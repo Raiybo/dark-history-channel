@@ -1,4 +1,4 @@
-import { Composition } from 'remotion';
+import { Composition, registerRoot } from 'remotion';
 import { DarkHistoryVideo } from './video/DarkHistoryVideo';
 
 const FPS = 30;
@@ -32,3 +32,5 @@ export const RemotionRoot = () => {
     />
   );
 };
+
+registerRoot(RemotionRoot);
