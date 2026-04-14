@@ -1,5 +1,21 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
+async function withRetry(fn, retries = 5, delayMs = 10000) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await fn();
+    } catch (err) {
+      const isRetryable = err.message.includes('503') || err.message.includes('overloaded') || err.message.includes('temporarily');
+      if (isRetryable && i < retries - 1) {
+        console.log(`  Model busy, retrying in ${delayMs / 1000}s... (attempt ${i + 2}/${retries})`);
+        await new Promise(r => setTimeout(r, delayMs));
+      } else {
+        throw err;
+      }
+    }
+  }
+}
+
 export async function generateScript(idea) {
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
   const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
@@ -36,17 +52,19 @@ Rules:
 - Tone: serious, haunting, documentary — not sensationalist
 - End the final chapter with reflection on what this story means for history`;
 
-  const result = await model.generateContent(prompt);
-  const text = result.response.text().trim();
+  const script = await withRetry(async () => {
+    const result = await model.generateContent(prompt);
+    const text = result.response.text().trim();
 
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error(`Gemini returned non-JSON for script`);
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error(`Gemini returned non-JSON for script`);
 
-  const script = JSON.parse(jsonMatch[0]);
-
-  if (!script.chapters || script.chapters.length !== 8) {
-    throw new Error(`Expected 8 chapters, got ${script.chapters?.length}`);
-  }
+    const parsed = JSON.parse(jsonMatch[0]);
+    if (!parsed.chapters || parsed.chapters.length !== 8) {
+      throw new Error(`Expected 8 chapters, got ${parsed.chapters?.length}`);
+    }
+    return parsed;
+  });
 
   return script;
 }
