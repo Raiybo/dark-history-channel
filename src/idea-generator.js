@@ -40,7 +40,7 @@ export async function generateIdea() {
   console.log(`Selected topic: ${topic}`);
 
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-lite' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
   const prompt = `You are a writer for a dark history YouTube channel called "Dark Chronicles". Your videos tell true, deeply researched stories from history that are disturbing, mysterious, or forgotten.
 
