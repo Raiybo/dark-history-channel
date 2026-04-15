@@ -7,6 +7,22 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const TOPICS_PATH = join(__dirname, '../config/topics.json');
 const USED_IDEAS_PATH = join(__dirname, '../config/used-ideas.json');
 
+async function withRetry(fn, retries = 5, delayMs = 15000) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await fn();
+    } catch (err) {
+      const isRetryable = err.message.includes('503') || err.message.includes('overloaded') || err.message.includes('temporarily') || err.message.includes('unavailable');
+      if (isRetryable && i < retries - 1) {
+        console.log(`  Model busy, retrying in ${delayMs / 1000}s... (attempt ${i + 2}/${retries})`);
+        await new Promise(r => setTimeout(r, delayMs));
+      } else {
+        throw err;
+      }
+    }
+  }
+}
+
 function loadUsedIdeas() {
   if (!existsSync(USED_IDEAS_PATH)) return [];
   return JSON.parse(readFileSync(USED_IDEAS_PATH, 'utf-8'));
@@ -55,17 +71,17 @@ Generate a specific, gripping video story angle. Return ONLY valid JSON with no 
   "hook": "The opening sentence that will immediately grab the viewer",
   "era": "Historical time period",
   "location": "Geographic location where events took place",
-  "estimated_duration_minutes": 6
+  "estimated_duration_minutes": 11
 }`;
 
-  const result = await model.generateContent(prompt);
-  const text = result.response.text().trim();
+  const idea = await withRetry(async () => {
+    const result = await model.generateContent(prompt);
+    const text = result.response.text().trim();
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error(`Gemini returned non-JSON: ${text}`);
+    return JSON.parse(jsonMatch[0]);
+  });
 
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error(`Gemini returned non-JSON: ${text}`);
-
-  const idea = JSON.parse(jsonMatch[0]);
   saveUsedIdea(idea);
-
   return idea;
 }

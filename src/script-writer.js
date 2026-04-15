@@ -1,11 +1,11 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-async function withRetry(fn, retries = 5, delayMs = 10000) {
+async function withRetry(fn, retries = 5, delayMs = 15000) {
   for (let i = 0; i < retries; i++) {
     try {
       return await fn();
     } catch (err) {
-      const isRetryable = err.message.includes('503') || err.message.includes('overloaded') || err.message.includes('temporarily');
+      const isRetryable = err.message.includes('503') || err.message.includes('overloaded') || err.message.includes('temporarily') || err.message.includes('unavailable');
       if (isRetryable && i < retries - 1) {
         console.log(`  Model busy, retrying in ${delayMs / 1000}s... (attempt ${i + 2}/${retries})`);
         await new Promise(r => setTimeout(r, delayMs));
@@ -29,7 +29,7 @@ Story brief:
 - Era: ${idea.era}
 - Location: ${idea.location}
 
-Write a full narration script divided into 8 chapters. Each chapter should be 100-150 words of tight, gripping prose. No filler. No hedging. Write as if narrating a documentary.
+Write a full narration script divided into 12 chapters. Each chapter should be 150-200 words of tight, gripping prose. No filler. No hedging. Write as if narrating a documentary. The total script should produce approximately 10-12 minutes of spoken audio.
 
 Return ONLY valid JSON with no markdown, no code fences:
 
@@ -40,14 +40,14 @@ Return ONLY valid JSON with no markdown, no code fences:
   "chapters": [
     {
       "heading": "Chapter heading (3-6 words, atmospheric)",
-      "narration": "Full narration text for this chapter, 100-150 words, no stage directions, pure spoken prose."
+      "narration": "Full narration text for this chapter, 150-200 words, no stage directions, pure spoken prose."
     }
   ]
 }
 
 Rules:
 - Chapter 1 MUST begin with the exact hook: "${idea.hook}"
-- Write exactly 8 chapters
+- Write exactly 12 chapters
 - Each chapter narration is spoken aloud — no parenthetical, no asterisks, no formatting
 - Tone: serious, haunting, documentary — not sensationalist
 - End the final chapter with reflection on what this story means for history`;
@@ -60,8 +60,8 @@ Rules:
     if (!jsonMatch) throw new Error(`Gemini returned non-JSON for script`);
 
     const parsed = JSON.parse(jsonMatch[0]);
-    if (!parsed.chapters || parsed.chapters.length !== 8) {
-      throw new Error(`Expected 8 chapters, got ${parsed.chapters?.length}`);
+    if (!parsed.chapters || parsed.chapters.length !== 12) {
+      throw new Error(`Expected 12 chapters, got ${parsed.chapters?.length}`);
     }
     return parsed;
   });
