@@ -1,88 +1,87 @@
-import { useCurrentFrame, interpolate, spring, useVideoConfig } from 'remotion';
+import { useCurrentFrame, useVideoConfig, interpolate, spring } from 'remotion';
 
 export const TitleScene = ({ title, channelName }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
-  const channelOpacity = interpolate(frame, [0, 20], [0, 1], { extrapolateRight: 'clamp' });
-  const channelY = interpolate(frame, [0, 20], [-10, 0], { extrapolateRight: 'clamp' });
+  const hue = (frame / fps * 15) % 360;
 
-  const titleScale = spring({ frame: frame - 15, fps, config: { damping: 18, stiffness: 80 } });
-  const titleOpacity = interpolate(frame, [15, 40], [0, 1], { extrapolateRight: 'clamp' });
+  // Channel name drops in
+  const channelScale = spring({ frame, fps, config: { damping: 15, stiffness: 200 } });
+  const channelOpacity = interpolate(frame, [0, 10], [0, 1], { extrapolateRight: 'clamp' });
 
-  const lineWidth = interpolate(frame, [40, 80], [0, 320], { extrapolateRight: 'clamp' });
+  // Title slams in
+  const titleScale = spring({ frame: frame - 20, fps, config: { damping: 10, stiffness: 400 } });
+  const titleOpacity = interpolate(frame, [20, 35], [0, 1], { extrapolateRight: 'clamp' });
 
-  const subtitleOpacity = interpolate(frame, [70, 100], [0, 1], { extrapolateRight: 'clamp' });
+  // Subtitle fades
+  const subOpacity = interpolate(frame, [55, 75], [0, 1], { extrapolateRight: 'clamp' });
+
+  // Line grows
+  const lineWidth = interpolate(frame, [35, 65], [0, 600], { extrapolateRight: 'clamp' });
 
   return (
     <div style={{
-      position: 'absolute',
-      inset: 0,
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '80px 120px'
+      position: 'absolute', inset: 0,
+      display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center',
+      padding: '60px 100px'
     }}>
       {/* Channel name */}
       <div style={{
-        fontFamily: 'Georgia, "Times New Roman", serif',
-        fontSize: 22,
-        letterSpacing: 8,
-        color: '#8b1a1a',
+        fontFamily: '"Arial Black", Impact, sans-serif',
+        fontSize: 28,
+        fontWeight: 900,
+        letterSpacing: 10,
         textTransform: 'uppercase',
+        color: `hsl(${hue}, 100%, 60%)`,
+        textShadow: `0 0 30px hsl(${hue}, 100%, 60%)`,
         opacity: channelOpacity,
-        transform: `translateY(${channelY}px)`,
-        marginBottom: 32
+        transform: `scale(${channelScale})`,
+        marginBottom: 30
       }}>
         {channelName}
       </div>
 
-      {/* Decorative line */}
+      {/* Animated line */}
       <div style={{
         width: lineWidth,
-        height: 1,
-        backgroundColor: '#c9a84c',
-        marginBottom: 40,
-        opacity: 0.6
+        height: 3,
+        backgroundColor: `hsl(${hue}, 100%, 60%)`,
+        boxShadow: `0 0 15px hsl(${hue}, 100%, 60%)`,
+        marginBottom: 40
       }} />
 
-      {/* Main title */}
+      {/* Main title — slams in */}
       <div style={{
-        fontFamily: 'Georgia, "Times New Roman", serif',
-        fontSize: 72,
-        fontWeight: 'bold',
-        color: '#e8d5b7',
+        fontFamily: '"Arial Black", Impact, sans-serif',
+        fontSize: 80,
+        fontWeight: 900,
+        textTransform: 'uppercase',
+        color: '#FFFFFF',
         textAlign: 'center',
-        lineHeight: 1.2,
+        lineHeight: 1.1,
         opacity: titleOpacity,
-        transform: `scale(${0.85 + titleScale * 0.15})`,
-        textShadow: '0 0 60px rgba(139,26,26,0.4), 0 2px 8px rgba(0,0,0,0.8)',
-        maxWidth: 1100
+        transform: `scale(${0.6 + titleScale * 0.4})`,
+        textShadow: '-4px -4px 0 #000, 4px -4px 0 #000, -4px 4px 0 #000, 4px 4px 0 #000, 0 0 40px rgba(255,255,255,0.3)',
+        maxWidth: 1400
       }}>
         {title}
       </div>
 
-      {/* Decorative line bottom */}
+      {/* Subtitle */}
       <div style={{
-        width: lineWidth,
-        height: 1,
-        backgroundColor: '#c9a84c',
-        marginTop: 40,
-        opacity: 0.6
-      }} />
-
-      {/* Era tag */}
-      <div style={{
-        fontFamily: 'Georgia, "Times New Roman", serif',
-        fontSize: 20,
-        letterSpacing: 4,
-        color: '#7a6a50',
+        fontFamily: '"Arial Black", sans-serif',
+        fontSize: 22,
+        fontWeight: 900,
+        letterSpacing: 5,
         textTransform: 'uppercase',
-        opacity: subtitleOpacity,
-        marginTop: 28
+        color: `hsl(${hue}, 100%, 60%)`,
+        opacity: subOpacity,
+        marginTop: 35,
+        textShadow: `0 0 20px hsl(${hue}, 100%, 60%)`
       }}>
-        A True Story
+        No Cap. True History. Fr Fr.
       </div>
     </div>
   );

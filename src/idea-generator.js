@@ -38,7 +38,6 @@ function pickRandomUnusedTopic() {
   const categories = JSON.parse(readFileSync(TOPICS_PATH, 'utf-8'));
   const used = loadUsedIdeas();
   const usedTopics = new Set(used.map(u => u.topic));
-
   const all = categories.flatMap(cat => cat.topics);
   const available = all.filter(t => !usedTopics.has(t));
 
@@ -58,19 +57,19 @@ export async function generateIdea() {
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
   const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
-  const prompt = `You are a writer for a dark history YouTube channel called "Dark Chronicles". Your videos tell true, deeply researched stories from history that are disturbing, mysterious, or forgotten.
+  const prompt = `You are a writer for "Dark Chronicles" — a YouTube channel that takes real dark history events and narrates them in Gen Alpha / Brainrot internet slang. The contrast between serious history and absurd slang is what makes it go viral.
 
-Given this broad topic: "${topic}"
+Given this historical topic: "${topic}"
 
-Generate a specific, gripping video story angle. Return ONLY valid JSON with no markdown, no code fences:
+Generate a specific video angle in full brainrot style. Return ONLY valid JSON with no markdown, no code fences:
 
 {
   "topic": "${topic}",
-  "title": "Compelling YouTube title under 70 characters — specific, not generic",
-  "angle": "Exactly which event, person, or episode to focus on and what makes it dark/compelling",
-  "hook": "The opening sentence that will immediately grab the viewer",
+  "title": "YouTube title in brainrot style, max 70 chars. Examples: 'The Black Death Was Pure Ohio Energy No Cap', 'Napoleon Caught The Biggest L In History Fr'",
+  "angle": "Which specific event or person to focus on and why it's skibidi/ohio/sigma in brainrot terms",
+  "hook": "Opening sentence in brainrot slang that immediately grabs attention. Must reference the real event but use Gen Alpha vocabulary. Bold, punchy, under 25 words.",
   "era": "Historical time period",
-  "location": "Geographic location where events took place",
+  "location": "Geographic location",
   "estimated_duration_minutes": 11
 }`;
 

@@ -1,89 +1,68 @@
-import { useCurrentFrame, interpolate, spring, useVideoConfig } from 'remotion';
+import { useCurrentFrame, useVideoConfig, interpolate, spring } from 'remotion';
 
 export const OutroScene = ({ channelName }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
-  const logoScale = spring({ frame, fps, config: { damping: 20, stiffness: 90 } });
-  const logoOpacity = interpolate(frame, [0, 20], [0, 1], { extrapolateRight: 'clamp' });
+  const hue = (frame / fps * 20) % 360;
 
-  const textOpacity = interpolate(frame, [20, 45], [0, 1], { extrapolateRight: 'clamp' });
-  const textY = interpolate(frame, [20, 45], [10, 0], { extrapolateRight: 'clamp' });
-
-  const subOpacity = interpolate(frame, [50, 75], [0, 1], { extrapolateRight: 'clamp' });
+  const logoScale = spring({ frame, fps, config: { damping: 12, stiffness: 250 } });
+  const logoOpacity = interpolate(frame, [0, 15], [0, 1], { extrapolateRight: 'clamp' });
+  const textOpacity = interpolate(frame, [20, 40], [0, 1], { extrapolateRight: 'clamp' });
+  const ctaOpacity = interpolate(frame, [45, 65], [0, 1], { extrapolateRight: 'clamp' });
+  const ctaScale = spring({ frame: frame - 45, fps, config: { damping: 15, stiffness: 200 } });
 
   return (
     <div style={{
-      position: 'absolute',
-      inset: 0,
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center'
+      position: 'absolute', inset: 0,
+      display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center'
     }}>
-      {/* Channel logo area */}
-      <div style={{
-        width: 100,
-        height: 100,
-        borderRadius: '50%',
-        border: '2px solid #c9a84c',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        opacity: logoOpacity,
-        transform: `scale(${logoScale})`,
-        marginBottom: 36,
-        backgroundColor: 'rgba(139,26,26,0.2)'
-      }}>
-        <div style={{
-          fontFamily: 'Georgia, "Times New Roman", serif',
-          fontSize: 36,
-          color: '#c9a84c'
-        }}>
-          ✦
-        </div>
-      </div>
-
       {/* Channel name */}
       <div style={{
-        fontFamily: 'Georgia, "Times New Roman", serif',
-        fontSize: 52,
-        fontWeight: 'bold',
-        color: '#e8d5b7',
+        fontFamily: '"Arial Black", Impact, sans-serif',
+        fontSize: 72,
+        fontWeight: 900,
+        textTransform: 'uppercase',
+        color: '#FFFFFF',
+        textShadow: `-4px -4px 0 #000, 4px -4px 0 #000, -4px 4px 0 #000, 4px 4px 0 #000, 0 0 50px hsl(${hue}, 100%, 60%)`,
         opacity: logoOpacity,
-        transform: `scale(${0.85 + logoScale * 0.15})`,
-        textShadow: '0 0 40px rgba(139,26,26,0.5)',
-        marginBottom: 20,
-        letterSpacing: 2
+        transform: `scale(${0.5 + logoScale * 0.5})`,
+        letterSpacing: 4,
+        marginBottom: 20
       }}>
         {channelName}
       </div>
 
       {/* Tagline */}
       <div style={{
-        fontFamily: 'Georgia, "Times New Roman", serif',
-        fontSize: 22,
-        color: '#7a6a50',
-        letterSpacing: 5,
+        fontFamily: '"Arial Black", sans-serif',
+        fontSize: 26,
+        fontWeight: 900,
+        letterSpacing: 4,
         textTransform: 'uppercase',
+        color: `hsl(${hue}, 100%, 65%)`,
+        textShadow: `0 0 20px hsl(${hue}, 100%, 65%)`,
         opacity: textOpacity,
-        transform: `translateY(${textY}px)`,
         marginBottom: 50
       }}>
-        True Stories From the Shadows of History
+        Real History. Unfiltered Rizz.
       </div>
 
-      {/* Subscribe CTA */}
+      {/* CTA */}
       <div style={{
-        fontFamily: 'Georgia, "Times New Roman", serif',
-        fontSize: 26,
-        color: '#c9a84c',
-        opacity: subOpacity,
+        fontFamily: '"Arial Black", sans-serif',
+        fontSize: 32,
+        fontWeight: 900,
+        textTransform: 'uppercase',
+        color: '#FFFFFF',
+        textShadow: '-3px -3px 0 #000, 3px -3px 0 #000, -3px 3px 0 #000, 3px 3px 0 #000',
+        opacity: ctaOpacity,
+        transform: `scale(${ctaScale})`,
         textAlign: 'center',
-        lineHeight: 1.6,
-        letterSpacing: 1
+        lineHeight: 1.6
       }}>
-        Subscribe for a new dark history story every day
+        Subscribe or you have no aura. No cap.
       </div>
     </div>
   );

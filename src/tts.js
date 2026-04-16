@@ -34,8 +34,8 @@ export async function generateAudio(chapters) {
       },
       audioConfig: {
         audioEncoding: 'MP3',
-        speakingRate: 0.92,   // Slightly slower — more dramatic
-        pitch: -2.0,          // Slightly lower pitch — more ominous
+        speakingRate: 1.1,    // Faster — brainrot energy
+        pitch: -1.0,          // Slightly deep — ironic serious tone
         effectsProfileId: ['headphone-class-device']
       }
     });
