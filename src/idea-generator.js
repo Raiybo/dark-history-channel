@@ -57,20 +57,18 @@ export async function generateIdea() {
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
   const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
-  const prompt = `You are a writer for "Dark Chronicles" — a YouTube channel that takes real dark history events and narrates them in Gen Alpha / Brainrot internet slang. The contrast between serious history and absurd slang is what makes it go viral.
+  const prompt = `You are a writer for a YouTube Shorts channel that explains how everyday things work using Gen Alpha brainrot slang. Videos are 60 seconds, punchy, and mind-blowing.
 
-Given this historical topic: "${topic}"
+Topic: "${topic}"
 
-Generate a specific video angle in full brainrot style. Return ONLY valid JSON with no markdown, no code fences:
+Generate a specific angle for a 60-second Short. Return ONLY valid JSON, no markdown:
 
 {
   "topic": "${topic}",
-  "title": "YouTube title in brainrot style, max 70 chars. Examples: 'The Black Death Was Pure Ohio Energy No Cap', 'Napoleon Caught The Biggest L In History Fr'",
-  "angle": "Which specific event or person to focus on and why it's skibidi/ohio/sigma in brainrot terms",
-  "hook": "Opening sentence in brainrot slang that immediately grabs attention. Must reference the real event but use Gen Alpha vocabulary. Bold, punchy, under 25 words.",
-  "era": "Historical time period",
-  "location": "Geographic location",
-  "estimated_duration_minutes": 11
+  "title": "Short brainrot-style title under 60 chars (e.g. 'Why WiFi Is Actually Sigma Physics No Cap')",
+  "hook": "Opening sentence under 20 words. Must be shocking or mind-blowing. Use brainrot slang.",
+  "angle": "The most interesting and surprising fact about this topic to center the explanation around",
+  "estimated_duration_minutes": 1
 }`;
 
   const idea = await withRetry(async () => {

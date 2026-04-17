@@ -20,93 +20,44 @@ export async function generateScript(idea) {
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
   const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
-  const prompt = `You are writing a narration script for the YouTube channel "Dark Chronicles" — a channel that takes REAL, serious historical events and narrates them entirely in Gen Alpha / Brainrot internet slang.
+  const prompt = `You write scripts for a YouTube Shorts channel explaining how things work using Gen Alpha brainrot slang. Each Short is exactly 60 seconds when spoken at normal pace.
 
-THE CONCEPT: The contrast between serious, disturbing history and absurd internet slang IS the comedy and the hook. Historical facts must be accurate. The slang makes it go viral.
+CONCEPT: Take a fascinating real scientific or everyday explanation and deliver it in brainrot Gen Alpha language. The facts must be 100% accurate. The slang makes it entertaining and shareable.
 
-BRAINROT VOCABULARY (mix these naturally throughout — do not force every word, make it flow):
-- Rizz / No rizz / Negative rizz (charm, charisma or lack of it)
-- Sigma / Alpha / Beta (dominant, successful, or weak person)
-- Skibidi (weird, chaotic, unhinged behavior)
-- Ohio / Pure Ohio energy (cursed, bizarre, wrong)
-- Gyatt / Gyattdamn (expression of shock or disbelief)
-- NPC (someone acting mindlessly, following orders)
-- Mewing / Looksmaxxing (self-improvement, optimizing appearance)
-- W / L / Massive L / Taking an L (win or loss)
-- Based (admirable, respectable, doing what you want)
-- Delulu (completely delusional)
-- Glazing (over-praising, simping for someone)
-- Understood the assignment / Missed the assignment entirely
-- No cap (no lie, for real, seriously)
-- It's giving... (it resembles, the vibes are)
-- Caught an L / Took the biggest L in history
-- Main character energy / NPC energy
-- Fanum tax (taking someone's resources, food, land)
-- Aura / Lost all their aura / Aura points
-- Lowkey / Highkey
-- Cooked (in serious trouble, ruined, finished)
-- Ate and left no crumbs (executed perfectly)
-- Ratio'd (publicly humiliated or defeated)
-- Slay / Slayed (performed excellently)
-- Era (a phase or period — "his villain era", "her redemption era")
-- Bussin (excellent, incredible)
-- Fr fr (for real for real — emphasis)
-- On god (I swear, absolutely)
-- Touch grass (go outside, disconnected from reality)
-- The audacity (disbelief at someone's behavior)
-- Not him/her doing X (sarcastic disbelief)
-- Bestie (addressing the audience or a historical figure)
-- Main character syndrome (thinking you are the center of everything)
-- Mid (mediocre, average)
-- Rent free (living in someone's head)
+BRAINROT VOCABULARY (use naturally, not forced):
+rizz, sigma, ohio, skibidi, gyatt, NPC, mewing, based, delulu, cooked, slay, bussin, glazing, no cap, it's giving, caught an L, main character energy, fanum tax, aura, lowkey, highkey, fr fr, mid, era, bestie, on god, ratio, understood the assignment
 
-EXAMPLE HOOKS:
-- "King Louis XVI had absolutely zero rizz, negative aura, and it cost him his entire head, no cap."
-- "Napoleon was a certified sigma grindset king until Russia said 'nah, you're cooked bestie.'"
-- "The Black Death was giving pure Ohio energy and nobody had the rizz to stop it."
-- "Vlad the Impaler was NOT mewing, he was NOT looksmaxxing, he was just fully cooked in the head fr fr."
+Topic: "${idea.topic}"
+Angle: "${idea.angle}"
+Hook: "${idea.hook}"
 
-Story brief:
-- Topic: ${idea.topic}
-- Specific angle: ${idea.angle}
-- Opening hook: ${idea.hook}
-- Era: ${idea.era}
-- Location: ${idea.location}
-
-Write a full narration script divided into 12 chapters. Each chapter: 120-150 words, full brainrot slang, but real historical facts underneath. Write as if a chronically online Gen Alpha is narrating a serious documentary.
-
-Return ONLY valid JSON with no markdown, no code fences:
-
-{
-  "title": "YouTube title in brainrot style, max 70 chars (e.g. 'The French Revolution But King Louis Had Zero Rizz')",
-  "description": "YouTube description 3-4 sentences mixing brainrot and real history. End with: #DarkHistory #BrainrotHistory #GenAlpha #History",
-  "tags": ["brainrot history", "dark history", "gen alpha history", "skibidi history", "add 6 more specific tags"],
-  "chapters": [
-    {
-      "heading": "Chapter heading in brainrot style (e.g. 'The NPC Era Begins', 'Main Character Loses Aura')",
-      "narration": "Full narration 120-150 words mixing Gen Alpha slang with real history. Pure spoken prose, no asterisks, no stage directions."
-    }
-  ]
-}
+Write a single 150-word narration script. Structure:
+1. Hook (first 2 sentences) — opens with the hook, immediately surprising
+2. Explanation (middle) — the actual science/explanation in brainrot terms, simple and clear
+3. Mind-blow ending (last 2 sentences) — the most shocking fact, ends with a call to follow
 
 Rules:
-- Chapter 1 MUST begin with this hook (rewritten in brainrot style): "${idea.hook}"
-- Write exactly 12 chapters
-- Every chapter must have at least 4-5 brainrot slang terms used naturally
-- Historical facts must be accurate — the slang is the delivery, not the content
-- Tone: unhinged Gen Alpha narrator who somehow knows everything about history
-- End the final chapter reflecting on what this means for history — but in brainrot terms`;
+- Exactly 150 words (counts as ~60 seconds at speaking pace)
+- Use at least 6 brainrot slang terms naturally
+- Facts must be scientifically accurate
+- No chapter headings, no stage directions — pure narration only
+- End with "Follow for daily facts that hit different." or similar brainrot CTA
+
+Return ONLY valid JSON, no markdown:
+
+{
+  "title": "YouTube Shorts title with brainrot flair, max 60 chars, include #Shorts",
+  "description": "2-3 sentence description mixing brainrot and real explanation. End with: #Shorts #HowThingsWork #LearnOnTikTok #Science #BrainrotFacts",
+  "tags": ["shorts", "how things work", "brainrot", "science", "facts", "gen alpha", "add 4 more relevant tags"],
+  "narration": "The full 150-word script as a single paragraph of spoken prose."
+}`;
 
   const script = await withRetry(async () => {
     const result = await model.generateContent(prompt);
     const text = result.response.text().trim();
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) throw new Error(`Gemini returned non-JSON for script`);
-    const parsed = JSON.parse(jsonMatch[0]);
-    if (!parsed.chapters || parsed.chapters.length !== 12) {
-      throw new Error(`Expected 12 chapters, got ${parsed.chapters?.length}`);
-    }
-    return parsed;
+    return JSON.parse(jsonMatch[0]);
   });
 
   return script;
