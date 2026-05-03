@@ -16,7 +16,12 @@ export async function renderVideo(script, audio) {
     title: script.title,
     narration: script.narration,
     audioDuration: audio.duration,
-    channelName: process.env.CHANNEL_NAME || 'HowItWorks'
+    wordTimings: audio.wordTimings || [],
+    channelName: process.env.CHANNEL_NAME || 'Chronicles',
+    genre: script.genre,
+    hookText: script.hook_text,
+    imagePaths: script.imagePaths || [],
+    scenes: script.scenes || [],
   };
 
   writeFileSync(join(ROOT_DIR, 'config', 'render-props.json'), JSON.stringify(inputProps, null, 2));
@@ -24,14 +29,14 @@ export async function renderVideo(script, audio) {
   console.log('  Bundling Remotion project...');
   const bundled = await bundle({
     entryPoint: join(__dirname, 'index.jsx'),
-    webpackOverride: (config) => config
+    webpackOverride: (config) => config,
   });
 
   console.log('  Selecting composition...');
   const composition = await selectComposition({
     serveUrl: bundled,
-    id: 'ShortsVideo',
-    inputProps
+    id: 'SlideshowVideo',
+    inputProps,
   });
 
   mkdirSync(join(ROOT_DIR, 'output'), { recursive: true });
@@ -48,7 +53,7 @@ export async function renderVideo(script, audio) {
     chromiumOptions: { disableWebSecurity: true, gl: 'swiftshader' },
     onProgress: ({ progress }) => {
       process.stdout.write(`\r  Progress: ${Math.round(progress * 100)}%   `);
-    }
+    },
   });
 
   process.stdout.write('\n');

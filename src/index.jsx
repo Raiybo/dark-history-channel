@@ -1,25 +1,29 @@
 import { Composition, registerRoot } from 'remotion';
-import { ShortsVideo } from './video/ShortsVideo';
+import { SlideshowVideo } from './video/SlideshowVideo';
 
 const FPS = 30;
 
 export const RemotionRoot = () => {
   return (
     <Composition
-      id="ShortsVideo"
-      component={ShortsVideo}
+      id="SlideshowVideo"
+      component={SlideshowVideo}
       durationInFrames={1800}
       fps={FPS}
       width={1080}
       height={1920}
       defaultProps={{
-        title: 'How WiFi Actually Works #Shorts',
-        narration: 'WiFi is sigma physics no cap.',
-        audioDuration: 60,
-        channelName: 'HowItWorks'
+        title: 'Chronicles Preview',
+        narration: 'This is a preview of the Chronicles channel video system.',
+        audioDuration: 50,
+        channelName: 'Chronicles',
+        genre: 'stoic',
+        hookText: 'MOST PEOPLE NEVER LEARN THIS',
+        imagePaths: [],
+        scenes: [],
       }}
       calculateMetadata={({ props }) => ({
-        durationInFrames: Math.ceil((props.audioDuration + 1) * FPS)
+        durationInFrames: Math.ceil((props.audioDuration + 1) * FPS),
       })}
     />
   );

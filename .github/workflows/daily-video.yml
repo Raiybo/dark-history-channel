@@ -1,9 +1,11 @@
-name: Generate and Upload Daily Video
+name: Generate and Upload Daily Videos
 
 on:
   schedule:
-    - cron: '0 9 * * *'   # Every day at 9:00 AM UTC
-  workflow_dispatch:        # Allow manual trigger from GitHub UI
+    - cron: '0 8 * * *'    # 8:00 AM UTC
+    - cron: '0 14 * * *'   # 2:00 PM UTC
+    - cron: '0 20 * * *'   # 8:00 PM UTC
+  workflow_dispatch:         # Allow manual trigger from GitHub UI
 
 jobs:
   generate-video:
@@ -27,7 +29,7 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y ffmpeg chromium-browser fonts-liberation
+          sudo apt-get install -y ffmpeg chromium fonts-liberation
           echo "CHROMIUM_FLAGS=--no-sandbox" >> $GITHUB_ENV
 
       - name: Install npm dependencies
@@ -41,13 +43,14 @@ jobs:
           YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
           YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
           CHANNEL_NAME: ${{ secrets.CHANNEL_NAME }}
-          PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium-browser
+          PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium
+          UPLOAD: '1'
         run: node src/main.js
 
       - name: Commit updated used-ideas.json
         run: |
-          git config user.name "Dark Chronicles Bot"
-          git config user.email "bot@darkchronicles.auto"
+          git config user.name "Chronicles Bot"
+          git config user.email "bot@chronicles.auto"
           git add config/used-ideas.json
           git diff --staged --quiet || git commit -m "chore: mark today's topic as used [skip ci]"
           git push

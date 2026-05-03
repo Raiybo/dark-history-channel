@@ -14,7 +14,7 @@ const oauth2Client = new google.auth.OAuth2(
   'urn:ietf:wg:oauth:2.0:oob'
 );
 
-const SCOPES = ['https://www.googleapis.com/auth/youtube.upload'];
+const SCOPES = ['https://www.googleapis.com/auth/youtube'];
 
 const authUrl = oauth2Client.generateAuthUrl({
   access_type: 'offline',
