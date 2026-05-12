@@ -51,6 +51,7 @@ export async function renderVideo(script, audio) {
     codec: 'h264',
     outputLocation: outputPath,
     inputProps,
+    timeoutInMilliseconds: 60000,
     chromiumOptions: {
       disableWebSecurity: true,
       gl: 'swiftshader',

@@ -1,4 +1,4 @@
-import { Video, staticFile, useCurrentFrame, interpolate } from 'remotion';
+import { OffthreadVideo, staticFile, useCurrentFrame, interpolate } from 'remotion';
 
 const FALLBACK_COLORS = ['#06080f', '#080610', '#06100a'];
 
@@ -20,10 +20,9 @@ export const VideoClip = ({ src, index, totalFrames, crossfade = 15, isFirst = f
 
   return (
     <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', opacity }}>
-      <Video
+      <OffthreadVideo
         src={staticFile(src)}
-        volume={0}
-        loop
+        muted
         playbackRate={0.88}
         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
       />
