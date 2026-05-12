@@ -10,6 +10,13 @@ function sleep(ms) {
   return new Promise(r => setTimeout(r, ms));
 }
 
+function fetchWithTimeout(url, options, ms) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  return fetch(url, { ...options, signal: controller.signal })
+    .finally(() => clearTimeout(timer));
+}
+
 function pickBestFile(videoFiles) {
   const portrait = videoFiles.filter(f =>
     f.file_type === 'video/mp4' && f.height > f.width
@@ -31,10 +38,11 @@ async function searchVideo(keyword, attempt = 0) {
     per_page: '10',
   });
 
-  const res = await fetch(`https://api.pexels.com/videos/search?${params}`, {
-    headers: { Authorization: process.env.PEXELS_API_KEY },
-    signal: AbortSignal.timeout(20000),
-  });
+  const res = await fetchWithTimeout(
+    `https://api.pexels.com/videos/search?${params}`,
+    { headers: { Authorization: process.env.PEXELS_API_KEY } },
+    30000
+  );
 
   if (res.status === 429) {
     if (attempt < 3) {
@@ -62,7 +70,7 @@ async function searchVideo(keyword, attempt = 0) {
 }
 
 async function downloadClip(url, outputPath) {
-  const res = await fetch(url, { signal: AbortSignal.timeout(90000) });
+  const res = await fetchWithTimeout(url, {}, 120000);
   if (!res.ok) throw new Error(`Download ${res.status}`);
   const writer = createWriteStream(outputPath);
   await pipeline(res.body, writer);
