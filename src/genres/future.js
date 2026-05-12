@@ -43,7 +43,7 @@ SCENE RULES — critical:
 }
 
 export const FUTURE_VOICE = {
-  name: 'en-US-Journey-D',
-  gender: 'MALE',
-  speakingRate: 0.85,
+  name: 'en-US-ChristopherNeural',
+  rate: '-18%',
+  pitch: '-8Hz',
 };

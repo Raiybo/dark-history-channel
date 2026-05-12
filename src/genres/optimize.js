@@ -41,7 +41,7 @@ SCENE RULES — critical:
 }
 
 export const OPTIMIZE_VOICE = {
-  name: 'en-US-Journey-F',
-  gender: 'FEMALE',
-  speakingRate: 1.00,
+  name: 'en-US-AriaNeural',
+  rate: '+5%',
+  pitch: '+0Hz',
 };

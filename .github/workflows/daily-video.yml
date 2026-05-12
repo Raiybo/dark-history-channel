@@ -30,13 +30,15 @@ jobs:
           sudo apt-get install -y ffmpeg chromium fonts-liberation
           echo "CHROMIUM_FLAGS=--no-sandbox" >> $GITHUB_ENV
 
+      - name: Install Python TTS
+        run: pip3 install edge-tts
+
       - name: Install npm dependencies
         run: npm ci
 
       - name: Run video pipeline
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          GOOGLE_TTS_CREDENTIALS: ${{ secrets.GOOGLE_TTS_CREDENTIALS }}
           YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
           YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
           YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}

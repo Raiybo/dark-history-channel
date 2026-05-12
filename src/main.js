@@ -9,7 +9,6 @@ import { uploadToYouTube }  from './uploader.js';
 
 const REQUIRED_ENV = [
   'GEMINI_API_KEY',
-  'GOOGLE_TTS_CREDENTIALS',
   'YOUTUBE_CLIENT_ID',
   'YOUTUBE_CLIENT_SECRET',
   'YOUTUBE_REFRESH_TOKEN',
