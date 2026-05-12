@@ -10,7 +10,7 @@ Return ONLY valid JSON, no markdown:
   "description": "2-3 sentences. Direct, compelling. End with: #Optimization #Science #Performance #Distoir #Shorts",
   "tags": ["optimization", "science", "performance", "focus", "health", "life hack", "shorts", "distoir"],
   "hook_text": "MUST use one of these formulas: (1) shocking number e.g. 'YOUR FOCUS DROPS 40 PERCENT AFTER LUNCH', (2) thing everyone does wrong e.g. 'YOU BREATHE WRONG EVERY DAY', (3) impossible-sounding result e.g. 'TWO MINUTES TRIPLES YOUR MEMORY'. MAX 7 WORDS. ALL CAPS. No punctuation. Must feel like a personal revelation the viewer never knew they needed.",
-  "narration": "Exactly 110-word narration. Open with the hook verbatim. Act 1 (2-3 sentences): the relatable problem — what happens to most people, how bad it gets. Act 2 (3-4 sentences): the exact method with specific steps — what to do, when, for how long. Include the real study name or institution. Act 3 (2-3 sentences): what changes — the measurable transformation. End with one sentence so surprising they screenshot it. Direct, clear, fast. Max 9 words per sentence. Pure prose.",
+  "narration": "Exactly 80-word narration. Open with the hook verbatim. Act 1 (2 sentences): the relatable problem — what happens to most people. Act 2 (2-3 sentences): exact method with specific steps — what to do, when, for how long. Show the ACTUAL mechanism (e.g. if it's breathing, show the exact breath pattern, not just 'breathe better'). Include the real study name. Act 3 (2 sentences): what changes — measurable results. End with one sentence so surprising they screenshot it. Max 5 words per sentence.",
   "scenes": [
     {"keyword": "pexels search query", "narration_moment": "first 1-2 sentences of narration", "duration": 5},
     {"keyword": "pexels search query", "narration_moment": "next 1-2 sentences", "duration": 4},
@@ -41,8 +41,7 @@ SCENE RULES — critical:
 }
 
 export const OPTIMIZE_VOICE = {
-  name: 'en-US-Neural2-F',
+  name: 'en-US-Journey-F',
   gender: 'FEMALE',
-  speakingRate: 1.05,
-  pitch: 0.5,
+  speakingRate: 1.00,
 };

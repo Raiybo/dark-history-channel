@@ -12,7 +12,7 @@ Return ONLY valid JSON, no markdown:
   "description": "2-3 sentences. Factual, compelling. End with: #History #FutureHistory #HowItWorks #Distoir #Shorts",
   "tags": ["history", "engineering", "how it works", "invention", "technology", "facts", "shorts", "distoir"],
   "hook_text": "MUST use one of these formulas — pick whichever fits: (1) shocking number nobody believes e.g. 'THIS GEAR RUNS 4 BILLION MACHINES', (2) visceral contradiction e.g. 'YOUR BRAIN LIES TO YOU DAILY', (3) impossible scale e.g. 'ONE WIRE POWERS A BILLION HOMES'. MAX 7 WORDS. ALL CAPS. No punctuation. The viewer must feel they just learned something that changes how they see the world. First word must create instant shock.",
-  "narration": "Exactly 110-word narration. Open with the hook verbatim. Then 3 clear acts — (1) How painful life was BEFORE this: 2-3 vivid sentences, specific hardships. (2) The moment it changed — simple, clear, one concrete analogy the viewer already understands. (3) The jaw-dropping scale of impact: real numbers, real places, real change. Final sentence must be so wild the viewer wants to share it. Pure spoken prose. Max 9 words per sentence. No lists. No filler words.",
+  "narration": "Exactly 80-word narration. Open with the hook verbatim. Then 3 clear acts — (1) How painful life was BEFORE this: 2 vivid sentences with specific hardships. (2) The moment it changed — show the ACTUAL mechanism (e.g. show what a differential IS, not just 'cars got better'). (3) The jaw-dropping scale of impact: real numbers, real places, real change. Final sentence must be so wild they screenshot it. Max 5 words per sentence. Simple words. No filler.",
   "scenes": [
     {"keyword": "pexels search query", "narration_moment": "first 1-2 sentences of narration", "duration": 5},
     {"keyword": "pexels search query", "narration_moment": "next 1-2 sentences", "duration": 4},
@@ -43,8 +43,7 @@ SCENE RULES — critical:
 }
 
 export const FUTURE_VOICE = {
-  name: 'en-US-Neural2-F',
-  gender: 'FEMALE',
-  speakingRate: 0.94,
-  pitch: -0.5,
+  name: 'en-US-Journey-D',
+  gender: 'MALE',
+  speakingRate: 0.85,
 };
