@@ -3,6 +3,8 @@ node_modules/
 output/
 public/audio/
 public/images/
+public/videos/
+public/music/
 config/render-props.json
 
 # Keep used-ideas.json tracked (it's our persistence layer)

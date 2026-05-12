@@ -1,53 +1,39 @@
 import { Audio, staticFile, useVideoConfig, Sequence } from 'remotion';
-import { Slide } from './components/Slide.jsx';
+import { VideoClip } from './components/VideoClip.jsx';
 import { HookScene, HOOK_FRAMES } from './components/HookScene.jsx';
 import { SlideshowSubtitles } from './components/SlideshowSubtitles.jsx';
 
-const CROSSFADE = 12;
+const CROSSFADE = 15;
 
 const GENRE_GRADE = {
-  stoic: {
-    overlay: 'rgba(0, 0, 0, 0.30)',
-    tint: 'rgba(20, 10, 0, 0.12)',
-    vignette: 'radial-gradient(ellipse at center, transparent 25%, rgba(0,0,0,0.82) 100%)',
-    letterbox: true,
-  },
   future: {
-    overlay: 'rgba(0, 0, 0, 0.28)',
-    tint: 'rgba(0, 5, 15, 0.15)',
-    vignette: 'radial-gradient(ellipse at center, transparent 28%, rgba(0,0,0,0.80) 100%)',
-    letterbox: true,
+    overlay:      'rgba(0, 8, 30, 0.36)',
+    vignette:     'radial-gradient(ellipse at center, transparent 15%, rgba(0,0,0,0.90) 100%)',
+    letterbox:    true,
+    watermark:    '#00C8FF',
+    watermarkTop: 112,
   },
   optimize: {
-    overlay: 'rgba(0, 0, 0, 0.25)',
-    tint: 'rgba(0, 0, 0, 0.10)',
-    vignette: 'radial-gradient(ellipse at center, transparent 28%, rgba(0,0,0,0.78) 100%)',
-    letterbox: true,
+    overlay:      'rgba(5, 3, 0, 0.30)',
+    vignette:     'radial-gradient(ellipse at center, transparent 20%, rgba(0,0,0,0.84) 100%)',
+    letterbox:    false,
+    watermark:    '#F5A623',
+    watermarkTop: 60,
   },
 };
 
-const WATERMARK_COLOR = {
-  stoic: '#C8932A',
-  future: '#00E5FF',
-  optimize: '#4AFF91',
-};
-
-function buildSlideTimings(scenes, fps, durationInFrames) {
-  const paths = scenes || [];
-  if (paths.length === 0) return [];
-
-  // Use scene durations from script; scale to fit actual audio length
-  const totalSceneSeconds = paths.reduce((s, sc) => s + (sc.duration || 4), 0);
-  const scale = durationInFrames / (totalSceneSeconds * fps);
-
-  const timings = [];
+function buildTimings(scenes, fps, durationInFrames) {
+  const sc = scenes || [];
+  if (sc.length === 0) return [];
+  const totalSecs = sc.reduce((s, item) => s + (item.duration || 4), 0);
+  const scale = durationInFrames / (totalSecs * fps);
   let cursor = 0;
-  for (let i = 0; i < paths.length; i++) {
-    const rawFrames = Math.round((paths[i].duration || 4) * fps * scale);
-    timings.push({ from: cursor, frames: rawFrames });
-    cursor += rawFrames;
-  }
-  return timings;
+  return sc.map(item => {
+    const frames = Math.round((item.duration || 4) * fps * scale);
+    const timing = { from: cursor, frames };
+    cursor += frames;
+    return timing;
+  });
 }
 
 export const SlideshowVideo = ({
@@ -58,86 +44,90 @@ export const SlideshowVideo = ({
   channelName,
   genre,
   hookText,
-  imagePaths,
+  clips,
   scenes,
+  hasMusic,
 }) => {
   const { durationInFrames, fps } = useVideoConfig();
   const grade = GENRE_GRADE[genre] || GENRE_GRADE.future;
-  const watermarkColor = WATERMARK_COLOR[genre] || '#FFFFFF';
-
-  const validPaths = imagePaths || [];
-  const timings = buildSlideTimings(scenes || [], fps, durationInFrames);
+  const timings = buildTimings(scenes || [], fps, durationInFrames);
 
   return (
-    <div style={{ width: '100%', height: '100%', overflow: 'hidden', backgroundColor: '#060606' }}>
+    <div style={{ width: '100%', height: '100%', overflow: 'hidden', backgroundColor: '#040404' }}>
 
-      {/* Slides with Ken Burns + crossfade, timed per scene duration */}
-      {validPaths.map((path, i) => {
+      {/* Video clips — the story plays out here */}
+      {(clips || []).map((clipPath, i) => {
         const t = timings[i];
         if (!t) return null;
         return (
           <Sequence key={i} from={t.from} durationInFrames={t.frames + CROSSFADE}>
-            <Slide
-              src={path}
+            <VideoClip
+              src={clipPath}
               index={i}
               totalFrames={t.frames}
               crossfade={CROSSFADE}
               isFirst={i === 0}
-              isLast={i === validPaths.length - 1}
             />
           </Sequence>
         );
       })}
 
-      {/* Color tint */}
-      <div style={{ position: 'absolute', inset: 0, background: grade.tint, pointerEvents: 'none' }} />
-
-      {/* Dark overlay */}
+      {/* Genre colour tint */}
       <div style={{ position: 'absolute', inset: 0, backgroundColor: grade.overlay, pointerEvents: 'none' }} />
 
-      {/* Vignette */}
+      {/* Deep vignette — keeps focus on centre */}
       <div style={{ position: 'absolute', inset: 0, background: grade.vignette, pointerEvents: 'none' }} />
 
-      {/* Letterbox bars (Stoic only) */}
+      {/* Cinematic letterbox bars (Future-History only) */}
       {grade.letterbox && (
         <>
-          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 110, backgroundColor: '#000' }} />
-          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 110, backgroundColor: '#000' }} />
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 100, backgroundColor: '#000' }} />
+          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 100, backgroundColor: '#000' }} />
         </>
       )}
 
-      {/* Audio */}
+      {/* Narration audio */}
       <Audio src={staticFile('audio/narration.mp3')} />
 
-      {/* Hook scene — first 5 seconds */}
-      <Sequence from={0} durationInFrames={HOOK_FRAMES + 25}>
+      {/* Background music — subtle, never competes with voice */}
+      {hasMusic && (
+        <Audio src={staticFile('music/background.mp3')} volume={0.13} loop />
+      )}
+
+      {/* Hook — first 5 seconds, grabs attention */}
+      <Sequence from={0} durationInFrames={HOOK_FRAMES + 20}>
         <HookScene hookText={hookText || ''} genre={genre} />
       </Sequence>
 
-      {/* Subtitles — appear after hook fades */}
-      <SlideshowSubtitles narration={narration} audioDuration={audioDuration} wordTimings={wordTimings} genre={genre} />
+      {/* Subtitles — secondary guide, appears after hook */}
+      <SlideshowSubtitles
+        narration={narration}
+        audioDuration={audioDuration}
+        wordTimings={wordTimings}
+        genre={genre}
+      />
 
-      {/* Channel watermark */}
+      {/* Channel wordmark */}
       <div style={{
         position: 'absolute',
-        top: grade.letterbox ? 125 : 70,
+        top: grade.watermarkTop,
         left: 0, right: 0,
         display: 'flex',
         justifyContent: 'center',
         pointerEvents: 'none',
       }}>
-        <div style={{
+        <span style={{
           fontFamily: '"Arial Black", Impact, sans-serif',
-          fontSize: 26,
+          fontSize: 20,
           fontWeight: 900,
-          letterSpacing: 6,
+          letterSpacing: 9,
           textTransform: 'uppercase',
-          color: watermarkColor,
-          opacity: 0.85,
-          textShadow: '0 0 20px rgba(0,0,0,0.8)',
+          color: grade.watermark,
+          opacity: 0.70,
+          textShadow: '0 0 30px rgba(0,0,0,0.95)',
         }}>
           {channelName}
-        </div>
+        </span>
       </div>
     </div>
   );

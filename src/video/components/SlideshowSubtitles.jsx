@@ -6,9 +6,15 @@ const { fontFamily } = loadFont();
 
 const GROUP_SIZE = 3;
 
+const GENRE_ACCENT = {
+  future:   '#00C8FF',
+  optimize: '#F5A623',
+};
+
 export const SlideshowSubtitles = ({ narration, audioDuration, wordTimings, genre }) => {
   const frame = useCurrentFrame();
   const { fps, durationInFrames } = useVideoConfig();
+  const accent = GENRE_ACCENT[genre] || GENRE_ACCENT.future;
 
   const fadeIn = interpolate(frame, [HOOK_FRAMES, HOOK_FRAMES + 15], [0, 1], {
     extrapolateLeft: 'clamp',
@@ -17,7 +23,7 @@ export const SlideshowSubtitles = ({ narration, audioDuration, wordTimings, genr
 
   const currentTime = frame / fps;
 
-  let timings = wordTimings && wordTimings.length > 0 ? wordTimings : null;
+  let timings = wordTimings?.length > 0 ? wordTimings : null;
   if (!timings && narration) {
     const words = narration.trim().split(/\s+/);
     const totalSeconds = audioDuration || durationInFrames / fps;
@@ -39,8 +45,7 @@ export const SlideshowSubtitles = ({ narration, audioDuration, wordTimings, genr
   const groupStart = currentGroupIndex * GROUP_SIZE;
   const currentGroup = timings.slice(groupStart, groupStart + GROUP_SIZE);
 
-  const groupStartTime = timings[groupStart]?.start ?? 0;
-  const groupStartFrame = Math.round(groupStartTime * fps);
+  const groupStartFrame = Math.round((timings[groupStart]?.start ?? 0) * fps);
   const frameInGroup = Math.max(0, frame - groupStartFrame);
   const popScale = spring({ frame: frameInGroup, fps, config: { damping: 18, stiffness: 320 } });
 
@@ -50,19 +55,19 @@ export const SlideshowSubtitles = ({ narration, audioDuration, wordTimings, genr
       display: 'flex',
       alignItems: 'flex-end',
       justifyContent: 'center',
-      paddingBottom: 175,
-      paddingLeft: 40,
-      paddingRight: 40,
+      paddingBottom: 185,
+      paddingLeft: 32,
+      paddingRight: 32,
       opacity: fadeIn,
       pointerEvents: 'none',
     }}>
       <div style={{
         textAlign: 'center',
-        transform: `scale(${0.92 + popScale * 0.08})`,
+        transform: `scale(${0.94 + popScale * 0.06})`,
         display: 'flex',
         flexWrap: 'wrap',
         justifyContent: 'center',
-        gap: '0 12px',
+        gap: '4px 8px',
       }}>
         {currentGroup.map(({ word }, i) => {
           const isActive = groupStart + i === currentWordIndex;
@@ -72,21 +77,21 @@ export const SlideshowSubtitles = ({ narration, audioDuration, wordTimings, genr
               style={{
                 display: 'inline-block',
                 fontFamily,
-                fontSize: 64,
+                fontSize: 78,
                 fontWeight: 900,
-                letterSpacing: -0.5,
+                letterSpacing: -1,
                 textTransform: 'uppercase',
-                lineHeight: 1.25,
+                lineHeight: 1.2,
                 ...(isActive ? {
-                  backgroundColor: '#FFD600',
-                  color: '#000000',
-                  paddingLeft: 10,
-                  paddingRight: 10,
+                  backgroundColor: accent,
+                  color: '#000',
+                  paddingLeft: 12,
+                  paddingRight: 12,
                   paddingTop: 2,
-                  paddingBottom: 2,
+                  paddingBottom: 4,
                 } : {
                   color: '#FFFFFF',
-                  textShadow: '-2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000, 0 3px 12px rgba(0,0,0,0.9)',
+                  textShadow: '-2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000, 0 4px 20px rgba(0,0,0,0.98)',
                 }),
               }}
             >

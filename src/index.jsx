@@ -13,14 +13,15 @@ export const RemotionRoot = () => {
       width={1080}
       height={1920}
       defaultProps={{
-        title: 'Chronicles Preview',
-        narration: 'This is a preview of the Chronicles channel video system.',
+        title:         'Distoir Preview',
+        narration:     'This is Distoir. Where history meets optimization.',
         audioDuration: 50,
-        channelName: 'Chronicles',
-        genre: 'stoic',
-        hookText: 'MOST PEOPLE NEVER LEARN THIS',
-        imagePaths: [],
-        scenes: [],
+        channelName:   'Distoir',
+        genre:         'future',
+        hookText:      'HISTORY CHANGED EVERYTHING',
+        clips:         [],
+        scenes:        [],
+        hasMusic:      false,
       }}
       calculateMetadata={({ props }) => ({
         durationInFrames: Math.ceil((props.audioDuration + 1) * FPS),

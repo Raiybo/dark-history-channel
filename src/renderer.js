@@ -13,15 +13,16 @@ export async function renderVideo(script, audio) {
   copyFileSync(audio.file, join(publicAudioDir, 'narration.mp3'));
 
   const inputProps = {
-    title: script.title,
-    narration: script.narration,
+    title:         script.title,
+    narration:     script.narration,
     audioDuration: audio.duration,
-    wordTimings: audio.wordTimings || [],
-    channelName: process.env.CHANNEL_NAME || 'Chronicles',
-    genre: script.genre,
-    hookText: script.hook_text,
-    imagePaths: script.imagePaths || [],
-    scenes: script.scenes || [],
+    wordTimings:   audio.wordTimings || [],
+    channelName:   process.env.CHANNEL_NAME || 'Distoir',
+    genre:         script.genre,
+    hookText:      script.hook_text,
+    clips:         script.clips || [],
+    scenes:        script.scenes || [],
+    hasMusic:      script.hasMusic || false,
   };
 
   writeFileSync(join(ROOT_DIR, 'config', 'render-props.json'), JSON.stringify(inputProps, null, 2));
@@ -50,7 +51,11 @@ export async function renderVideo(script, audio) {
     codec: 'h264',
     outputLocation: outputPath,
     inputProps,
-    chromiumOptions: { disableWebSecurity: true, gl: 'swiftshader' },
+    chromiumOptions: {
+      disableWebSecurity: true,
+      gl: 'swiftshader',
+      noSandbox: !!process.env.CI,
+    },
     onProgress: ({ progress }) => {
       process.stdout.write(`\r  Progress: ${Math.round(progress * 100)}%   `);
     },
