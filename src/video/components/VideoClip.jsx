@@ -2,11 +2,12 @@ import { OffthreadVideo, staticFile, useCurrentFrame, interpolate } from 'remoti
 
 const FALLBACK_COLORS = ['#06080f', '#080610', '#06100a'];
 
-export const VideoClip = ({ src, index, totalFrames, crossfade = 15, isFirst = false }) => {
+export const VideoClip = ({ src, index, totalFrames, crossfade = 15, isFirst = false, isLast = false }) => {
   const frame = useCurrentFrame();
 
   const fadeIn  = isFirst ? 1 : interpolate(frame, [0, crossfade], [0, 1], { extrapolateRight: 'clamp' });
-  const fadeOut = interpolate(frame, [totalFrames, totalFrames + crossfade], [1, 0], { extrapolateRight: 'clamp' });
+  // Last clip never fades out — video stays visible until the audio ends
+  const fadeOut = isLast  ? 1 : interpolate(frame, [totalFrames, totalFrames + crossfade], [1, 0], { extrapolateRight: 'clamp' });
   const opacity = Math.min(fadeIn, fadeOut);
 
   if (!src) {

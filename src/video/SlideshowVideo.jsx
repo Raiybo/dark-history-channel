@@ -28,10 +28,13 @@ function buildTimings(scenes, fps, durationInFrames) {
   const totalSecs = sc.reduce((s, item) => s + (item.duration || 4), 0);
   const scale = durationInFrames / (totalSecs * fps);
   let cursor = 0;
-  return sc.map(item => {
-    const frames = Math.round((item.duration || 4) * fps * scale);
+  return sc.map((item, i) => {
+    const isLast = i === sc.length - 1;
+    const rawFrames = Math.round((item.duration || 4) * fps * scale);
+    // Last clip stretches to fill any remaining frames from rounding
+    const frames = isLast ? Math.max(rawFrames, durationInFrames - cursor) : rawFrames;
     const timing = { from: cursor, frames };
-    cursor += frames;
+    cursor += rawFrames;
     return timing;
   });
 }
@@ -59,14 +62,18 @@ export const SlideshowVideo = ({
       {(clips || []).map((clipPath, i) => {
         const t = timings[i];
         if (!t) return null;
+        const isLast = i === (clips || []).length - 1;
+        // Last clip's sequence runs all the way to the end — no black frame gap
+        const seqDuration = isLast ? durationInFrames - t.from : t.frames + CROSSFADE;
         return (
-          <Sequence key={i} from={t.from} durationInFrames={t.frames + CROSSFADE}>
+          <Sequence key={i} from={t.from} durationInFrames={seqDuration}>
             <VideoClip
               src={clipPath}
               index={i}
               totalFrames={t.frames}
               crossfade={CROSSFADE}
               isFirst={i === 0}
+              isLast={isLast}
             />
           </Sequence>
         );

@@ -1,48 +1,50 @@
 export function getFuturePrompt(topic) {
-  return `You are a content director for "Distoir" — a premium YouTube Shorts channel. Genre: "Future-History." Every video reveals one invention, machine, or turning point that silently reshaped how humans live. Style: calm, cinematic documentary — the footage carries the emotion, the voice guides it.
+  return `You are a content director for "Distoir" — a premium YouTube Shorts channel. Genre: "Future-History." Every video reveals one invention, discovery, or turning point that silently reshaped how humans live. The footage tells the story. The voice explains it. They move together.
 
 Topic: "${topic}"
 
-All facts must be 100% accurate. Write for a 20-35 year old audience that values real knowledge, not clickbait. Simple words, short sentences, big ideas.
+All facts must be 100% accurate. Audience: 20-35 year olds who want to feel smarter after watching. Short sentences. Big revelations.
 
 Return ONLY valid JSON, no markdown:
 
 {
-  "title": "Under 60 chars. Direct and intriguing. e.g. 'The Tiny Gear That Runs Every Machine' or 'How One Wire Changed Civilization'",
-  "description": "2-3 sentences. Factual, compelling. End with: #History #Engineering #FutureHistory #HowItWorks #Distoir #Shorts",
+  "title": "Under 60 chars. Direct and intriguing. e.g. 'The Tiny Gear That Runs Every Machine'",
+  "description": "2-3 sentences. Factual, compelling. End with: #History #FutureHistory #HowItWorks #Distoir #Shorts",
   "tags": ["history", "engineering", "how it works", "invention", "technology", "facts", "shorts", "distoir"],
-  "hook_text": "One jaw-dropping fact. MAX 6 WORDS. ALL CAPS. No punctuation. Must stop the scroll instantly.",
-  "narration": "Exactly 110-word calm documentary narration. RULES: max 9 words per sentence. Open with the hook verbatim. Structure: (1) what life was like BEFORE — make it feel hard, (2) how this thing works — one concrete everyday analogy, (3) the scale of impact — real numbers. End on a line so surprising they share it. Measured tone, like a trusted documentary. Pure prose only, no lists.",
+  "hook_text": "MUST use one of these formulas — pick whichever fits: (1) shocking number nobody believes e.g. 'THIS GEAR RUNS 4 BILLION MACHINES', (2) visceral contradiction e.g. 'YOUR BRAIN LIES TO YOU DAILY', (3) impossible scale e.g. 'ONE WIRE POWERS A BILLION HOMES'. MAX 7 WORDS. ALL CAPS. No punctuation. The viewer must feel they just learned something that changes how they see the world. First word must create instant shock.",
+  "narration": "Exactly 110-word narration. Open with the hook verbatim. Then 3 clear acts — (1) How painful life was BEFORE this: 2-3 vivid sentences, specific hardships. (2) The moment it changed — simple, clear, one concrete analogy the viewer already understands. (3) The jaw-dropping scale of impact: real numbers, real places, real change. Final sentence must be so wild the viewer wants to share it. Pure spoken prose. Max 9 words per sentence. No lists. No filler words.",
   "scenes": [
-    {"keyword": "stock video search query — 3-4 words max", "duration": 5},
-    {"keyword": "...", "duration": 4},
-    {"keyword": "...", "duration": 5},
-    {"keyword": "...", "duration": 4},
-    {"keyword": "...", "duration": 4},
-    {"keyword": "...", "duration": 5},
-    {"keyword": "...", "duration": 4},
-    {"keyword": "...", "duration": 5},
-    {"keyword": "...", "duration": 4},
-    {"keyword": "...", "duration": 4},
-    {"keyword": "...", "duration": 5},
-    {"keyword": "...", "duration": 4}
+    {"keyword": "pexels search query", "narration_moment": "first 1-2 sentences of narration", "duration": 5},
+    {"keyword": "pexels search query", "narration_moment": "next 1-2 sentences", "duration": 4},
+    {"keyword": "pexels search query", "narration_moment": "next 1-2 sentences", "duration": 5},
+    {"keyword": "pexels search query", "narration_moment": "next 1-2 sentences", "duration": 4},
+    {"keyword": "pexels search query", "narration_moment": "next 1-2 sentences", "duration": 4},
+    {"keyword": "pexels search query", "narration_moment": "next 1-2 sentences", "duration": 5},
+    {"keyword": "pexels search query", "narration_moment": "next 1-2 sentences", "duration": 4},
+    {"keyword": "pexels search query", "narration_moment": "next 1-2 sentences", "duration": 5},
+    {"keyword": "pexels search query", "narration_moment": "next 1-2 sentences", "duration": 4},
+    {"keyword": "pexels search query", "narration_moment": "next 1-2 sentences", "duration": 4},
+    {"keyword": "pexels search query", "narration_moment": "next 1-2 sentences", "duration": 5},
+    {"keyword": "pexels search query", "narration_moment": "final sentences", "duration": 4}
   ]
 }
 
-SCENE KEYWORD RULES — these are real stock video search queries (Pexels):
-- Exactly 12 scenes, each 4-5 seconds
-- Each keyword = a Pexels stock video search — real footage, not AI art descriptions
-- Match EXACTLY what is being narrated at that moment
-- Use concrete subjects + action words: "workers building steel bridge", "engineer adjusting machine gears", "hands turning wrench close up"
-- Vary shot types: close-up detail, wide establishing, aerial, person in action, object macro
-- Good: "steam train moving through fog", "gears spinning inside factory machine", "power lines spanning landscape aerial", "blacksmith hammering hot metal", "city night lights aerial time lapse"
-- Bad: "industrial abstract", "dark dramatic atmosphere", "cinematic moody"
+SCENE RULES — critical:
+- Exactly 12 scenes, 4-5 seconds each
+- "keyword" = Pexels stock VIDEO search query. Real footage. 3-5 words max.
+- "narration_moment" = the exact part of the narration playing during this scene — fill this in accurately
+- Keyword must show EXACTLY what is being SAID in narration_moment — not the mood, the SUBJECT
+- If narrator says "factories needed waterwheels" → keyword: "historical watermill water wheel turning"
+- If narrator says "two wire coils transfer energy" → keyword: "copper wire coil electrical transformer"
+- If narrator says "powers a billion homes" → keyword: "city aerial night lights power"
+- Vary shots: close-up detail, person in action, wide establishing, aerial, macro object
+- No abstract descriptions. No mood words. Concrete subjects only.
 - Portrait/vertical orientation`;
 }
 
 export const FUTURE_VOICE = {
-  name: 'en-US-Neural2-D',
-  gender: 'MALE',
-  speakingRate: 0.90,
-  pitch: -2.0,
+  name: 'en-US-Neural2-F',
+  gender: 'FEMALE',
+  speakingRate: 0.94,
+  pitch: -0.5,
 };
