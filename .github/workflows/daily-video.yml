@@ -1,14 +1,14 @@
-name: Generate and Upload Daily Video
+name: Daily Distoir Videos
 
 on:
   schedule:
-    - cron: '0 10 * * *'   # Every day at 10:00 AM UTC
-  workflow_dispatch:         # Allow manual trigger from GitHub UI
+    - cron: '0 9 * * *'   # Every day at 9:00 AM UTC
+  workflow_dispatch:        # Manual trigger from GitHub UI
 
 jobs:
-  generate-video:
+  generate-videos:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 180
     permissions:
       contents: write
 
@@ -28,7 +28,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg chromium fonts-liberation
-          echo "CHROMIUM_FLAGS=--no-sandbox" >> $GITHUB_ENV
+          echo "PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium" >> $GITHUB_ENV
 
       - name: Install Python TTS
         run: pip3 install edge-tts
@@ -36,7 +36,7 @@ jobs:
       - name: Install npm dependencies
         run: npm ci
 
-      - name: Run video pipeline
+      - name: Video 1 — Future-History
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
@@ -44,9 +44,35 @@ jobs:
           YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
           CHANNEL_NAME: ${{ secrets.CHANNEL_NAME }}
-          PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium
           CI: 'true'
           UPLOAD: '1'
+          GENRE_OVERRIDE: future
+        run: node src/main.js
+
+      - name: Video 2 — Optimization
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+          CHANNEL_NAME: ${{ secrets.CHANNEL_NAME }}
+          CI: 'true'
+          UPLOAD: '1'
+          GENRE_OVERRIDE: optimize
+        run: node src/main.js
+
+      - name: Video 3 — Future-History
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+          CHANNEL_NAME: ${{ secrets.CHANNEL_NAME }}
+          CI: 'true'
+          UPLOAD: '1'
+          GENRE_OVERRIDE: future
         run: node src/main.js
 
       - name: Commit updated used-ideas.json
@@ -54,5 +80,5 @@ jobs:
           git config user.name "Distoir Bot"
           git config user.email "bot@distoir.auto"
           git add config/used-ideas.json
-          git diff --staged --quiet || git commit -m "chore: mark today's topic as used [skip ci]"
+          git diff --staged --quiet || git commit -m "chore: mark used topics [skip ci]"
           git push

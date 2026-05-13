@@ -44,6 +44,6 @@ SCENE RULES — critical:
 
 export const FUTURE_VOICE = {
   name: 'en-US-ChristopherNeural',
-  rate: '-18%',
+  rate: '-10%',
   pitch: '-8Hz',
 };
