@@ -61,8 +61,8 @@ export async function generateAudio(narration, genre = 'future') {
 
   const result = spawnSync('edge-tts', [
     '--voice', voice.name,
-    '--rate', voice.rate || '-15%',
-    '--pitch', voice.pitch || '-5Hz',
+    `--rate=${voice.rate || '-15%'}`,
+    `--pitch=${voice.pitch || '-5Hz'}`,
     '--text', narration,
     '--write-media', mp3Path,
     '--write-subtitles', vttPath,
