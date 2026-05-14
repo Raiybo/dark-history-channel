@@ -1,11 +1,12 @@
 import 'dotenv/config';
-import { generateIdea }     from './idea-generator.js';
-import { generateScript }   from './script-writer.js';
-import { generateAudio }    from './tts.js';
-import { fetchSceneVideos } from './pexels.js';
-import { prepareMusic }     from './music.js';
-import { renderVideo }      from './renderer.js';
-import { uploadToYouTube }  from './uploader.js';
+import { generateIdea }          from './idea-generator.js';
+import { generateScript }        from './script-writer.js';
+import { generateAudio }         from './tts.js';
+import { fetchSceneVideos }      from './pexels.js';
+import { prepareMusic }          from './music.js';
+import { generateCharacterImages } from './character.js';
+import { renderVideo }           from './renderer.js';
+import { uploadToYouTube }       from './uploader.js';
 
 const REQUIRED_ENV = [
   'GEMINI_API_KEY',
@@ -67,6 +68,11 @@ async function run() {
   console.log('Step 5/7  Preparing background music...');
   const musicPath = await prepareMusic(genre);
   script.hasMusic = musicPath !== null;
+  console.log();
+
+  console.log('Step 5b   Generating character narrator...');
+  const characterImages = await generateCharacterImages();
+  script.characterImages = characterImages;
   console.log();
 
   console.log('Step 6/7  Rendering video...');

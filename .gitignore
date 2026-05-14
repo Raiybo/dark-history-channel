@@ -9,3 +9,4 @@ config/render-props.json
 
 # Keep used-ideas.json tracked (it's our persistence layer)
 !config/used-ideas.json
+public/characters/

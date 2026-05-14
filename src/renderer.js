@@ -13,16 +13,17 @@ export async function renderVideo(script, audio) {
   copyFileSync(audio.file, join(publicAudioDir, 'narration.mp3'));
 
   const inputProps = {
-    title:         script.title,
-    narration:     script.narration,
-    audioDuration: audio.duration,
-    wordTimings:   audio.wordTimings || [],
-    channelName:   process.env.CHANNEL_NAME || 'Distoir',
-    genre:         script.genre,
-    hookText:      script.hook_text,
-    clips:         script.clips || [],
-    scenes:        script.scenes || [],
-    hasMusic:      script.hasMusic || false,
+    title:           script.title,
+    narration:       script.narration,
+    audioDuration:   audio.duration,
+    wordTimings:     audio.wordTimings || [],
+    channelName:     process.env.CHANNEL_NAME || 'Distoir',
+    genre:           script.genre,
+    hookText:        script.hook_text,
+    clips:           script.clips || [],
+    scenes:          script.scenes || [],
+    hasMusic:        script.hasMusic || false,
+    characterImages: script.characterImages || null,
   };
 
   writeFileSync(join(ROOT_DIR, 'config', 'render-props.json'), JSON.stringify(inputProps, null, 2));

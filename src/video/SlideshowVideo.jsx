@@ -2,23 +2,24 @@ import { Audio, staticFile, useVideoConfig, Sequence } from 'remotion';
 import { VideoClip } from './components/VideoClip.jsx';
 import { HookScene, HOOK_FRAMES } from './components/HookScene.jsx';
 import { SlideshowSubtitles } from './components/SlideshowSubtitles.jsx';
+import { CharacterFrame } from './components/CharacterFrame.jsx';
 
 const CROSSFADE = 15;
 
 const GENRE_GRADE = {
   future: {
-    overlay:      'rgba(0, 8, 30, 0.36)',
-    vignette:     'radial-gradient(ellipse at center, transparent 15%, rgba(0,0,0,0.90) 100%)',
-    letterbox:    true,
+    overlay:      'rgba(0, 8, 30, 0.42)',
+    vignette:     'radial-gradient(ellipse at center, transparent 15%, rgba(0,0,0,0.92) 100%)',
+    letterbox:    false,
     watermark:    '#00C8FF',
-    watermarkTop: 112,
+    watermarkTop: 72,
   },
   optimize: {
-    overlay:      'rgba(5, 3, 0, 0.30)',
-    vignette:     'radial-gradient(ellipse at center, transparent 20%, rgba(0,0,0,0.84) 100%)',
+    overlay:      'rgba(5, 3, 0, 0.36)',
+    vignette:     'radial-gradient(ellipse at center, transparent 20%, rgba(0,0,0,0.88) 100%)',
     letterbox:    false,
     watermark:    '#F5A623',
-    watermarkTop: 60,
+    watermarkTop: 72,
   },
 };
 
@@ -31,7 +32,6 @@ function buildTimings(scenes, fps, durationInFrames) {
   return sc.map((item, i) => {
     const isLast = i === sc.length - 1;
     const rawFrames = Math.round((item.duration || 4) * fps * scale);
-    // Last clip stretches to fill any remaining frames from rounding
     const frames = isLast ? Math.max(rawFrames, durationInFrames - cursor) : rawFrames;
     const timing = { from: cursor, frames };
     cursor += rawFrames;
@@ -50,20 +50,21 @@ export const SlideshowVideo = ({
   clips,
   scenes,
   hasMusic,
+  characterImages,
 }) => {
   const { durationInFrames, fps } = useVideoConfig();
   const grade = GENRE_GRADE[genre] || GENRE_GRADE.future;
   const timings = buildTimings(scenes || [], fps, durationInFrames);
+  const hasCharacter = characterImages && Object.values(characterImages).some(Boolean);
 
   return (
     <div style={{ width: '100%', height: '100%', overflow: 'hidden', backgroundColor: '#040404' }}>
 
-      {/* Video clips — the story plays out here */}
+      {/* Stock footage — story backdrop */}
       {(clips || []).map((clipPath, i) => {
         const t = timings[i];
         if (!t) return null;
         const isLast = i === (clips || []).length - 1;
-        // Last clip's sequence runs all the way to the end — no black frame gap
         const seqDuration = isLast ? durationInFrames - t.from : t.frames + CROSSFADE;
         return (
           <Sequence key={i} from={t.from} durationInFrames={seqDuration}>
@@ -82,31 +83,44 @@ export const SlideshowVideo = ({
       {/* Genre colour tint */}
       <div style={{ position: 'absolute', inset: 0, backgroundColor: grade.overlay, pointerEvents: 'none' }} />
 
-      {/* Deep vignette — keeps focus on centre */}
+      {/* Deep vignette */}
       <div style={{ position: 'absolute', inset: 0, background: grade.vignette, pointerEvents: 'none' }} />
 
-      {/* Cinematic letterbox bars (Future-History only) */}
-      {grade.letterbox && (
-        <>
-          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 100, backgroundColor: '#000' }} />
-          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 100, backgroundColor: '#000' }} />
-        </>
+      {/* Heavy gradient at bottom — stage for character */}
+      {hasCharacter && (
+        <div style={{
+          position: 'absolute',
+          bottom: 0, left: 0, right: 0,
+          height: '55%',
+          background: 'linear-gradient(to top, rgba(0,0,0,0.97) 0%, rgba(0,0,0,0.80) 40%, transparent 100%)',
+          pointerEvents: 'none',
+        }} />
       )}
 
       {/* Narration audio */}
       <Audio src={staticFile('audio/narration.mp3')} />
 
-      {/* Background music — subtle, never competes with voice */}
+      {/* Background music */}
       {hasMusic && (
-        <Audio src={staticFile('music/background.mp3')} volume={0.13} loop />
+        <Audio src={staticFile('music/background.mp3')} volume={0.11} loop />
       )}
 
-      {/* Hook — first 5 seconds, grabs attention */}
+      {/* Hook — first 5 seconds */}
       <Sequence from={0} durationInFrames={HOOK_FRAMES + 20}>
         <HookScene hookText={hookText || ''} genre={genre} />
       </Sequence>
 
-      {/* Subtitles — secondary guide, appears after hook */}
+      {/* Character narrator — appears after hook */}
+      {hasCharacter && (
+        <Sequence from={HOOK_FRAMES} durationInFrames={durationInFrames - HOOK_FRAMES}>
+          <CharacterFrame
+            characterImages={characterImages}
+            durationInFrames={durationInFrames - HOOK_FRAMES}
+          />
+        </Sequence>
+      )}
+
+      {/* Subtitles */}
       <SlideshowSubtitles
         narration={narration}
         audioDuration={audioDuration}
