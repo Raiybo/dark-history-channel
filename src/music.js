@@ -15,13 +15,9 @@ function fetchWithTimeout(url, ms = 30000) {
 
 // Kevin MacLeod — CC BY 3.0 (royalty-free, attribution in description)
 const TRACKS = {
-  future: [
+  money: [
     'https://incompetech.com/music/royalty-free/mp3-royaltyfree/Invariance.mp3',
     'https://incompetech.com/music/royalty-free/mp3-royaltyfree/Olympus.mp3',
-  ],
-  optimize: [
-    'https://incompetech.com/music/royalty-free/mp3-royaltyfree/Faster%20Does%20It.mp3',
-    'https://incompetech.com/music/royalty-free/mp3-royaltyfree/Call%20to%20Adventure.mp3',
   ],
 };
 

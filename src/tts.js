@@ -3,13 +3,12 @@ import { readFileSync, mkdirSync } from 'fs';
 import { getAudioDurationInSeconds } from 'get-audio-duration';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { FUTURE_VOICE } from './genres/future.js';
-import { OPTIMIZE_VOICE } from './genres/optimize.js';
+import { MONEY_VOICE } from './genres/money.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const AUDIO_DIR = join(__dirname, '../output/audio');
 
-const VOICES = { future: FUTURE_VOICE, optimize: OPTIMIZE_VOICE };
+const VOICES = { money: MONEY_VOICE };
 
 function parseTimestamp(ts) {
   const clean = ts.trim().replace(',', '.');

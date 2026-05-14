@@ -6,13 +6,14 @@ export const HOOK_FRAMES = 150;
 const { fontFamily } = loadFont();
 
 const GENRE_ACCENT = {
+  money:    '#00D97E',
   future:   '#00C8FF',
   optimize: '#F5A623',
 };
 
 export const HookScene = ({ hookText, genre }) => {
   const frame = useCurrentFrame();
-  const accent = GENRE_ACCENT[genre] || GENRE_ACCENT.future;
+  const accent = GENRE_ACCENT[genre] || GENRE_ACCENT.money;
   const words = (hookText || '').split(' ');
 
   // Quick flash-in from black on the very first frames

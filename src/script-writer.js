@@ -1,7 +1,5 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { getStoicPrompt } from './genres/stoic.js';
-import { getFuturePrompt } from './genres/future.js';
-import { getOptimizePrompt } from './genres/optimize.js';
+import { getMoneyPrompt } from './genres/money.js';
 
 async function withRetry(fn, retries = 5, delayMs = 15000) {
   for (let i = 0; i < retries; i++) {
@@ -23,14 +21,7 @@ export async function generateScript(idea) {
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
   const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
-  let prompt;
-  if (idea.genre === 'stoic') {
-    prompt = getStoicPrompt();
-  } else if (idea.genre === 'future') {
-    prompt = getFuturePrompt(idea.topic);
-  } else {
-    prompt = getOptimizePrompt();
-  }
+  const prompt = getMoneyPrompt(idea.topic);
 
   const script = await withRetry(async () => {
     const result = await model.generateContent(prompt);

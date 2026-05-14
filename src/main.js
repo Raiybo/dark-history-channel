@@ -15,16 +15,12 @@ const REQUIRED_ENV = [
   'PEXELS_API_KEY',
 ];
 
-// Strict alternation: Future-History ↔ Optimization
-const DAY_ROTATION = ['future', 'optimize', 'future', 'optimize', 'future', 'optimize', 'future'];
-
 const GENRE_LABELS = {
-  future:   'Future-History',
-  optimize: 'Optimization',
+  money: 'Money & Power',
 };
 
 function getTodayGenre() {
-  return DAY_ROTATION[new Date().getDay()];
+  return 'money';
 }
 
 function checkEnv() {
@@ -47,8 +43,7 @@ async function run() {
 
   console.log('Step 1/7  Generating idea...');
   const idea = await generateIdea(genre);
-  if (idea.topic) console.log(`  Topic: "${idea.topic}"\n`);
-  else console.log(`  Genre: ${label}\n`);
+  console.log(`  Topic: "${idea.topic}"\n`);
 
   console.log('Step 2/7  Writing script...');
   const script = await generateScript(idea);

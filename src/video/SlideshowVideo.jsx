@@ -6,18 +6,11 @@ import { SlideshowSubtitles } from './components/SlideshowSubtitles.jsx';
 const CROSSFADE = 15;
 
 const GENRE_GRADE = {
-  future: {
-    overlay:      'rgba(0, 8, 30, 0.42)',
-    vignette:     'radial-gradient(ellipse at center, transparent 15%, rgba(0,0,0,0.92) 100%)',
+  money: {
+    overlay:      'rgba(0, 10, 2, 0.38)',
+    vignette:     'radial-gradient(ellipse at center, transparent 18%, rgba(0,0,0,0.90) 100%)',
     letterbox:    false,
-    watermark:    '#00C8FF',
-    watermarkTop: 72,
-  },
-  optimize: {
-    overlay:      'rgba(5, 3, 0, 0.36)',
-    vignette:     'radial-gradient(ellipse at center, transparent 20%, rgba(0,0,0,0.88) 100%)',
-    letterbox:    false,
-    watermark:    '#F5A623',
+    watermark:    '#00D97E',
     watermarkTop: 72,
   },
 };

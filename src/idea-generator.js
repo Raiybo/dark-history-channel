@@ -42,14 +42,9 @@ function pickRandomUnusedTopic() {
 }
 
 export async function generateIdea(genre) {
-  if (genre === 'future') {
-    const topic = pickRandomUnusedTopic();
-    console.log(`  Selected topic: ${topic}`);
-    const idea = { genre, topic, title: topic };
-    saveUsedIdea(idea);
-    return idea;
-  }
-
-  // Stoic and optimize: Gemini generates the specific angle from scratch in script-writer
-  return { genre, topic: null, title: null };
+  const topic = pickRandomUnusedTopic();
+  console.log(`  Selected topic: ${topic}`);
+  const idea = { genre, topic, title: topic };
+  saveUsedIdea(idea);
+  return idea;
 }

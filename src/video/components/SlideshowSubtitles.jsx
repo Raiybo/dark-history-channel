@@ -7,6 +7,7 @@ const { fontFamily } = loadFont();
 const GROUP_SIZE = 3;
 
 const GENRE_ACCENT = {
+  money:    '#00D97E',
   future:   '#00C8FF',
   optimize: '#F5A623',
 };
