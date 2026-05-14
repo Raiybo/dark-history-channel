@@ -2,6 +2,7 @@ import { Audio, staticFile, useVideoConfig, Sequence } from 'remotion';
 import { VideoClip } from './components/VideoClip.jsx';
 import { HookScene, HOOK_FRAMES } from './components/HookScene.jsx';
 import { SlideshowSubtitles } from './components/SlideshowSubtitles.jsx';
+import { CtaCard } from './components/CtaCard.jsx';
 
 const CROSSFADE = 15;
 
@@ -96,6 +97,11 @@ export const SlideshowVideo = ({
         wordTimings={wordTimings}
         genre={genre}
       />
+
+      {/* CTA card — last 3 seconds */}
+      <Sequence from={durationInFrames - 90} durationInFrames={90}>
+        <CtaCard accent={grade.watermark} />
+      </Sequence>
 
       {/* Channel wordmark */}
       <div style={{
