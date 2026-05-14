@@ -10,9 +10,10 @@ const BASE = 'cartoon male narrator, natural afro hairstyle, thin mustache, red 
 
 const EXPRESSIONS = {
   shocked:    'shocked expression wide open eyes mouth open disbelief dramatic reaction',
-  serious:    'serious skeptical one raised eyebrow side eye look arms crossed confidence',
-  explaining: 'explaining pointing finger upward confident smirk teaching gesture',
+  serious:    'serious skeptical one raised eyebrow side eye look arms crossed mouth closed',
+  explaining: 'explaining pointing finger upward confident smirk teaching gesture mouth closed',
   amazed:     'mind blown amazed expression pointing at head eyes wide excitement celebrating',
+  talking:    'mid-speech mouth wide open teeth visible active talking gesture neutral expression',
 };
 
 function fetchWithTimeout(url, ms = 45000) {

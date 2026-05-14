@@ -116,6 +116,7 @@ export const SlideshowVideo = ({
           <CharacterFrame
             characterImages={characterImages}
             durationInFrames={durationInFrames - HOOK_FRAMES}
+            wordTimings={wordTimings}
           />
         </Sequence>
       )}
