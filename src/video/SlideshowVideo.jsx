@@ -2,7 +2,6 @@ import { Audio, staticFile, useVideoConfig, Sequence } from 'remotion';
 import { VideoClip } from './components/VideoClip.jsx';
 import { HookScene, HOOK_FRAMES } from './components/HookScene.jsx';
 import { SlideshowSubtitles } from './components/SlideshowSubtitles.jsx';
-import { CharacterFrame } from './components/CharacterFrame.jsx';
 
 const CROSSFADE = 15;
 
@@ -50,12 +49,10 @@ export const SlideshowVideo = ({
   clips,
   scenes,
   hasMusic,
-  characterImages,
 }) => {
   const { durationInFrames, fps } = useVideoConfig();
   const grade = GENRE_GRADE[genre] || GENRE_GRADE.future;
   const timings = buildTimings(scenes || [], fps, durationInFrames);
-  const hasCharacter = characterImages && Object.values(characterImages).some(Boolean);
 
   return (
     <div style={{ width: '100%', height: '100%', overflow: 'hidden', backgroundColor: '#040404' }}>
@@ -86,17 +83,6 @@ export const SlideshowVideo = ({
       {/* Deep vignette */}
       <div style={{ position: 'absolute', inset: 0, background: grade.vignette, pointerEvents: 'none' }} />
 
-      {/* Heavy gradient at bottom — stage for character */}
-      {hasCharacter && (
-        <div style={{
-          position: 'absolute',
-          bottom: 0, left: 0, right: 0,
-          height: '55%',
-          background: 'linear-gradient(to top, rgba(0,0,0,0.97) 0%, rgba(0,0,0,0.80) 40%, transparent 100%)',
-          pointerEvents: 'none',
-        }} />
-      )}
-
       {/* Narration audio */}
       <Audio src={staticFile('audio/narration.mp3')} />
 
@@ -109,17 +95,6 @@ export const SlideshowVideo = ({
       <Sequence from={0} durationInFrames={HOOK_FRAMES + 20}>
         <HookScene hookText={hookText || ''} genre={genre} />
       </Sequence>
-
-      {/* Character narrator — appears after hook */}
-      {hasCharacter && (
-        <Sequence from={HOOK_FRAMES} durationInFrames={durationInFrames - HOOK_FRAMES}>
-          <CharacterFrame
-            characterImages={characterImages}
-            durationInFrames={durationInFrames - HOOK_FRAMES}
-            wordTimings={wordTimings}
-          />
-        </Sequence>
-      )}
 
       {/* Subtitles */}
       <SlideshowSubtitles
