@@ -36,7 +36,7 @@ jobs:
       - name: Install npm dependencies
         run: npm ci
 
-      - name: Video 1 — Future-History
+      - name: Video 1 — Money & Power
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
@@ -46,10 +46,10 @@ jobs:
           CHANNEL_NAME: ${{ secrets.CHANNEL_NAME }}
           CI: 'true'
           UPLOAD: '1'
-          GENRE_OVERRIDE: future
+          GENRE_OVERRIDE: money
         run: node src/main.js
 
-      - name: Video 2 — Optimization
+      - name: Video 2 — Money & Power
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
@@ -59,10 +59,10 @@ jobs:
           CHANNEL_NAME: ${{ secrets.CHANNEL_NAME }}
           CI: 'true'
           UPLOAD: '1'
-          GENRE_OVERRIDE: optimize
+          GENRE_OVERRIDE: money
         run: node src/main.js
 
-      - name: Video 3 — Future-History
+      - name: Video 3 — Money & Power
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
@@ -72,7 +72,7 @@ jobs:
           CHANNEL_NAME: ${{ secrets.CHANNEL_NAME }}
           CI: 'true'
           UPLOAD: '1'
-          GENRE_OVERRIDE: future
+          GENRE_OVERRIDE: money
         run: node src/main.js
 
       - name: Commit updated used-ideas.json
@@ -81,4 +81,5 @@ jobs:
           git config user.email "bot@distoir.auto"
           git add config/used-ideas.json
           git diff --staged --quiet || git commit -m "chore: mark used topics [skip ci]"
+          git pull --rebase origin main
           git push

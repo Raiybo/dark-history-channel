@@ -49,10 +49,10 @@ function buildWordTimings(segments, totalDuration) {
   return wordTimings;
 }
 
-export async function generateAudio(narration, genre = 'future') {
+export async function generateAudio(narration, genre = 'money') {
   mkdirSync(AUDIO_DIR, { recursive: true });
 
-  const voice = VOICES[genre] || VOICES.future;
+  const voice = VOICES[genre] || VOICES.money;
   const mp3Path = join(AUDIO_DIR, 'narration.mp3');
   const vttPath = join(AUDIO_DIR, 'narration.vtt');
 
