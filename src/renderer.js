@@ -10,13 +10,17 @@ const ROOT_DIR = join(__dirname, '..');
 export async function renderVideo(script, audio) {
   const publicAudioDir = join(ROOT_DIR, 'public', 'audio');
   mkdirSync(publicAudioDir, { recursive: true });
-  copyFileSync(audio.file, join(publicAudioDir, 'narration.mp3'));
+  const audioSrcDir = join(ROOT_DIR, 'output', 'audio');
+  for (const beat of audio.beats) {
+    copyFileSync(join(audioSrcDir, beat.file), join(publicAudioDir, beat.file));
+  }
 
   const inputProps = {
     title:           script.title,
     narration:       script.narration,
     audioDuration:   audio.duration,
     wordTimings:     audio.wordTimings || [],
+    beats:           audio.beats || [],
     channelName:     process.env.CHANNEL_NAME || 'Did You Know',
     genre:           script.genre,
     hookText:        script.hook_text,

@@ -69,43 +69,74 @@ function buildWordTimings(segments, totalDuration) {
   return wordTimings;
 }
 
-export async function generateAudio(narration, genre = 'didyouknow') {
-  mkdirSync(AUDIO_DIR, { recursive: true });
+// Silent breath inserted between idea beats (seconds).
+const GAP_SECONDS = 0.42;
 
-  const voice = VOICES[genre] || VOICES.didyouknow;
-  const mp3Path = join(AUDIO_DIR, 'narration.mp3');
-  const vttPath = join(AUDIO_DIR, 'narration.vtt');
-
-  console.log(`  Generating voiceover (${voice.name})...`);
-
-  const ttsArgs = [
+function runEdgeTts(voice, text, mp3Path, vttPath) {
+  const args = [
     '--voice', voice.name,
-    `--rate=${voice.rate || '-15%'}`,
-    `--pitch=${voice.pitch || '-5Hz'}`,
-    '--text', narration,
+    `--rate=${voice.rate || '+0%'}`,
+    `--pitch=${voice.pitch || '+0Hz'}`,
+    '--text', text,
     '--write-media', mp3Path,
     '--write-subtitles', vttPath,
   ];
-
   // Prefer the `edge-tts` CLI (Linux CI); fall back to the Python module
   // invocation when the standalone command isn't on PATH (common on Windows).
   const opts = { timeout: 90000, encoding: 'utf8' };
-  let result = spawnSync('edge-tts', ttsArgs, opts);
+  let result = spawnSync('edge-tts', args, opts);
   if (result.error?.code === 'ENOENT') {
     const py = process.platform === 'win32' ? 'python' : 'python3';
-    result = spawnSync(py, ['-m', 'edge_tts', ...ttsArgs], opts);
+    result = spawnSync(py, ['-m', 'edge_tts', ...args], opts);
   }
-
   if (result.status !== 0) {
     throw new Error(`edge-tts failed: ${result.stderr || result.error?.message}`);
   }
+}
 
-  const duration = await getAudioDurationInSeconds(mp3Path);
-  console.log(`  Audio duration: ${duration.toFixed(1)}s`);
+// The narration is written with " || " marking each idea shift. We synthesize
+// each beat separately and lay them out with a real silent gap between, so the
+// narrator audibly breathes when the idea changes. Each beat is also a fresh
+// utterance, which keeps the delivery from flattening into one monotone read.
+// Word timings are merged onto one global timeline (beat start + local time).
+export async function generateAudio(narration, genre = 'didyouknow') {
+  mkdirSync(AUDIO_DIR, { recursive: true });
+  const voice = VOICES[genre] || VOICES.didyouknow;
 
-  const vttContent = readFileSync(vttPath, 'utf8');
-  const segments = parseVtt(vttContent);
-  const wordTimings = buildWordTimings(segments, duration);
+  const beatsText = narration.split('||').map(s => s.trim()).filter(Boolean);
+  const texts = beatsText.length > 0 ? beatsText : [narration.trim()];
 
-  return { file: mp3Path, duration, wordTimings };
+  console.log(`  Generating voiceover (${voice.name}) — ${texts.length} beat(s)...`);
+
+  const beats = [];
+  const wordTimings = [];
+  let cursor = 0;     // start time (s) of the current beat
+  let segOffset = 0;  // running global sentence index
+
+  for (let i = 0; i < texts.length; i++) {
+    const file = `beat_${i}.mp3`;
+    const mp3Path = join(AUDIO_DIR, file);
+    const vttPath = join(AUDIO_DIR, `beat_${i}.vtt`);
+
+    runEdgeTts(voice, texts[i], mp3Path, vttPath);
+    const dur = await getAudioDurationInSeconds(mp3Path);
+    const segs = parseVtt(readFileSync(vttPath, 'utf8'));
+
+    for (const w of buildWordTimings(segs, dur)) {
+      wordTimings.push({
+        word: w.word,
+        start: w.start + cursor,
+        end: w.end + cursor,
+        seg: w.seg + segOffset,
+        segStart: w.segStart,
+      });
+    }
+
+    beats.push({ file, startTime: cursor, duration: dur });
+    segOffset += segs.length;
+    cursor += dur + (i < texts.length - 1 ? GAP_SECONDS : 0);
+  }
+
+  console.log(`  Total duration: ${cursor.toFixed(1)}s (with ${texts.length - 1} gap(s))`);
+  return { beats, duration: cursor, wordTimings };
 }

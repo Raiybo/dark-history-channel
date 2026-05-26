@@ -38,6 +38,7 @@ export const SlideshowVideo = ({
   hookText,
   clips,
   scenes,
+  beats,
   hasMusic,
 }) => {
   const { durationInFrames, fps } = useVideoConfig();
@@ -80,8 +81,20 @@ export const SlideshowVideo = ({
       {/* Deep vignette */}
       <div style={{ position: 'absolute', inset: 0, background: grade.vignette, pointerEvents: 'none' }} />
 
-      {/* Narration audio */}
-      <Audio src={staticFile('audio/narration.mp3')} />
+      {/* Narration — each idea beat is its own track, with a real silent gap
+          between them so the narrator audibly breathes when the idea shifts. */}
+      {(beats && beats.length > 0
+        ? beats
+        : [{ file: 'narration.mp3', startTime: 0, duration: audioDuration }]
+      ).map((b, i) => (
+        <Sequence
+          key={`beat-${i}`}
+          from={Math.round((b.startTime || 0) * fps)}
+          durationInFrames={Math.round((b.duration || 0) * fps) + 6}
+        >
+          <Audio src={staticFile(`audio/${b.file}`)} />
+        </Sequence>
+      ))}
 
       {/* Background music */}
       {hasMusic && (

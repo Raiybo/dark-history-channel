@@ -57,6 +57,8 @@ async function run() {
 
   console.log('Step 4/7  Generating voiceover...');
   const audio = await generateAudio(script.narration, genre);
+  // Strip the beat markers now that the audio is split — keep clean text for captions/fallback.
+  script.narration = script.narration.replace(/\s*\|\|\s*/g, ' ').trim();
   console.log();
 
   console.log('Step 5/7  Preparing background music...');

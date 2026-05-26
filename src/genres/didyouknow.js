@@ -12,7 +12,7 @@ Return ONLY valid JSON, no markdown:
   "description": "2-3 sentences. Fun, factual, makes people want to comment. End with: #DidYouKnow #Facts #Shorts #LearnOnYouTube",
   "tags": ["did you know", "facts", "interesting facts", "science", "history", "fun facts", "today i learned", "shorts"],
   "hook_text": "MUST start with 'DID YOU KNOW'. State the surprising fact in the fewest words possible. MAX 7 WORDS. ALL CAPS. No punctuation. e.g. 'DID YOU KNOW HONEY NEVER SPOILS'. Must make scrolling impossible.",
-  "narration": "Exactly 80-90 words. Open with the hook line verbatim (as a spoken question). Then: (1) reveal the surprising fact plainly, (2) explain WHY it's true in simple vivid terms — the mechanism or the story, (3) add one extra detail that makes it even cooler, (4) land it with a satisfying 'mind = blown' closing thought. Speak like an excited friend, warm and clear. Final line is a light CTA: 'Follow for your daily did you know.' Max 8 words per sentence.",
+  "narration": "75-90 words. Open with the hook line verbatim (as a spoken question). Then: (1) reveal the surprising fact plainly, (2) explain WHY it's true in simple vivid terms — the mechanism or the story, (3) add one extra detail that makes it even cooler, (4) land it with a satisfying 'mind = blown' closing thought. Speak like an excited friend. Vary the rhythm so it never sounds flat: mix short punchy lines with a couple of longer ones, and use natural emphasis. Final line is a light CTA: 'Follow for your daily did you know.' IMPORTANT: separate each major idea shift with ' || ' (a literal double-pipe) — this marks a short breath/pause. Use 4 to 6 of them, including one right after the opening hook line. Never put || inside a single idea, and never start or end the narration with ||.",
   "scenes": [
     {"keyword": "pexels search query", "narration_moment": "first ~2 sentences of narration"},
     {"keyword": "pexels search query", "narration_moment": "next ~2 sentences"},
@@ -39,7 +39,7 @@ SCENE RULES — critical:
 }
 
 export const DYK_VOICE = {
-  name: 'en-US-AndrewMultilingualNeural',
+  name: 'en-US-AvaMultilingualNeural',
   rate: '+0%',
   pitch: '+0Hz',
 };
