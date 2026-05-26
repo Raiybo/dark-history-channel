@@ -44,6 +44,13 @@ export const SlideshowVideo = ({
   const grade = GENRE_GRADE[genre] || GENRE_GRADE.didyouknow;
   const timings = buildTimings((clips || []).length, durationInFrames);
 
+  // End the hook overlay when the narrator actually finishes the spoken hook
+  // line, so captions take over immediately (no silent dead-zone at the start).
+  const hookWordCount = (hookText || '').trim().split(/\s+/).filter(Boolean).length;
+  const hookEndFrame = (wordTimings && wordTimings.length >= hookWordCount && hookWordCount > 0)
+    ? Math.max(45, Math.min(Math.round(wordTimings[hookWordCount - 1].end * fps), durationInFrames - 1))
+    : HOOK_FRAMES;
+
   return (
     <div style={{ width: '100%', height: '100%', overflow: 'hidden', backgroundColor: '#040404' }}>
 
@@ -81,9 +88,9 @@ export const SlideshowVideo = ({
         <Audio src={staticFile('music/background.mp3')} volume={0.11} loop />
       )}
 
-      {/* Hook — first 5 seconds */}
-      <Sequence from={0} durationInFrames={HOOK_FRAMES + 20}>
-        <HookScene hookText={hookText || ''} genre={genre} />
+      {/* Hook — until the spoken hook line ends */}
+      <Sequence from={0} durationInFrames={hookEndFrame + 20}>
+        <HookScene hookText={hookText || ''} genre={genre} endFrame={hookEndFrame} />
       </Sequence>
 
       {/* Subtitles */}
@@ -92,6 +99,7 @@ export const SlideshowVideo = ({
         audioDuration={audioDuration}
         wordTimings={wordTimings}
         genre={genre}
+        startFrame={hookEndFrame}
       />
 
       {/* CTA card — last 3 seconds */}

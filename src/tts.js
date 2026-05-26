@@ -18,7 +18,11 @@ function parseTimestamp(ts) {
 
 function parseVtt(vttContent) {
   const segments = [];
-  const blocks = vttContent.trim().split(/\n\n+/);
+  // Normalize line endings first — edge-tts on Windows writes CRLF, and a raw
+  // \n\n split would never match \r\n\r\n, collapsing the whole file into one
+  // bogus cue (which made every word timing garbage and the captions drift).
+  const normalized = vttContent.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  const blocks = normalized.trim().split(/\n\n+/);
   for (const block of blocks) {
     const lines = block.trim().split('\n');
     const timeLine = lines.find(l => l.includes('-->'));
@@ -32,20 +36,36 @@ function parseVtt(vttContent) {
   return segments;
 }
 
+// edge-tts gives sentence-level cues, so we split each cue into words and
+// estimate how long each word actually takes. Even splitting makes long words
+// (and spoken-out numbers) lag; weighting by syllables/length tracks the voice
+// much more closely. Each word is tagged with its sentence index so captions
+// can be grouped by the line being spoken.
+function speakWeight(word) {
+  const w = word.toLowerCase().replace(/[^a-z0-9]/g, '');
+  if (!w) return 1;
+  // Digits are read aloud (e.g. "2560" -> "twenty-five sixty"), so weigh them heavily.
+  const digits = (w.match(/[0-9]/g) || []).length;
+  const vowelGroups = (w.match(/[aeiouy]+/g) || []).length;
+  const syllables = Math.max(1, vowelGroups, Math.ceil(w.length / 3));
+  return syllables + digits * 1.5;
+}
+
 function buildWordTimings(segments, totalDuration) {
   const wordTimings = [];
-  for (const seg of segments) {
+  segments.forEach((seg, segIndex) => {
     const words = seg.text.split(/\s+/).filter(Boolean);
     const segDuration = seg.end - seg.start;
-    const wordDur = segDuration / words.length;
+    const weights = words.map(speakWeight);
+    const totalWeight = weights.reduce((a, b) => a + b, 0) || words.length;
+    let cursor = seg.start;
     words.forEach((word, i) => {
-      wordTimings.push({
-        word,
-        start: seg.start + i * wordDur,
-        end: Math.min(seg.start + (i + 1) * wordDur, totalDuration),
-      });
+      const dur = segDuration * (weights[i] / totalWeight);
+      const start = cursor;
+      cursor = Math.min(cursor + dur, totalDuration);
+      wordTimings.push({ word, start, end: cursor, seg: segIndex, segStart: i === 0 });
     });
-  }
+  });
   return wordTimings;
 }
 

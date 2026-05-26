@@ -1,6 +1,7 @@
 import { useCurrentFrame, interpolate, spring } from 'remotion';
 import { loadFont } from '@remotion/google-fonts/Montserrat';
 
+// Fallback hook length when no spoken-word timing is available.
 export const HOOK_FRAMES = 150;
 
 const { fontFamily } = loadFont();
@@ -9,7 +10,7 @@ const GENRE_ACCENT = {
   didyouknow: '#FFC83D',
 };
 
-export const HookScene = ({ hookText, genre }) => {
+export const HookScene = ({ hookText, genre, endFrame = HOOK_FRAMES }) => {
   const frame = useCurrentFrame();
   const accent = GENRE_ACCENT[genre] || GENRE_ACCENT.didyouknow;
   const words = (hookText || '').split(' ');
@@ -17,20 +18,21 @@ export const HookScene = ({ hookText, genre }) => {
   // Quick flash-in from black on the very first frames
   const flashIn = interpolate(frame, [0, 6], [0, 1], { extrapolateRight: 'clamp' });
 
-  // Fade out near the end
+  // Fade out as the spoken hook line ends
   const fadeOut = interpolate(
     frame,
-    [HOOK_FRAMES - 18, HOOK_FRAMES],
+    [endFrame - 18, endFrame],
     [1, 0],
     { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
   );
 
   const containerOpacity = Math.min(flashIn, fadeOut);
 
-  // Pulsing glow on the accent word (peaks at frame 60)
+  // Pulsing glow on the accent word — keyframes scale to the hook length so
+  // they stay strictly increasing even for short (adaptive) hooks.
   const glowPulse = interpolate(
     frame,
-    [30, 60, 90, HOOK_FRAMES - 20],
+    [0, endFrame * 0.4, endFrame * 0.7, endFrame],
     [0.6, 1.0, 0.7, 0.5],
     { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
   );
