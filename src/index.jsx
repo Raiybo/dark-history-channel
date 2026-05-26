@@ -17,7 +17,6 @@ export const RemotionRoot = () => {
         narration:     'Did you know honey never spoils. Archaeologists found edible honey in ancient tombs.',
         audioDuration: 50,
         wordTimings:   [],
-        sceneStarts:   [],
         channelName:   'Did You Know',
         genre:         'didyouknow',
         hookText:      'DID YOU KNOW HONEY NEVER SPOILS',

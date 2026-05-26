@@ -16,20 +16,14 @@ const GENRE_GRADE = {
   },
 };
 
-// Build footage timings from the real spoken-word clock (sceneStarts, in seconds).
-// Each clip cuts exactly when the narrator reaches that scene's words, so footage,
-// captions, and voice all move on the same timeline. Falls back to an even split.
-function buildTimings(scenes, sceneStarts, fps, durationInFrames) {
-  const sc = scenes || [];
-  if (sc.length === 0) return [];
-
-  const starts = (sceneStarts && sceneStarts.length === sc.length)
-    ? sceneStarts.map((s) => Math.round(s * fps))
-    : sc.map((_, i) => Math.round((i / sc.length) * durationInFrames));
-
-  return sc.map((_, i) => {
-    const from = Math.max(0, Math.min(starts[i], durationInFrames - 1));
-    const next = i < sc.length - 1 ? starts[i + 1] : durationInFrames;
+// Even cadence: every clip gets an equal slice of the video, so the footage
+// changes on one steady, predictable beat from start to finish. Captions stay
+// word-synced to the voice separately — the two layers no longer fight.
+function buildTimings(count, durationInFrames) {
+  if (count <= 0) return [];
+  return Array.from({ length: count }, (_, i) => {
+    const from = Math.round((i / count) * durationInFrames);
+    const next = Math.round(((i + 1) / count) * durationInFrames);
     return { from, frames: Math.max(1, next - from) };
   });
 }
@@ -44,12 +38,11 @@ export const SlideshowVideo = ({
   hookText,
   clips,
   scenes,
-  sceneStarts,
   hasMusic,
 }) => {
   const { durationInFrames, fps } = useVideoConfig();
   const grade = GENRE_GRADE[genre] || GENRE_GRADE.didyouknow;
-  const timings = buildTimings(scenes || [], sceneStarts || [], fps, durationInFrames);
+  const timings = buildTimings((clips || []).length, durationInFrames);
 
   return (
     <div style={{ width: '100%', height: '100%', overflow: 'hidden', backgroundColor: '#040404' }}>

@@ -24,7 +24,7 @@ export const VideoClip = ({ src, index, totalFrames, crossfade = 15, isFirst = f
       <OffthreadVideo
         src={staticFile(src)}
         muted
-        playbackRate={0.88}
+        playbackRate={1}
         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
       />
     </div>
