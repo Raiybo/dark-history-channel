@@ -6,7 +6,8 @@
   "scripts": {
     "studio": "remotion studio src/index.jsx",
     "generate": "node src/main.js",
-    "get-token": "node scripts/get-youtube-token.js"
+    "get-token": "node scripts/get-youtube-token.js",
+    "auth-tiktok": "node scripts/auth-tiktok.js"
   },
   "dependencies": {
     "@google-cloud/text-to-speech": "^5.3.0",

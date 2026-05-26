@@ -1,9 +1,18 @@
 name: Daily Did You Know Videos
 
 on:
+  # 5 reels/day, spread across high-engagement windows for a Lebanon (Asia/Beirut)
+  # audience. Times below are UTC; Beirut is currently UTC+3 (EEST, summer).
+  # NOTE: GitHub cron is fixed UTC and does NOT follow DST — in winter (EET,
+  # UTC+2) each post lands 1h later in Beirut, so nudge these by +1h around late
+  # October if you want the exact same local times year-round.
   schedule:
-    - cron: '0 23 * * *'  # Every day at 11:00 PM UTC (7PM EST / 4PM PST)
-  workflow_dispatch:        # Manual trigger from GitHub UI
+    - cron: '30 4 * * *'   # 07:30 Beirut — morning
+    - cron: '30 9 * * *'   # 12:30 Beirut — lunch
+    - cron: '0 13 * * *'   # 16:00 Beirut — afternoon
+    - cron: '30 16 * * *'  # 19:30 Beirut — prime evening
+    - cron: '30 18 * * *'  # 21:30 Beirut — night peak
+  workflow_dispatch:        # Manual trigger from GitHub UI (posts one reel)
 
 jobs:
   generate-videos:
@@ -36,7 +45,7 @@ jobs:
       - name: Install npm dependencies
         run: npm ci
 
-      - name: Generate & upload 5 Did You Know reels
+      - name: Generate & upload one Did You Know reel
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
@@ -44,14 +53,14 @@ jobs:
           YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
           CHANNEL_NAME: ${{ secrets.CHANNEL_NAME }}
+          TIKTOK_CLIENT_KEY: ${{ secrets.TIKTOK_CLIENT_KEY }}
+          TIKTOK_CLIENT_SECRET: ${{ secrets.TIKTOK_CLIENT_SECRET }}
+          TIKTOK_REFRESH_TOKEN: ${{ secrets.TIKTOK_REFRESH_TOKEN }}
+          TIKTOK_PRIVACY: ${{ secrets.TIKTOK_PRIVACY }}
           CI: 'true'
           UPLOAD: '1'
           GENRE_OVERRIDE: didyouknow
-        run: |
-          for i in 1 2 3 4 5; do
-            echo "──────────── Reel $i / 5 ────────────"
-            node src/main.js || echo "Reel $i failed — continuing"
-          done
+        run: node src/main.js
 
       - name: Commit updated used-ideas.json
         if: always()
