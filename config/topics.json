@@ -1,119 +1,95 @@
 [
   {
-    "category": "Central Banks & Interest Rates",
+    "category": "History",
     "topics": [
-      "How the Federal Reserve raising rates makes your mortgage cost 400 more per month",
-      "Why central banks printing money quietly steals your savings",
-      "How interest rates control whether you can afford a house",
-      "Why the Fed keeping rates high is crashing small businesses",
-      "How one Fed decision moved 10 trillion dollars in a single day",
-      "Why negative interest rates in Europe punished people for saving money",
-      "How the Bank of Japan losing control sent shockwaves through global markets",
-      "Why the Fed pivot could make or break the housing market in 2025"
+      "Did you know Oxford University is older than the Aztec Empire",
+      "Did you know Cleopatra lived closer to the Moon landing than to the pyramids",
+      "Did you know Roman concrete gets stronger underwater over time",
+      "Did you know the Great Wall of China is not visible from space",
+      "Did you know Vikings used crystals to navigate on cloudy days",
+      "Did you know ancient Egyptians invented toothpaste 5000 years ago",
+      "Did you know woolly mammoths were still alive when the pyramids were built",
+      "Did you know Napoleon was once attacked by a horde of rabbits"
     ]
   },
   {
-    "category": "AI & Jobs",
+    "category": "Space",
     "topics": [
-      "How ChatGPT cost thousands of writers their jobs in six months",
-      "Why AI replacing lawyers could save you thousands in legal fees",
-      "How Nvidia became the most valuable company on Earth through AI chips",
-      "Why 300 million jobs are at risk from AI in the next decade",
-      "How AI trading bots now control 70 percent of the stock market",
-      "Why Goldman Sachs says AI will replace 25 percent of all work",
-      "How Sam Altman plans to fund universal basic income through AI profits",
-      "Why the AI arms race between the US and China is the most expensive war never fought",
-      "How one AI model destroyed an entire industry overnight",
-      "Why companies using AI are growing five times faster than those that don't"
+      "Did you know a day on Venus is longer than its year",
+      "Did you know there is a giant cloud of alcohol in space",
+      "Did you know neutron stars are so dense a teaspoon weighs a billion tons",
+      "Did you know Saturn would float in water if it were big enough",
+      "Did you know footprints on the Moon will last millions of years",
+      "Did you know it rains diamonds on Neptune and Uranus",
+      "Did you know the Sun makes up 99 percent of the solar system's mass"
     ]
   },
   {
-    "category": "Billionaires & Power Moves",
+    "category": "Human Body",
     "topics": [
-      "How Elon Musk buying Twitter cost him 44 billion and changed global politics",
-      "Why Jeff Bezos buying a media empire controls what news you see",
-      "How BlackRock secretly owns a piece of almost everything you buy",
-      "Why Warren Buffett holding 300 billion in cash is a warning sign",
-      "How one Elon Musk tweet can move a cryptocurrency by 40 percent",
-      "Why billionaires are buying bunkers and what they know that you don't",
-      "How Larry Fink at BlackRock controls more money than most countries",
-      "Why Mark Zuckerberg spending 40 billion on the metaverse was the biggest bet in tech history",
-      "How Peter Thiel funded politicians who then changed laws that made him richer"
+      "Did you know your stomach gets a new lining every few days",
+      "Did you know you are taller in the morning than at night",
+      "Did you know your bones are stronger than steel by weight",
+      "Did you know you can't breathe and swallow at the same time",
+      "Did you know your brain uses 20 percent of your energy",
+      "Did you know your nose can remember 50000 different scents",
+      "Did you know you shed your entire outer skin every month"
     ]
   },
   {
-    "category": "Political Decisions & Your Wallet",
+    "category": "Animals",
     "topics": [
-      "How tariffs on Chinese goods added 1000 dollars to the average American shopping cart",
-      "Why the US debt hitting 35 trillion dollars will eventually cost every citizen",
-      "How one political decision caused grocery prices to rise 25 percent in two years",
-      "Why sanctions on Russia accidentally doubled energy bills across Europe",
-      "How student loan payments restarting cost graduates 400 dollars a month",
-      "Why the US dollar losing reserve currency status would crash your savings overnight",
-      "How government subsidies to oil companies cost taxpayers 20 billion a year",
-      "Why China dumping US Treasury bonds is the financial weapon nobody talks about",
-      "How the CHIPS Act is shifting 500 billion in semiconductor money back to America"
+      "Did you know octopuses have three hearts and blue blood",
+      "Did you know a group of flamingos is called a flamboyance",
+      "Did you know wombats produce cube-shaped poop",
+      "Did you know sea otters hold hands while sleeping",
+      "Did you know a shrimp's heart is located in its head",
+      "Did you know cows have best friends and get stressed apart",
+      "Did you know honeybees can recognize human faces"
     ]
   },
   {
-    "category": "Stock Market & Investing",
+    "category": "Food",
     "topics": [
-      "Why the stock market hitting all-time highs while people cannot afford rent makes no sense",
-      "How passive index funds now control more of the market than all hedge funds combined",
-      "Why short sellers bet billions that a company will fail and sometimes cause it",
-      "How the GameStop squeeze cost Wall Street 20 billion in one week",
-      "Why 90 percent of day traders lose money and who is taking it from them",
-      "How insider trading on Capitol Hill is completely legal for members of Congress",
-      "Why the next market crash will be triggered by something most people are not watching",
-      "How options trading turned retail investors into the biggest force on Wall Street"
+      "Did you know honey never spoils and lasts thousands of years",
+      "Did you know bananas are berries but strawberries are not",
+      "Did you know carrots were originally purple not orange",
+      "Did you know peanuts are not nuts they are legumes",
+      "Did you know pineapples take almost two years to grow",
+      "Did you know chocolate was once used as money by the Aztecs"
     ]
   },
   {
-    "category": "Housing & Real Estate",
+    "category": "Technology",
     "topics": [
-      "How hedge funds buying single family homes made it impossible for you to compete",
-      "Why rents rose 30 percent in two years while wages grew 4 percent",
-      "How Airbnb removing homes from the rental market pushed up your rent",
-      "Why home prices in major cities are completely disconnected from local incomes",
-      "How the 2008 financial crisis was engineered and who made billions from it",
-      "Why the commercial real estate collapse could trigger the next banking crisis",
-      "How remote work permanently shifted 1 trillion dollars of real estate value overnight"
+      "Did you know the first computer mouse was made of wood",
+      "Did you know more computing power launched Apollo 11 than a calculator",
+      "Did you know the @ symbol existed centuries before email",
+      "Did you know Wi-Fi was almost named after a sea monster",
+      "Did you know the first webcam watched a coffee pot",
+      "Did you know QWERTY keyboards were designed to slow you down"
     ]
   },
   {
-    "category": "Crypto & Digital Money",
+    "category": "Nature & Earth",
     "topics": [
-      "How Bitcoin going from zero to a million percent return changed who controls wealth",
-      "Why the US government approving Bitcoin ETFs moved 50 billion in a single week",
-      "How Sam Bankman-Fried stole 8 billion from regular people and almost got away with it",
-      "Why central bank digital currencies would give governments total control of your spending",
-      "How El Salvador making Bitcoin legal tender was either genius or catastrophe",
-      "Why Tether printing unbacked stablecoins could be the next Lehman Brothers moment",
-      "How crypto whales can legally manipulate prices that would land a stock trader in jail"
+      "Did you know lightning strikes Earth 8 million times a day",
+      "Did you know there is enough gold in the ocean for everyone",
+      "Did you know some bamboo grows almost a meter in a single day",
+      "Did you know the Sahara desert was once a green forest",
+      "Did you know a single bolt of lightning is hotter than the Sun's surface",
+      "Did you know there are more trees on Earth than stars in the Milky Way"
     ]
   },
   {
-    "category": "Tech Giants & Market Power",
+    "category": "Myths Busted",
     "topics": [
-      "How Apple charging a 30 percent tax on every app is worth more than most countries GDP",
-      "Why Google paying Apple 20 billion a year to stay the default search engine is the biggest secret in tech",
-      "How Amazon using seller data to undercut its own merchants is legal but devastating",
-      "Why Microsoft buying Activision for 69 billion changed the rules of gaming and tech monopolies",
-      "How TikTok's algorithm controlling what a billion people see is worth more than the platform itself",
-      "Why Meta spending 40 billion on AI infrastructure is either visionary or desperation",
-      "How Nvidia's chip monopoly means every AI company on Earth must pay its toll"
-    ]
-  },
-  {
-    "category": "Global Economy & Trade",
-    "topics": [
-      "Why China and the US decoupling their economies will cost every consumer thousands",
-      "How the Panama Canal being contested could raise the price of everything you buy",
-      "Why the petrodollar system ending would be the biggest financial shift in 50 years",
-      "How supply chain failures during COVID exposed that America makes almost nothing",
-      "Why Germany's economy collapsing is a warning sign the rest of the world is ignoring",
-      "How dedollarization — countries abandoning the US dollar — is accelerating faster than reported",
-      "Why the BRICS countries building an alternative to the dollar threatens American economic power"
+      "Did you know goldfish actually have months-long memories",
+      "Did you know lightning really can strike the same place twice",
+      "Did you know we use far more than 10 percent of our brain",
+      "Did you know bulls are not actually angered by the color red",
+      "Did you know the tongue taste map you learned in school is a myth",
+      "Did you know Einstein did not actually fail math in school"
     ]
   }
 ]

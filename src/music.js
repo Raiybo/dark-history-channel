@@ -15,16 +15,17 @@ function fetchWithTimeout(url, ms = 30000) {
 
 // Kevin MacLeod — CC BY 3.0 (royalty-free, attribution in description)
 const TRACKS = {
-  money: [
+  didyouknow: [
+    'https://incompetech.com/music/royalty-free/mp3-royaltyfree/Carefree.mp3',
+    'https://incompetech.com/music/royalty-free/mp3-royaltyfree/Wallpaper.mp3',
     'https://incompetech.com/music/royalty-free/mp3-royaltyfree/Invariance.mp3',
-    'https://incompetech.com/music/royalty-free/mp3-royaltyfree/Olympus.mp3',
   ],
 };
 
 export async function prepareMusic(genre) {
   mkdirSync(MUSIC_DIR, { recursive: true });
   const outputPath = join(MUSIC_DIR, 'background.mp3');
-  const urls = TRACKS[genre] || TRACKS.future;
+  const urls = TRACKS[genre] || TRACKS.didyouknow || [];
 
   for (const url of urls) {
     try {

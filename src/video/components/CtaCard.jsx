@@ -3,7 +3,7 @@ import { loadFont } from '@remotion/google-fonts/Montserrat';
 
 const { fontFamily } = loadFont();
 
-export const CtaCard = ({ accent = '#00D97E' }) => {
+export const CtaCard = ({ accent = '#FFC83D' }) => {
   const frame = useCurrentFrame();
 
   const slideUp = spring({
@@ -66,7 +66,7 @@ export const CtaCard = ({ accent = '#00D97E' }) => {
         textShadow: '0 2px 12px rgba(0,0,0,0.9)',
         textAlign: 'center',
       }}>
-        For insider moves like this
+        For your daily did you know
       </div>
     </div>
   );

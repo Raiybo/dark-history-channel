@@ -7,15 +7,13 @@ const { fontFamily } = loadFont();
 const GROUP_SIZE = 3;
 
 const GENRE_ACCENT = {
-  money:    '#00D97E',
-  future:   '#00C8FF',
-  optimize: '#F5A623',
+  didyouknow: '#FFC83D',
 };
 
 export const SlideshowSubtitles = ({ narration, audioDuration, wordTimings, genre }) => {
   const frame = useCurrentFrame();
   const { fps, durationInFrames } = useVideoConfig();
-  const accent = GENRE_ACCENT[genre] || GENRE_ACCENT.future;
+  const accent = GENRE_ACCENT[genre] || GENRE_ACCENT.didyouknow;
 
   const fadeIn = interpolate(frame, [HOOK_FRAMES, HOOK_FRAMES + 15], [0, 1], {
     extrapolateLeft: 'clamp',

@@ -16,11 +16,11 @@ const REQUIRED_ENV = [
 ];
 
 const GENRE_LABELS = {
-  money: 'Money & Power',
+  didyouknow: 'Did You Know',
 };
 
 function getTodayGenre() {
-  return 'money';
+  return 'didyouknow';
 }
 
 function checkEnv() {
@@ -38,7 +38,7 @@ async function run() {
   const label = GENRE_LABELS[genre];
 
   console.log('\n═══════════════════════════════════════');
-  console.log(`   DISTOIR — ${label}`);
+  console.log(`   ${label}`);
   console.log('═══════════════════════════════════════\n');
 
   console.log('Step 1/7  Generating idea...');

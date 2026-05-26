@@ -3,6 +3,7 @@ import { renderMedia, selectComposition } from '@remotion/renderer';
 import { copyFileSync, mkdirSync, writeFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { computeSceneStarts } from './align-scenes.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = join(__dirname, '..');
@@ -12,12 +13,16 @@ export async function renderVideo(script, audio) {
   mkdirSync(publicAudioDir, { recursive: true });
   copyFileSync(audio.file, join(publicAudioDir, 'narration.mp3'));
 
+  // Align footage cuts to the real moment each scene's words are spoken.
+  const sceneStarts = computeSceneStarts(script.scenes, audio.wordTimings, audio.duration);
+
   const inputProps = {
     title:           script.title,
     narration:       script.narration,
     audioDuration:   audio.duration,
     wordTimings:     audio.wordTimings || [],
-    channelName:     process.env.CHANNEL_NAME || 'Distoir',
+    sceneStarts,
+    channelName:     process.env.CHANNEL_NAME || 'Did You Know',
     genre:           script.genre,
     hookText:        script.hook_text,
     clips:           script.clips || [],

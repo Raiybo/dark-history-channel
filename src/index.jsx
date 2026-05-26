@@ -13,12 +13,14 @@ export const RemotionRoot = () => {
       width={1080}
       height={1920}
       defaultProps={{
-        title:         'Distoir Preview',
-        narration:     'This is Distoir. Where history meets optimization.',
+        title:         'Did You Know Preview',
+        narration:     'Did you know honey never spoils. Archaeologists found edible honey in ancient tombs.',
         audioDuration: 50,
-        channelName:   'Distoir',
-        genre:         'money',
-        hookText:      'THIS DECISION COSTS YOU 400 DOLLARS',
+        wordTimings:   [],
+        sceneStarts:   [],
+        channelName:   'Did You Know',
+        genre:         'didyouknow',
+        hookText:      'DID YOU KNOW HONEY NEVER SPOILS',
         clips:         [],
         scenes:        [],
         hasMusic:      false,

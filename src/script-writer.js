@@ -1,5 +1,5 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { getMoneyPrompt } from './genres/money.js';
+import { getDidYouKnowPrompt } from './genres/didyouknow.js';
 
 async function withRetry(fn, retries = 5, delayMs = 15000) {
   for (let i = 0; i < retries; i++) {
@@ -21,7 +21,7 @@ export async function generateScript(idea) {
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
   const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
-  const prompt = getMoneyPrompt(idea.topic);
+  const prompt = getDidYouKnowPrompt(idea.topic);
 
   const script = await withRetry(async () => {
     const result = await model.generateContent(prompt);

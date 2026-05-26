@@ -1,4 +1,4 @@
-name: Daily Distoir Videos
+name: Daily Did You Know Videos
 
 on:
   schedule:
@@ -36,7 +36,7 @@ jobs:
       - name: Install npm dependencies
         run: npm ci
 
-      - name: Video 1 — Money & Power
+      - name: Video 1 — Did You Know
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
@@ -46,10 +46,10 @@ jobs:
           CHANNEL_NAME: ${{ secrets.CHANNEL_NAME }}
           CI: 'true'
           UPLOAD: '1'
-          GENRE_OVERRIDE: money
+          GENRE_OVERRIDE: didyouknow
         run: node src/main.js
 
-      - name: Video 2 — Money & Power
+      - name: Video 2 — Did You Know
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
@@ -59,10 +59,10 @@ jobs:
           CHANNEL_NAME: ${{ secrets.CHANNEL_NAME }}
           CI: 'true'
           UPLOAD: '1'
-          GENRE_OVERRIDE: money
+          GENRE_OVERRIDE: didyouknow
         run: node src/main.js
 
-      - name: Video 3 — Money & Power
+      - name: Video 3 — Did You Know
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
@@ -72,7 +72,7 @@ jobs:
           CHANNEL_NAME: ${{ secrets.CHANNEL_NAME }}
           CI: 'true'
           UPLOAD: '1'
-          GENRE_OVERRIDE: money
+          GENRE_OVERRIDE: didyouknow
         run: node src/main.js
 
       - name: Commit updated used-ideas.json

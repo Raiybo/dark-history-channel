@@ -7,28 +7,30 @@ import { CtaCard } from './components/CtaCard.jsx';
 const CROSSFADE = 15;
 
 const GENRE_GRADE = {
-  money: {
-    overlay:      'rgba(0, 10, 2, 0.38)',
-    vignette:     'radial-gradient(ellipse at center, transparent 18%, rgba(0,0,0,0.90) 100%)',
+  didyouknow: {
+    overlay:      'rgba(8, 6, 24, 0.30)',
+    vignette:     'radial-gradient(ellipse at center, transparent 32%, rgba(4,2,16,0.82) 100%)',
     letterbox:    false,
-    watermark:    '#00D97E',
+    watermark:    '#FFC83D',
     watermarkTop: 72,
   },
 };
 
-function buildTimings(scenes, fps, durationInFrames) {
+// Build footage timings from the real spoken-word clock (sceneStarts, in seconds).
+// Each clip cuts exactly when the narrator reaches that scene's words, so footage,
+// captions, and voice all move on the same timeline. Falls back to an even split.
+function buildTimings(scenes, sceneStarts, fps, durationInFrames) {
   const sc = scenes || [];
   if (sc.length === 0) return [];
-  const totalSecs = sc.reduce((s, item) => s + (item.duration || 4), 0);
-  const scale = durationInFrames / (totalSecs * fps);
-  let cursor = 0;
-  return sc.map((item, i) => {
-    const isLast = i === sc.length - 1;
-    const rawFrames = Math.round((item.duration || 4) * fps * scale);
-    const frames = isLast ? Math.max(rawFrames, durationInFrames - cursor) : rawFrames;
-    const timing = { from: cursor, frames };
-    cursor += rawFrames;
-    return timing;
+
+  const starts = (sceneStarts && sceneStarts.length === sc.length)
+    ? sceneStarts.map((s) => Math.round(s * fps))
+    : sc.map((_, i) => Math.round((i / sc.length) * durationInFrames));
+
+  return sc.map((_, i) => {
+    const from = Math.max(0, Math.min(starts[i], durationInFrames - 1));
+    const next = i < sc.length - 1 ? starts[i + 1] : durationInFrames;
+    return { from, frames: Math.max(1, next - from) };
   });
 }
 
@@ -42,11 +44,12 @@ export const SlideshowVideo = ({
   hookText,
   clips,
   scenes,
+  sceneStarts,
   hasMusic,
 }) => {
   const { durationInFrames, fps } = useVideoConfig();
-  const grade = GENRE_GRADE[genre] || GENRE_GRADE.future;
-  const timings = buildTimings(scenes || [], fps, durationInFrames);
+  const grade = GENRE_GRADE[genre] || GENRE_GRADE.didyouknow;
+  const timings = buildTimings(scenes || [], sceneStarts || [], fps, durationInFrames);
 
   return (
     <div style={{ width: '100%', height: '100%', overflow: 'hidden', backgroundColor: '#040404' }}>
