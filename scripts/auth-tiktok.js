@@ -23,7 +23,9 @@ const authUrl =
   'https://www.tiktok.com/v2/auth/authorize/?' +
   new URLSearchParams({
     client_key: TIKTOK_CLIENT_KEY,
-    scope: 'video.publish,video.upload',
+    // Only the scopes granted pre-audit. After TikTok approves video.publish,
+    // change this to 'user.info.basic,video.upload,video.publish' and re-run.
+    scope: 'user.info.basic,video.upload',
     response_type: 'code',
     redirect_uri: TIKTOK_REDIRECT_URI,
     state: 'didyouknow',
