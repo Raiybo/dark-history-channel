@@ -40,6 +40,6 @@ SCENE RULES — critical:
 
 export const DYK_VOICE = {
   name: 'en-US-AvaMultilingualNeural',
-  rate: '+0%',
+  rate: '+10%',
   pitch: '+0Hz',
 };

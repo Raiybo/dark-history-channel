@@ -18,66 +18,77 @@ function saveUsedIdea(idea) {
   writeFileSync(USED_IDEAS_PATH, JSON.stringify(used, null, 2));
 }
 
-// Reliable fallback: pick an unused topic from the curated pool.
-function pickFromPool(used) {
-  const categories = JSON.parse(readFileSync(TOPICS_PATH, 'utf-8'));
-  const usedTopics = new Set(used.map(u => u.topic));
-  const pool = categories.flatMap(cat => cat.topics);
-  const available = pool.filter(t => !usedTopics.has(t));
+// Normalize a topic to a comparison key so near-duplicates (different wording,
+// same subject) are also treated as repeats: drop "did you know", punctuation,
+// and filler words, then collapse whitespace.
+function norm(s) {
+  return (s || '')
+    .toLowerCase()
+    .replace(/^\s*did you know/, '')
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\b(the|a|an|that|this|is|are|was|were|of|to|in|on|for|and|or|your|you|why|how|what|can|do|does)\b/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
 
-  if (available.length === 0) {
-    console.log('  Topic pool exhausted — resetting used-ideas list.');
-    writeFileSync(USED_IDEAS_PATH, JSON.stringify([], null, 2));
-    return pool[Math.floor(Math.random() * pool.length)];
-  }
+const usedKeySet = (used) => new Set(used.map(u => norm(u.topic)));
+
+// Curated fallback pool, used only if the AI is unavailable. Never resets, so it
+// never re-serves a used topic.
+function pickFromPool(usedKeys) {
+  const categories = JSON.parse(readFileSync(TOPICS_PATH, 'utf-8'));
+  const available = categories.flatMap(c => c.topics).filter(t => !usedKeys.has(norm(t)));
+  if (available.length === 0) return null;
   return available[Math.floor(Math.random() * available.length)];
 }
 
-// Primary: let Gemini invent a fresh, surprising "Did You Know" topic from any
-// field, steering clear of anything we've already covered.
-async function generateFreshTopic(used) {
+// Primary source: Gemini invents a fresh fact, steered away from everything
+// already used. Retries until it returns a genuinely new subject.
+async function generateFreshTopic(used, usedKeys) {
   if (!process.env.GEMINI_API_KEY) return null;
 
-  const recent = used.slice(-60).map(u => `- ${u.topic}`).join('\n');
-  const categories = JSON.parse(readFileSync(TOPICS_PATH, 'utf-8'))
-    .map(c => c.category).join(', ');
-
+  const recent = used.slice(-150).map(u => `- ${u.topic}`).join('\n');
+  const categories = JSON.parse(readFileSync(TOPICS_PATH, 'utf-8')).map(c => c.category).join(', ');
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
   const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
-  const prompt = `Invent ONE genuinely surprising "Did You Know" fact for a YouTube Shorts channel.
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const prompt = `Invent ONE genuinely surprising, TRUE "Did You Know" fact for a YouTube Shorts channel.
 It can come from any field: ${categories}, or anything else fascinating.
 
 Rules:
 - Must be 100% TRUE and verifiable.
-- Must be genuinely surprising — the kind of fact people repeat to friends.
-- Phrase it as a topic line beginning with "Did you know".
-- Keep it under 15 words.
-- It must NOT duplicate or closely resemble any of these already-used topics:
+- Genuinely surprising — the kind of fact people repeat to friends.
+- Phrase it as a topic line beginning with "Did you know", under 15 words.
+- It must be a COMPLETELY DIFFERENT subject from every already-used topic below.
+  Do not rephrase, narrow, or reuse the same subject as any of them:
 ${recent || '(none yet)'}
 
 Return ONLY the single topic line, nothing else.`;
 
-  try {
-    const result = await model.generateContent(prompt);
-    let topic = result.response.text().trim().replace(/^["'\-\s]+|["'\s]+$/g, '');
-    topic = topic.split('\n')[0].trim();
-    if (!/^did you know/i.test(topic) || topic.length < 12) return null;
-    return topic;
-  } catch (err) {
-    console.log(`  Topic generation failed (${err.message}) — using curated pool.`);
-    return null;
+    try {
+      const result = await model.generateContent(prompt);
+      const topic = result.response.text().trim().split('\n')[0].replace(/^["'\-\s]+|["'\s]+$/g, '').trim();
+      if (/^did you know/i.test(topic) && topic.length >= 12 && !usedKeys.has(norm(topic))) {
+        return topic;
+      }
+    } catch (err) {
+      console.log(`  Topic-gen attempt ${attempt + 1} failed (${err.message}); retrying...`);
+      await new Promise(r => setTimeout(r, 3000));
+    }
   }
+  return null;
 }
 
 export async function generateIdea(genre) {
   const used = loadUsedIdeas();
-  const usedTopics = new Set(used.map(u => u.topic.toLowerCase()));
+  const usedKeys = usedKeySet(used);
 
-  let topic = await generateFreshTopic(used);
-  if (!topic || usedTopics.has(topic.toLowerCase())) {
-    topic = pickFromPool(used);
-  }
+  // 1) fresh AI topic (deduped), 2) unused curated pool, 3) last-ditch AI call.
+  let topic = await generateFreshTopic(used, usedKeys);
+  if (!topic) topic = pickFromPool(usedKeys);
+  if (!topic) topic = await generateFreshTopic(used, new Set());
+  if (!topic) throw new Error('Could not generate a unique topic (AI unavailable and pool exhausted).');
 
   console.log(`  Selected topic: ${topic}`);
   const idea = { genre, topic, title: topic };

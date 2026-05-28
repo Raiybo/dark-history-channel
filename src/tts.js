@@ -69,8 +69,9 @@ function buildWordTimings(segments, totalDuration) {
   return wordTimings;
 }
 
-// Silent breath inserted between idea beats (seconds).
-const GAP_SECONDS = 0.42;
+// Silent breath inserted between idea beats (seconds). Trimmed to keep the
+// overall pace ~10% snappier alongside the faster voice rate.
+const GAP_SECONDS = 0.38;
 
 function runEdgeTts(voice, text, mp3Path, vttPath) {
   const args = [
