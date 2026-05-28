@@ -82,7 +82,7 @@ async function run() {
       try {
         console.log('Also uploading to TikTok...');
         const tt = await uploadToTikTok(script, videoPath);
-        console.log(`  TikTok: ${tt.status} (privacy: ${tt.privacy}, id: ${tt.publishId})\n`);
+        console.log(`  TikTok: ${tt.status} (mode: ${tt.mode}, id: ${tt.publishId})\n`);
       } catch (err) {
         console.error(`  TikTok upload failed (continuing): ${err.message}\n`);
       }

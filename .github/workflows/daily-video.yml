@@ -57,6 +57,7 @@ jobs:
           TIKTOK_CLIENT_SECRET: ${{ secrets.TIKTOK_CLIENT_SECRET }}
           TIKTOK_REFRESH_TOKEN: ${{ secrets.TIKTOK_REFRESH_TOKEN }}
           TIKTOK_PRIVACY: ${{ secrets.TIKTOK_PRIVACY }}
+          TIKTOK_MODE: ${{ secrets.TIKTOK_MODE }}
           CI: 'true'
           UPLOAD: '1'
           GENRE_OVERRIDE: didyouknow
