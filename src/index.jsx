@@ -24,6 +24,7 @@ export const RemotionRoot = () => {
         clips:         [],
         scenes:        [],
         hasMusic:      false,
+        logo:          null,
       }}
       calculateMetadata={({ props }) => ({
         durationInFrames: Math.ceil((props.audioDuration + 1) * FPS),

@@ -40,6 +40,7 @@ export const SlideshowVideo = ({
   scenes,
   beats,
   hasMusic,
+  logo,
 }) => {
   const { durationInFrames, fps } = useVideoConfig();
   const grade = GENRE_GRADE[genre] || GENRE_GRADE.didyouknow;
@@ -117,7 +118,7 @@ export const SlideshowVideo = ({
 
       {/* CTA card — last 3 seconds */}
       <Sequence from={durationInFrames - 90} durationInFrames={90}>
-        <CtaCard accent={grade.watermark} />
+        <CtaCard accent={grade.watermark} logo={logo} />
       </Sequence>
 
       {/* Channel wordmark */}

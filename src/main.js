@@ -6,7 +6,6 @@ import { fetchSceneVideos } from './pexels.js';
 import { prepareMusic }     from './music.js';
 import { renderVideo }      from './renderer.js';
 import { uploadToYouTube }  from './uploader.js';
-import { uploadToTikTok }   from './tiktok-uploader.js';
 
 const REQUIRED_ENV = [
   'GEMINI_API_KEY',
@@ -75,18 +74,6 @@ async function run() {
     console.log('Step 7/7  Uploading to YouTube...');
     const result = await uploadToYouTube(script, videoPath);
     console.log(`  Published: ${result.url}\n`);
-
-    // TikTok is optional and best-effort: only runs when credentials are set,
-    // and a TikTok failure never fails the run (YouTube already succeeded).
-    if (process.env.TIKTOK_CLIENT_KEY && process.env.TIKTOK_REFRESH_TOKEN) {
-      try {
-        console.log('Also uploading to TikTok...');
-        const tt = await uploadToTikTok(script, videoPath);
-        console.log(`  TikTok: ${tt.status} (mode: ${tt.mode}, id: ${tt.publishId})\n`);
-      } catch (err) {
-        console.error(`  TikTok upload failed (continuing): ${err.message}\n`);
-      }
-    }
   } else {
     console.log('Step 7/7  Upload skipped (set UPLOAD=1 to enable)');
     console.log(`  Video saved at: ${videoPath}\n`);
