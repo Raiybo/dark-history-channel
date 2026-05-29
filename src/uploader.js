@@ -5,6 +5,44 @@ import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
+// High-reach evergreen hashtags appended to every reel. Topic-specific ones
+// (from the script's tags) go FIRST so the 3 YouTube shows above the title are
+// the most relevant. Kept well under YouTube's 15-hashtag limit (over 15 makes
+// YouTube ignore ALL of them).
+const EVERGREEN_HASHTAGS = ['#DidYouKnow', '#FunFacts', '#Facts', '#Trivia', '#Shorts', '#LearnOnYouTube', '#InterestingFacts'];
+const EVERGREEN_TAGS = ['shorts', 'did you know', 'facts', 'fun facts', 'trivia', 'interesting facts', 'educational', 'today i learned', 'knowledge', 'mind blowing facts'];
+
+function toHashtag(s) {
+  const camel = (s || '').replace(/[^a-zA-Z0-9 ]/g, '').split(/\s+/).filter(Boolean)
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1)).join('');
+  return camel ? '#' + camel : '';
+}
+
+function buildHashtags(tags) {
+  const topic = (tags || []).slice(0, 3).map(toHashtag).filter(Boolean);
+  const seen = new Set();
+  const out = [];
+  for (const h of [...topic, ...EVERGREEN_HASHTAGS]) {
+    const k = h.toLowerCase();
+    if (!seen.has(k)) { seen.add(k); out.push(h); }
+  }
+  return out.slice(0, 12).join(' ');
+}
+
+function buildTags(tags) {
+  const seen = new Set();
+  const out = [];
+  let total = 0;
+  for (const t of [...(tags || []), ...EVERGREEN_TAGS]) {
+    const clean = (t || '').trim();
+    const k = clean.toLowerCase();
+    if (!clean || seen.has(k)) continue;
+    if (total + clean.length + 1 > 480) break; // YouTube tags cap ~500 chars
+    seen.add(k); out.push(clean); total += clean.length + 1;
+  }
+  return out;
+}
+
 function buildYouTubeClient() {
   const oauth2Client = new google.auth.OAuth2(
     process.env.YOUTUBE_CLIENT_ID,
@@ -30,8 +68,8 @@ export async function uploadToYouTube(script, videoPath) {
     requestBody: {
       snippet: {
         title: script.title,
-        description: script.description,
-        tags: script.tags,
+        description: `${(script.description || '').trim()}\n\n${buildHashtags(script.tags)}`.trim(),
+        tags: buildTags(script.tags),
         categoryId: '27',  // Education
         defaultLanguage: 'en',
         defaultAudioLanguage: 'en'

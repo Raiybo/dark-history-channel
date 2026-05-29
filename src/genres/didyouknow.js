@@ -9,7 +9,7 @@ Return ONLY valid JSON, no markdown:
 
 {
   "title": "UNDER 50 characters so YouTube never truncates it. Lead with the most curiosity-driving words; you do NOT need a 'Did You Know' prefix. e.g. 'Honey Never Spoils — Here's Why' or 'Goldfish Remember for Months?!'",
-  "description": "2-3 sentences. Fun, factual, makes people want to comment. End with: #DidYouKnow #Facts #Shorts #LearnOnYouTube",
+  "description": "2-3 fun, factual sentences that tease the surprise, ending with a short question that makes people want to comment. Do NOT add hashtags — they are appended automatically.",
   "tags": ["did you know", "facts", "interesting facts", "science", "history", "fun facts", "today i learned", "shorts"],
   "hook_text": "MUST start with 'DID YOU KNOW'. Pick the SINGLE most scroll-stopping angle and state it in the fewest words possible. MAX 7 WORDS. ALL CAPS. No punctuation. e.g. 'DID YOU KNOW HONEY NEVER SPOILS'. Must make scrolling impossible.",
   "narration": "70-85 words, tight with zero filler. Open with the hook line verbatim, then IMMEDIATELY deliver the single most shocking part of the fact — no slow build-up. Then: explain WHY it's true in vivid, concrete, simple terms; add one extra detail that makes it even cooler. Short punchy sentences, high energy, like an excited friend. END with a question that invites a comment, then the follow CTA in the SAME final beat — e.g. 'Which one blew your mind? Follow Distoir for more.' IMPORTANT: separate each idea shift with ' || ' (a literal double-pipe) marking a short breath. Use 4 to 6 of them, including one right after the opening hook line. Never put || inside a single idea, and never start or end the narration with ||.",
