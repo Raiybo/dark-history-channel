@@ -17,12 +17,11 @@ export const CtaCard = ({ accent = '#FFC83D', logo = null }) => {
   return (
     <div style={{
       position: 'absolute',
-      bottom: 150,
-      left: 0,
-      right: 0,
+      inset: 0,
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
+      justifyContent: 'center',
       gap: 16,
       transform: `translateY(${translateY}px)`,
       opacity,

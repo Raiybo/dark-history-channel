@@ -1,4 +1,4 @@
-import { Audio, staticFile, useVideoConfig, Sequence } from 'remotion';
+import { Audio, Img, staticFile, useVideoConfig, Sequence } from 'remotion';
 import { VideoClip } from './components/VideoClip.jsx';
 import { HookScene, HOOK_FRAMES } from './components/HookScene.jsx';
 import { SlideshowSubtitles } from './components/SlideshowSubtitles.jsx';
@@ -121,27 +121,36 @@ export const SlideshowVideo = ({
         <CtaCard accent={grade.watermark} logo={logo} />
       </Sequence>
 
-      {/* Channel wordmark */}
+      {/* Persistent brand watermark, top-middle (anti-theft). Shows the faint
+          logo when provided, otherwise the channel wordmark. */}
       <div style={{
         position: 'absolute',
         top: grade.watermarkTop,
         left: 0, right: 0,
         display: 'flex',
         justifyContent: 'center',
+        alignItems: 'center',
         pointerEvents: 'none',
       }}>
-        <span style={{
-          fontFamily: '"Arial Black", Impact, sans-serif',
-          fontSize: 20,
-          fontWeight: 900,
-          letterSpacing: 9,
-          textTransform: 'uppercase',
-          color: grade.watermark,
-          opacity: 0.70,
-          textShadow: '0 0 30px rgba(0,0,0,0.95)',
-        }}>
-          {channelName}
-        </span>
+        {logo ? (
+          <Img
+            src={staticFile(logo)}
+            style={{ width: 90, height: 90, objectFit: 'contain', opacity: 0.3, borderRadius: 14 }}
+          />
+        ) : (
+          <span style={{
+            fontFamily: '"Arial Black", Impact, sans-serif',
+            fontSize: 20,
+            fontWeight: 900,
+            letterSpacing: 9,
+            textTransform: 'uppercase',
+            color: grade.watermark,
+            opacity: 0.55,
+            textShadow: '0 0 30px rgba(0,0,0,0.95)',
+          }}>
+            {channelName}
+          </span>
+        )}
       </div>
     </div>
   );
