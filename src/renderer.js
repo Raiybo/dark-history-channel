@@ -28,8 +28,8 @@ export async function renderVideo(script, audio) {
     scenes:          script.scenes || [],
     hasMusic:        script.hasMusic || false,
     characterImages: script.characterImages || null,
-    // Subscribe-card logo, only if present in public/ (so renders never break).
-    logo:            existsSync(join(ROOT_DIR, 'public', 'logo.png')) ? 'logo.png' : null,
+    // Brand logo (watermark + end-card), only if present so renders never break.
+    logo:            ['logo.png', 'logo.webp', 'logo.jpg'].find(f => existsSync(join(ROOT_DIR, 'public', f))) || null,
   };
 
   writeFileSync(join(ROOT_DIR, 'config', 'render-props.json'), JSON.stringify(inputProps, null, 2));
