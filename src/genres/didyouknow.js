@@ -8,11 +8,11 @@ Every fact must be 100% accurate and real. Audience: curious people of all ages 
 Return ONLY valid JSON, no markdown:
 
 {
-  "title": "Under 60 chars. Curiosity-driven, specific. e.g. 'Did You Know Honey Never Spoils?'",
+  "title": "UNDER 50 characters so YouTube never truncates it. Lead with the most curiosity-driving words; you do NOT need a 'Did You Know' prefix. e.g. 'Honey Never Spoils — Here's Why' or 'Goldfish Remember for Months?!'",
   "description": "2-3 sentences. Fun, factual, makes people want to comment. End with: #DidYouKnow #Facts #Shorts #LearnOnYouTube",
   "tags": ["did you know", "facts", "interesting facts", "science", "history", "fun facts", "today i learned", "shorts"],
-  "hook_text": "MUST start with 'DID YOU KNOW'. State the surprising fact in the fewest words possible. MAX 7 WORDS. ALL CAPS. No punctuation. e.g. 'DID YOU KNOW HONEY NEVER SPOILS'. Must make scrolling impossible.",
-  "narration": "75-90 words. Open with the hook line verbatim (as a spoken question). Then: (1) reveal the surprising fact plainly, (2) explain WHY it's true in simple vivid terms — the mechanism or the story, (3) add one extra detail that makes it even cooler, (4) land it with a satisfying 'mind = blown' closing thought. Speak like an excited friend. Vary the rhythm so it never sounds flat: mix short punchy lines with a couple of longer ones, and use natural emphasis. Final line is a light CTA: 'Follow for your daily did you know.' IMPORTANT: separate each major idea shift with ' || ' (a literal double-pipe) — this marks a short breath/pause. Use 4 to 6 of them, including one right after the opening hook line. Never put || inside a single idea, and never start or end the narration with ||.",
+  "hook_text": "MUST start with 'DID YOU KNOW'. Pick the SINGLE most scroll-stopping angle and state it in the fewest words possible. MAX 7 WORDS. ALL CAPS. No punctuation. e.g. 'DID YOU KNOW HONEY NEVER SPOILS'. Must make scrolling impossible.",
+  "narration": "70-85 words, tight with zero filler. Open with the hook line verbatim, then IMMEDIATELY deliver the single most shocking part of the fact — no slow build-up. Then: explain WHY it's true in vivid, concrete, simple terms; add one extra detail that makes it even cooler. Short punchy sentences, high energy, like an excited friend. END with a question that invites a comment, then the follow CTA in the SAME final beat — e.g. 'Which one blew your mind? Follow Distoir for more.' IMPORTANT: separate each idea shift with ' || ' (a literal double-pipe) marking a short breath. Use 4 to 6 of them, including one right after the opening hook line. Never put || inside a single idea, and never start or end the narration with ||.",
   "scenes": [
     {"keyword": "pexels search query", "narration_moment": "first ~2 sentences of narration"},
     {"keyword": "pexels search query", "narration_moment": "next ~2 sentences"},

@@ -59,6 +59,7 @@ It can come from any field: ${categories}, or anything else fascinating.
 Rules:
 - Must be 100% TRUE and verifiable.
 - Genuinely surprising — the kind of fact people repeat to friends.
+- Favor CONCRETE, VISUAL, RELATABLE subjects (animals, space, the human body, everyday objects, surprising history) — these get the most views. Avoid purely abstract or numbers-only facts that are hard to picture.
 - Phrase it as a topic line beginning with "Did you know", under 15 words.
 - It must be a COMPLETELY DIFFERENT subject from every already-used topic below.
   Do not rephrase, narrow, or reuse the same subject as any of them:
