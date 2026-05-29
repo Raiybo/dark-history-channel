@@ -40,6 +40,15 @@ export const SlideshowSubtitles = ({ narration, audioDuration, wordTimings, genr
     extrapolateRight: 'clamp',
   });
 
+  // Fade captions out before the centered "Follow Distoir" card appears (last
+  // 90 frames), so the spoken CTA isn't subtitled on top of the card.
+  const ctaStart = durationInFrames - 90;
+  const fadeOut = interpolate(frame, [ctaStart - 12, ctaStart], [1, 0], {
+    extrapolateLeft: 'clamp',
+    extrapolateRight: 'clamp',
+  });
+  const opacity = Math.min(fadeIn, fadeOut);
+
   const currentTime = frame / fps + LEAD_SECONDS;
 
   let timings = wordTimings?.length > 0 ? wordTimings : null;
@@ -78,7 +87,7 @@ export const SlideshowSubtitles = ({ narration, audioDuration, wordTimings, genr
       paddingBottom: 185,
       paddingLeft: 32,
       paddingRight: 32,
-      opacity: fadeIn,
+      opacity,
       pointerEvents: 'none',
     }}>
       <div style={{

@@ -135,7 +135,7 @@ export const SlideshowVideo = ({
         {logo ? (
           <Img
             src={staticFile(logo)}
-            style={{ width: 150, height: 150, objectFit: 'contain', opacity: 0.45, mixBlendMode: 'screen' }}
+            style={{ width: 150, height: 150, objectFit: 'contain', opacity: 0.5, mixBlendMode: 'screen' }}
           />
         ) : (
           <span style={{

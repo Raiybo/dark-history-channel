@@ -31,11 +31,11 @@ export const CtaCard = ({ accent = '#FFC83D', logo = null }) => {
         <Img
           src={staticFile(logo)}
           style={{
-            width: 140,
-            height: 140,
+            width: 180,
+            height: 180,
             objectFit: 'contain',
-            borderRadius: 28,
-            filter: `drop-shadow(0 0 ${20 * glow}px ${accent})`,
+            mixBlendMode: 'screen',
+            filter: `drop-shadow(0 0 ${18 * glow}px ${accent})`,
           }}
         />
       )}
