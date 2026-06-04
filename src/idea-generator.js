@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { chat } from './llm.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TOPICS_PATH = join(__dirname, '../config/topics.json');
@@ -45,12 +45,10 @@ function pickFromPool(usedKeys) {
 // Primary source: Gemini invents a fresh fact, steered away from everything
 // already used. Retries until it returns a genuinely new subject.
 async function generateFreshTopic(used, usedKeys) {
-  if (!process.env.GEMINI_API_KEY) return null;
+  if (!process.env.GROQ_API_KEY) return null;
 
   const recent = used.slice(-150).map(u => `- ${u.topic}`).join('\n');
   const categories = JSON.parse(readFileSync(TOPICS_PATH, 'utf-8')).map(c => c.category).join(', ');
-  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
   for (let attempt = 0; attempt < 4; attempt++) {
     const prompt = `Invent ONE genuinely surprising, TRUE "Did You Know" fact for a YouTube Shorts channel.
@@ -68,8 +66,8 @@ ${recent || '(none yet)'}
 Return ONLY the single topic line, nothing else.`;
 
     try {
-      const result = await model.generateContent(prompt);
-      const topic = result.response.text().trim().split('\n')[0].replace(/^["'\-\s]+|["'\s]+$/g, '').trim();
+      const text = await chat(prompt, { temperature: 0.95, maxTokens: 80 });
+      const topic = text.split('\n')[0].replace(/^["'\-\s]+|["'\s]+$/g, '').trim();
       if (/^did you know/i.test(topic) && topic.length >= 12 && !usedKeys.has(norm(topic))) {
         return topic;
       }
