@@ -3,12 +3,17 @@ import { getDidYouKnowPrompt } from './genres/didyouknow.js';
 
 export async function generateScript(idea) {
   const prompt = getDidYouKnowPrompt(idea.topic);
-  const text = await chatWithRetry(prompt, { temperature: 0.85, maxTokens: 2048 });
+  const text = await chatWithRetry(prompt, { temperature: 0.85, maxTokens: 2048, json: true });
 
-  // The model may wrap the JSON in markdown or add prose; grab the JSON block.
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error(`LLM returned non-JSON for script: ${text.slice(0, 200)}`);
-  const script = JSON.parse(jsonMatch[0]);
+  // With json:true Groq returns strict JSON; still tolerate a wrapping match just in case.
+  let script;
+  try {
+    script = JSON.parse(text);
+  } catch {
+    const m = text.match(/\{[\s\S]*\}/);
+    if (!m) throw new Error(`LLM returned non-JSON: ${text.slice(0, 200)}`);
+    script = JSON.parse(m[0]);
+  }
 
   return { ...script, genre: idea.genre };
 }

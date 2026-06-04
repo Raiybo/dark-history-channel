@@ -7,9 +7,19 @@
 const API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const MODEL = 'llama-3.3-70b-versatile';
 
-export async function chat(prompt, { temperature = 0.9, maxTokens = 1024 } = {}) {
+export async function chat(prompt, { temperature = 0.9, maxTokens = 1024, json = false } = {}) {
   const key = process.env.GROQ_API_KEY;
   if (!key) throw new Error('GROQ_API_KEY not set');
+
+  const body = {
+    model: MODEL,
+    messages: [{ role: 'user', content: prompt }],
+    temperature,
+    max_tokens: maxTokens,
+  };
+  // json:true forces Groq to return strictly valid JSON (no markdown fences,
+  // no truncation mid-string). Avoids the parse failures we hit on long scripts.
+  if (json) body.response_format = { type: 'json_object' };
 
   const res = await fetch(API_URL, {
     method: 'POST',
@@ -17,12 +27,7 @@ export async function chat(prompt, { temperature = 0.9, maxTokens = 1024 } = {})
       Authorization: `Bearer ${key}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      model: MODEL,
-      messages: [{ role: 'user', content: prompt }],
-      temperature,
-      max_tokens: maxTokens,
-    }),
+    body: JSON.stringify(body),
   });
 
   const data = await res.json().catch(() => ({}));
