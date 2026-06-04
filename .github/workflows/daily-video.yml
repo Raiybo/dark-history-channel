@@ -16,6 +16,15 @@ on:
     - cron: '30 18 * * *'  # 21:30 Beirut — night peak
   workflow_dispatch:        # Manual trigger from GitHub UI (posts one reel)
 
+# Serialize ALL runs (scheduled + manual). Parallel runs race on idea-generation
+# — they each read the same used-ideas.json before any has pushed, so Groq can
+# return the same topic to multiple runs. With this lock, the next run waits
+# for the current to finish and push, then starts with up-to-date state. Also
+# prevents Groq's per-minute token budget from being hammered by parallel runs.
+concurrency:
+  group: daily-video
+  cancel-in-progress: false
+
 jobs:
   generate-videos:
     runs-on: ubuntu-latest
