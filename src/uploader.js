@@ -71,7 +71,7 @@ export async function uploadToYouTube(script, videoPath) {
     requestBody: {
       snippet: {
         title: script.title,
-        description: `${(script.description || '').trim()}\n\n${buildHashtags(script.tags)}`.trim(),
+        description: `${buildHashtags(script.tags)}\n\n${(script.description || '').trim()}`.trim(),
         tags: buildTags(script.tags),
         categoryId: '27',  // Education
         defaultLanguage: 'en',
