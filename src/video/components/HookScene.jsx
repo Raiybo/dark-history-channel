@@ -49,16 +49,18 @@ export const HookScene = ({ hookText, genre, endFrame = HOOK_FRAMES }) => {
     }}>
       <div style={{ textAlign: 'center', lineHeight: 1.1 }}>
         {words.map((word, i) => {
-          // Each word slams in earlier and harder
-          const delay = i * 7;
+          // Each word slams in fast and hard. A tight 4-frame stagger means even
+          // a full 7-word hook is fully on screen by ~frame 30 (~1s) — inside the
+          // make-or-break window before a viewer can swipe away.
+          const delay = i * 4;
           const wordSpring = spring({
             frame: Math.max(0, frame - delay),
             fps: 30,
-            config: { damping: 10, stiffness: 300, mass: 0.6 },
+            config: { damping: 11, stiffness: 340, mass: 0.5 },
           });
           const wordOpacity = interpolate(
             frame,
-            [delay, delay + 8],
+            [delay, delay + 5],
             [0, 1],
             { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
           );

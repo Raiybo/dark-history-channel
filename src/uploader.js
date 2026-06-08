@@ -9,8 +9,11 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 // (from the script's tags) go FIRST so the 3 YouTube shows above the title are
 // the most relevant. Kept well under YouTube's 15-hashtag limit (over 15 makes
 // YouTube ignore ALL of them).
-const EVERGREEN_HASHTAGS = ['#DidYouKnow', '#FunFacts', '#Facts', '#Trivia', '#Shorts', '#LearnOnYouTube', '#InterestingFacts'];
-const EVERGREEN_TAGS = ['shorts', 'did you know', 'facts', 'fun facts', 'trivia', 'interesting facts', 'educational', 'today i learned', 'knowledge', 'mind blowing facts'];
+// #Shorts #Viral #Facts lead the evergreen set so every upload always carries
+// the high-reach boost tags the channel relies on, followed by the niche-
+// specific evergreens. Topic hashtags still go FIRST overall (above-title slots).
+const EVERGREEN_HASHTAGS = ['#Shorts', '#Viral', '#Facts', '#DidYouKnow', '#FunFacts', '#Trivia', '#LearnOnYouTube', '#InterestingFacts'];
+const EVERGREEN_TAGS = ['shorts', 'viral', 'viral shorts', 'facts', 'did you know', 'fun facts', 'trivia', 'interesting facts', 'educational', 'today i learned', 'knowledge', 'mind blowing facts'];
 
 function toHashtag(s) {
   const camel = (s || '').replace(/[^a-zA-Z0-9 ]/g, '').split(/\s+/).filter(Boolean)
