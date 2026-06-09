@@ -38,8 +38,19 @@ const usedKeySet = (used) => new Set(used.map(u => norm(u.topic)));
 // same SUBJECT but rephrases it (e.g. "honey never spoils" vs "honey lasts
 // forever" — different exact match, same fact). If a candidate shares 2+
 // keywords AND >= 40% of its keywords with any used topic, treat as duplicate.
+// Light stemming so singular/plural and simple form variants compare equal
+// (wombat/wombats, pyramid/pyramids, keyboard/keyboards) — without this the
+// dedup misses reworded repeats, which is exactly how 4 dupes slipped in early.
+function stem(w) {
+  if (w.length <= 4) return w;
+  if (w.endsWith('ies')) return w.slice(0, -3) + 'y';
+  if (w.endsWith('es')) return w.slice(0, -2);
+  if (w.endsWith('s')) return w.slice(0, -1);
+  return w;
+}
+
 function topicKeywords(s) {
-  return new Set(norm(s).split(/\s+/).filter(w => w.length >= 4));
+  return new Set(norm(s).split(/\s+/).filter(w => w.length >= 4).map(stem));
 }
 
 function isTooSimilar(candidate, used) {
@@ -100,6 +111,32 @@ function pickFromPool(usedKeys, used) {
   return available[Math.floor(Math.random() * available.length)];
 }
 
+// Final, strictest dedup layer: ask the LLM whether the candidate is the SAME
+// core fact as any recent topic, even if worded completely differently —
+// catching reworded repeats that keyword overlap can never see. Best-effort:
+// any error returns false so it never blocks the pipeline.
+async function isSemanticDuplicate(topic, used) {
+  const recent = used.slice(-80).map(u => u.topic);
+  if (recent.length === 0) return false;
+  try {
+    const prompt = `You are strictly deduplicating ideas for a "Did You Know" channel. We must NEVER publish the same core fact twice.
+
+ALREADY PUBLISHED:
+${recent.map((t, i) => `${i + 1}. ${t}`).join('\n')}
+
+CANDIDATE: "${topic}"
+
+Would a viewer who saw one of the published videos feel the CANDIDATE is the SAME fact repeated — same specific subject AND same surprising point, even if reworded or framed from another angle? Answer YES if it would feel like a repeat. Answer NO only if it is clearly a different subject or a genuinely different fact.
+Reply with ONLY one word: YES or NO.`;
+    // maxTokens must leave room for this model's hidden "thinking" tokens — too
+    // small a budget (e.g. 4) returns an empty answer and silently disables the check.
+    const ans = (await chat(prompt, { temperature: 0, maxTokens: 512 })).trim().toUpperCase();
+    return ans.startsWith('Y');
+  } catch {
+    return false; // never block generation on a dedup-check failure
+  }
+}
+
 // Primary source: Gemini invents a fresh fact, steered away from everything
 // already used. Retries until it returns a genuinely new subject.
 async function generateFreshTopic(used, usedKeys) {
@@ -116,6 +153,7 @@ Rules:
 - Must be 100% TRUE and verifiable.
 - Genuinely surprising — the kind of fact people repeat to friends.
 - AVOID over-used facts that already flood YouTube Shorts (e.g. honey never spoils, bananas are berries, octopus has three hearts, sharks older than trees, we only use 10% of our brain, Cleopatra vs the pyramids, a day on Venus is longer than its year). Viewers have seen these a hundred times and skip instantly — pick something genuinely fresh and lesser-known.
+- STRONGLY favor "visual reveal" facts — a surprising HIDDEN visual about a familiar thing that we could literally show on screen: what an animal/object looks like under UV light, X-ray, or a microscope; the secret or original color of a famous product; what is hidden inside an everyday object; a startling size or scale comparison you can picture. (Our best-retaining videos are exactly this: "platypuses glow green under UV", "Coca-Cola's secret original color".) These keep viewers watching to the end, which is what grows the channel.
 - Favor CONCRETE, VISUAL, RELATABLE subjects (animals, space, the human body, everyday objects, surprising history) — these get the most views. Avoid purely abstract or numbers-only facts that are hard to picture.
 - Phrase it as a topic line beginning with "Did you know", under 15 words.
 - It must be a COMPLETELY DIFFERENT SUBJECT (not just different wording) from every already-used topic below. If your candidate shares 2+ significant keywords with any of these, pick a different subject entirely:
@@ -130,8 +168,13 @@ Return ONLY the single topic line, nothing else.`;
       const exactNew = !usedKeys.has(norm(topic));
       const subjectNew = !isTooSimilar(topic, used);
       const notCliche = !isCliche(topic);
-      if (formatOK && exactNew && subjectNew && notCliche) return topic;
-      if (formatOK && exactNew && subjectNew && !notCliche) {
+      if (formatOK && exactNew && subjectNew && notCliche) {
+        if (await isSemanticDuplicate(topic, used)) {
+          console.log(`  Topic is a reworded repeat of an earlier one, retrying...`);
+        } else {
+          return topic;
+        }
+      } else if (formatOK && exactNew && subjectNew && !notCliche) {
         console.log(`  Topic is an over-used cliché, retrying...`);
       } else if (formatOK && exactNew && !subjectNew) {
         console.log(`  Topic too similar to a used one, retrying...`);
