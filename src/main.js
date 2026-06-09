@@ -6,6 +6,7 @@ import { fetchSceneVideos } from './pexels.js';
 import { prepareMusic }     from './music.js';
 import { renderVideo }      from './renderer.js';
 import { uploadToYouTube }  from './uploader.js';
+import { sendDraftToTikTok, tiktokConfigured } from './tiktok.js';
 
 const REQUIRED_ENV = [
   'GEMINI_API_KEY',
@@ -77,6 +78,22 @@ async function run() {
   } else {
     console.log('Step 7/7  Upload skipped (set UPLOAD=1 to enable)');
     console.log(`  Video saved at: ${videoPath}\n`);
+  }
+
+  // TikTok: deliver the same MP4 to the creator's inbox as a DRAFT (manual post).
+  // Only runs when the TikTok secrets are set; never blocks the YouTube pipeline.
+  if (tiktokConfigured()) {
+    console.log('Sending draft to TikTok inbox...');
+    try {
+      const tk = await sendDraftToTikTok(videoPath);
+      console.log(`  TikTok draft delivered (publish_id ${tk.publish_id}). Open TikTok → inbox to add a caption and post.`);
+      const tikTags = (script.tags || []).slice(0, 3)
+        .map(t => '#' + String(t).replace(/[^a-zA-Z0-9]/g, ''))
+        .filter(h => h.length > 1).join(' ');
+      console.log(`  Suggested caption: ${script.title} ${tikTags} #fyp #viral #facts\n`);
+    } catch (err) {
+      console.log(`  TikTok draft skipped: ${err.message}\n`);
+    }
   }
 
   console.log('═══════════════════════════════════════');

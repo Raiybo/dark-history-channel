@@ -65,6 +65,10 @@ jobs:
           YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
           CHANNEL_NAME: ${{ secrets.CHANNEL_NAME }}
+          # TikTok draft delivery (optional — only acts if all three are set)
+          TIKTOK_CLIENT_KEY: ${{ secrets.TIKTOK_CLIENT_KEY }}
+          TIKTOK_CLIENT_SECRET: ${{ secrets.TIKTOK_CLIENT_SECRET }}
+          TIKTOK_REFRESH_TOKEN: ${{ secrets.TIKTOK_REFRESH_TOKEN }}
           CI: 'true'
           UPLOAD: '1'
           GENRE_OVERRIDE: didyouknow
