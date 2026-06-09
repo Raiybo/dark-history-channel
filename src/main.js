@@ -10,6 +10,8 @@ import { sendDraftToTikTok, tiktokConfigured } from './tiktok.js';
 import {
   checkTopic, checkScript, checkClips, checkAudio, checkRender,
 } from './pre-upload-checks.js';
+import { addVideoToThemedPlaylist } from './yt-playlists.js';
+import { saveCrossPostPack } from './cross-post.js';
 
 const REQUIRED_ENV = [
   'GEMINI_API_KEY',
@@ -85,7 +87,13 @@ async function run() {
   if (process.env.UPLOAD === '1') {
     console.log('Step 7/7  Uploading to YouTube...');
     const result = await uploadToYouTube(script, videoPath);
-    console.log(`  Published: ${result.url}\n`);
+    console.log(`  Published: ${result.url}`);
+    // Post-upload best-effort: classify into a themed playlist + save a cross-
+    // post pack for TikTok/Reels/Reddit. Both are wrapped so any error here
+    // never re-fails an already-successful upload.
+    await addVideoToThemedPlaylist(result.id, script);
+    saveCrossPostPack(script, videoPath, result.id, result.url);
+    console.log();
   } else {
     console.log('Step 7/7  Upload skipped (set UPLOAD=1 to enable)');
     console.log(`  Video saved at: ${videoPath}\n`);
