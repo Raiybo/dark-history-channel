@@ -12,28 +12,36 @@
 //
 // Set both GEMINI_API_KEY and GROQ_API_KEY so the fallback always has a path.
 
-import { GoogleGenerativeAI } from '@google/generative-ai';
-
+// Both providers are called via their plain REST endpoints with the built-in
+// fetch. We deliberately do NOT use the @google/generative-ai SDK: its fetch
+// flaked intermittently ("Error fetching") in CI and locally, while direct REST
+// calls were 100% reliable on the very same network and key.
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const GROQ_MODEL = 'llama-3.3-70b-versatile';
 const GEMINI_MODEL = 'gemini-2.5-flash';
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
 const PROVIDER = (process.env.LLM_PROVIDER || 'gemini').toLowerCase();
 
 async function callGemini(prompt, { temperature, maxTokens, json }) {
   const key = process.env.GEMINI_API_KEY;
   if (!key) throw new Error('GEMINI_API_KEY not set');
-  const genAI = new GoogleGenerativeAI(key);
-  const model = genAI.getGenerativeModel({
-    model: GEMINI_MODEL,
+  const body = {
+    contents: [{ parts: [{ text: prompt }] }],
     generationConfig: {
       temperature,
       maxOutputTokens: maxTokens,
       ...(json ? { responseMimeType: 'application/json' } : {}),
     },
+  };
+  const res = await fetch(`${GEMINI_URL}?key=${key}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
   });
-  const result = await model.generateContent(prompt);
-  return (result.response.text() || '').trim();
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(`Gemini ${res.status}: ${JSON.stringify(data.error || data).slice(0, 300)}`);
+  return (data.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join('').trim();
 }
 
 async function callGroq(prompt, { temperature, maxTokens, json }) {

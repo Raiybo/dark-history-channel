@@ -162,9 +162,16 @@ ${recent || '(none yet)'}
 Return ONLY the single topic line, nothing else.`;
 
     try {
-      const text = await chat(prompt, { temperature: 0.95, maxTokens: 80 });
+      // maxTokens must leave room for Gemini 2.5 Flash's hidden "thinking" tokens;
+      // at 80 the topic came back truncated to the bare stub "Did you know".
+      const text = await chat(prompt, { temperature: 0.95, maxTokens: 1024 });
       const topic = text.split('\n')[0].replace(/^["'\-\s]+|["'\s]+$/g, '').trim();
-      const formatOK = /^did you know/i.test(topic) && topic.length >= 12;
+      // Require real content AFTER the "did you know" prefix so a truncated stub
+      // can never be accepted as a topic (it would make the script writer fall
+      // back to the prompt's example fact).
+      const afterPrefix = topic.replace(/^did you know/i, '').replace(/[^a-z0-9]+/gi, ' ').trim();
+      const wordsAfter = afterPrefix ? afterPrefix.split(/\s+/).filter(w => w.length >= 3).length : 0;
+      const formatOK = /^did you know/i.test(topic) && topic.length >= 25 && wordsAfter >= 3;
       const exactNew = !usedKeys.has(norm(topic));
       const subjectNew = !isTooSimilar(topic, used);
       const notCliche = !isCliche(topic);
