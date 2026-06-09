@@ -56,7 +56,7 @@ function printSummary(label, s) {
   console.log(`\n${label}  (${s.startDate} → ${s.endDate}, ${s.days}d)`);
   console.log(`  views ........ ${s.views}  (${s.viewsPerDay}/day)`);
   console.log(`  watch time ... ${s.watchHours} h`);
-  console.log(`  avg view ..... ${s.avgViewSec}s  (${s.avgViewPct}% of each video)`);
+  console.log(`  avg view ..... ${Math.round(s.avgViewSec)}s  (${(+s.avgViewPct).toFixed(1)}% of each video)`);
   console.log(`  subs gained .. ${s.subscribersGained}`);
   console.log(`  engagement ... ${s.likes} likes · ${s.comments} comments · ${s.shares} shares`);
 }
@@ -65,7 +65,7 @@ function printList(label, vids) {
   console.log(`\n${label}`);
   if (!vids.length) { console.log('  (no data)'); return; }
   for (const v of vids) {
-    console.log(`  ${String(v.views).padStart(7)} views · ${String(v.avgViewPct).padStart(5)}% · ${v.title}`);
+    console.log(`  ${String(v.views).padStart(7)} views · ${(+v.avgViewPct).toFixed(1).padStart(5)}% retention · ${v.title}`);
   }
 }
 
@@ -81,8 +81,13 @@ try {
   printSummary('PRE-Groq  (Gemini era)', await summary(ymd(daysAgo(34)), '2026-06-03'));
   printSummary('POST-Groq (Llama era)',  await summary(GROQ_SWITCH, today));
 
-  printList('TOP 5 VIDEOS (last 30d, by views):',  await videosBy(start30, today, '-views'));
-  printList('WEAKEST 5 VIDEOS (last 30d, by views):', await videosBy(start30, today, 'views'));
+  // One supported query (sort must be descending for the video dimension), then
+  // derive both lists in JS. "Lowest retention of your most-viewed" is the most
+  // actionable cut — videos people clicked but swiped away from early.
+  const top = await videosBy(start30, today, '-views', 50);
+  printList('TOP 5 VIDEOS (last 30d, by views):', top.slice(0, 5));
+  const byRetention = [...top].sort((a, b) => a.avgViewPct - b.avgViewPct);
+  printList('LOWEST RETENTION (of your 50 most-viewed — biggest opportunities):', byRetention.slice(0, 5));
   console.log('\nTip: avg view % is the retention signal that drives reach — anything under ~50% is getting swiped early.\n');
 } catch (err) {
   const msg = err.message || String(err);
