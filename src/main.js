@@ -7,6 +7,9 @@ import { prepareMusic }     from './music.js';
 import { renderVideo }      from './renderer.js';
 import { uploadToYouTube }  from './uploader.js';
 import { sendDraftToTikTok, tiktokConfigured } from './tiktok.js';
+import {
+  checkTopic, checkScript, checkClips, checkAudio, checkRender,
+} from './pre-upload-checks.js';
 
 const REQUIRED_ENV = [
   'GEMINI_API_KEY',
@@ -44,22 +47,28 @@ async function run() {
 
   console.log('Step 1/7  Generating idea...');
   const idea = await generateIdea(genre);
-  console.log(`  Topic: "${idea.topic}"\n`);
+  console.log(`  Topic: "${idea.topic}"`);
+  checkTopic(idea);
+  console.log();
 
   console.log('Step 2/7  Writing script...');
   const script = await generateScript(idea);
   console.log(`  Hook: "${script.hook_text}"`);
-  console.log(`  Script: ${script.narration.split(' ').length} words\n`);
+  console.log(`  Script: ${script.narration.split(' ').length} words`);
+  checkScript(script);
+  console.log();
 
   console.log('Step 3/7  Fetching scene videos from Pexels...');
   const clips = await fetchSceneVideos(script.scenes);
   script.clips = clips;
+  checkClips(clips);
   console.log();
 
   console.log('Step 4/7  Generating voiceover...');
   const audio = await generateAudio(script.narration, genre);
   // Strip the beat markers now that the audio is split — keep clean text for captions/fallback.
   script.narration = script.narration.replace(/\s*\|\|\s*/g, ' ').trim();
+  checkAudio(audio);
   console.log();
 
   console.log('Step 5/7  Preparing background music...');
@@ -69,7 +78,9 @@ async function run() {
 
   console.log('Step 6/7  Rendering video...');
   const videoPath = await renderVideo(script, audio);
-  console.log(`  Saved to: ${videoPath}\n`);
+  console.log(`  Saved to: ${videoPath}`);
+  checkRender(videoPath);
+  console.log();
 
   if (process.env.UPLOAD === '1') {
     console.log('Step 7/7  Uploading to YouTube...');

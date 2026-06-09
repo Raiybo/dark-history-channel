@@ -30,12 +30,12 @@ function pickBestFile(videoFiles) {
     .sort((a, b) => b.width * b.height - a.width * a.height)[0] || null;
 }
 
-async function searchVideo(keyword, attempt = 0) {
+async function searchVideo(keyword, usedUrls, minDuration = 4, attempt = 0) {
   const params = new URLSearchParams({
     query: keyword,
     orientation: 'portrait',
     size: 'medium',
-    per_page: '10',
+    per_page: '15',
   });
 
   const res = await fetchWithTimeout(
@@ -47,7 +47,7 @@ async function searchVideo(keyword, attempt = 0) {
   if (res.status === 429) {
     if (attempt < 3) {
       await sleep(15000 * (attempt + 1));
-      return searchVideo(keyword, attempt + 1);
+      return searchVideo(keyword, usedUrls, minDuration, attempt + 1);
     }
     throw new Error('Rate limited');
   }
@@ -55,15 +55,27 @@ async function searchVideo(keyword, attempt = 0) {
   if (!res.ok) throw new Error(`Pexels API ${res.status}`);
 
   const data = await res.json();
+  // First pass: skip videos we've already used AND require sufficient source
+  // duration (so the clip doesn't end mid-scene and freeze, which reads as a
+  // glitch on screen). Second pass: relax the duration filter if nothing fits.
   for (const video of (data.videos || [])) {
     const file = pickBestFile(video.video_files || []);
-    if (file) return { link: file.link, duration: video.duration };
+    if (!file) continue;
+    if (usedUrls.has(file.link)) continue;
+    if (video.duration && video.duration < minDuration) continue;
+    return { link: file.link, duration: video.duration };
+  }
+  for (const video of (data.videos || [])) {
+    const file = pickBestFile(video.video_files || []);
+    if (!file) continue;
+    if (usedUrls.has(file.link)) continue;
+    return { link: file.link, duration: video.duration };
   }
 
-  // Retry with shorter keyword if no results
+  // Retry with shorter keyword if every result was either used or unsuitable.
   if (keyword.split(' ').length > 2) {
     const shorter = keyword.split(' ').slice(0, 2).join(' ');
-    return searchVideo(shorter, attempt + 1);
+    return searchVideo(shorter, usedUrls, minDuration, attempt + 1);
   }
 
   return null;
@@ -79,16 +91,21 @@ async function downloadClip(url, outputPath) {
 export async function fetchSceneVideos(scenes) {
   mkdirSync(VIDEOS_DIR, { recursive: true });
 
+  // Track the Pexels source URLs we've already used in THIS reel so no two
+  // scenes use the same footage — eliminates the "same clip showing twice" bug.
+  const usedUrls = new Set();
   const results = [];
+
   for (let i = 0; i < scenes.length; i++) {
     const { keyword } = scenes[i];
     try {
       process.stdout.write(`  [${i + 1}/${scenes.length}] "${keyword}"... `);
-      const video = await searchVideo(keyword);
+      const video = await searchVideo(keyword, usedUrls);
       if (!video) {
-        process.stdout.write('✗ (no results)\n');
+        process.stdout.write('✗ (no fresh results)\n');
         results.push(null);
       } else {
+        usedUrls.add(video.link);
         const clipPath = join(VIDEOS_DIR, `clip_${i}.mp4`);
         await downloadClip(video.link, clipPath);
         process.stdout.write('✓\n');
