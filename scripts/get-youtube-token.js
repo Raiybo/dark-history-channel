@@ -26,7 +26,11 @@ const oauth2Client = new google.auth.OAuth2(
   REDIRECT
 );
 
-const SCOPES = ['https://www.googleapis.com/auth/youtube'];
+const SCOPES = [
+  'https://www.googleapis.com/auth/youtube',               // upload + manage videos
+  'https://www.googleapis.com/auth/youtube.force-ssl',     // post the auto engagement comment
+  'https://www.googleapis.com/auth/yt-analytics.readonly', // read analytics (npm run analytics)
+];
 
 const authUrl = oauth2Client.generateAuthUrl({
   access_type: 'offline',

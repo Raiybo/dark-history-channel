@@ -46,6 +46,35 @@ function buildTags(tags) {
   return out;
 }
 
+// Pull the last question out of the description as a fallback comment.
+function extractQuestion(desc) {
+  const m = (desc || '').match(/[^.?!]*\?/g);
+  return m ? m[m.length - 1].trim() : '';
+}
+
+// Seed the comment section with a question FROM the channel right after upload.
+// Comments are a strong Shorts ranking signal and an owner question pulls
+// replies. Fully guarded: a failure (e.g. the token lacks the youtube.force-ssl
+// scope) only logs — it never blocks the upload. NOTE: the Data API cannot PIN
+// a comment, so pin it by hand if you want it stuck to the top.
+async function postEngagementComment(youtube, videoId, script) {
+  const text = (script.pinned_comment || '').trim()
+    || extractQuestion(script.description)
+    || 'Did this one surprise you? 👇';
+  try {
+    await youtube.commentThreads.insert({
+      part: ['snippet'],
+      requestBody: {
+        snippet: { videoId, topLevelComment: { snippet: { textOriginal: text } } },
+      },
+    });
+    console.log(`  Posted engagement comment: "${text}"`);
+  } catch (err) {
+    const msg = (err && err.message) || String(err);
+    console.log(`  Skipped engagement comment (${msg.slice(0, 120)}). Needs the youtube.force-ssl scope — run: npm run get-token`);
+  }
+}
+
 function buildYouTubeClient() {
   const oauth2Client = new google.auth.OAuth2(
     process.env.YOUTUBE_CLIENT_ID,
@@ -98,6 +127,8 @@ export async function uploadToYouTube(script, videoPath) {
 
   const videoId = response.data.id;
   const url = `https://www.youtube.com/watch?v=${videoId}`;
+
+  await postEngagementComment(youtube, videoId, script);
 
   return { id: videoId, url };
 }

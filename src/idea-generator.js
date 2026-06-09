@@ -54,12 +54,48 @@ function isTooSimilar(candidate, used) {
   return false;
 }
 
+// Over-saturated "did you know" facts that flood Shorts. Viewers have seen them
+// dozens of times, so they swipe on sight — which tanks retention and reach.
+// Any candidate sharing 2+ significant keywords with one of these is rejected.
+const CLICHE_SUBJECTS = [
+  'honey never spoils', 'bananas are berries', 'strawberries are not berries',
+  'octopus three hearts blue blood', 'wombat cube shaped poop', 'sharks older than trees',
+  'cleopatra closer pyramids moon landing', 'venus day longer than year',
+  'humans share dna with bananas', 'goldfish three second memory',
+  'great wall visible from space', 'humans use ten percent of brain',
+  'bulls hate the color red', 'hair and nails grow after death',
+  'eiffel tower taller in summer heat', 'nintendo started as playing cards',
+  'oxford older than aztec empire', 'lightning never strikes twice',
+  'napoleon was actually short', 'cracking knuckles causes arthritis',
+  'flamingos pink from shrimp', 'koala fingerprints like humans',
+  'astronauts grow taller in space', 'mantis shrimp punch boiling',
+  'tardigrades survive in space', 'hot water freezes faster mpemba',
+  'slugs snails have thousands of teeth', 'cows have best friends',
+  'sea otters hold hands sleeping', 'a group of flamingos is a flamboyance',
+];
+
+function isCliche(topic) {
+  const cand = topicKeywords(topic);
+  if (cand.size < 1) return false;
+  for (const c of CLICHE_SUBJECTS) {
+    const ckw = topicKeywords(c);
+    if (ckw.size === 0) continue;
+    let overlap = 0;
+    for (const w of cand) if (ckw.has(w)) overlap++;
+    // Only a cliché if the candidate covers MOST of this cliché's distinctive
+    // keywords — i.e. it really is that exact overdone fact, not just a fresh
+    // fact about the same popular subject (Eiffel Tower, sharks, the Great Wall…).
+    if (overlap >= 2 && overlap / ckw.size >= 0.6) return true;
+  }
+  return false;
+}
+
 // Curated fallback pool, used only if the AI is unavailable. Never resets, so it
 // never re-serves a used topic.
 function pickFromPool(usedKeys, used) {
   const categories = JSON.parse(readFileSync(TOPICS_PATH, 'utf-8'));
   const available = categories.flatMap(c => c.topics)
-    .filter(t => !usedKeys.has(norm(t)) && !isTooSimilar(t, used));
+    .filter(t => !usedKeys.has(norm(t)) && !isTooSimilar(t, used) && !isCliche(t));
   if (available.length === 0) return null;
   return available[Math.floor(Math.random() * available.length)];
 }
@@ -79,6 +115,7 @@ It can come from any field: ${categories}, or anything else fascinating.
 Rules:
 - Must be 100% TRUE and verifiable.
 - Genuinely surprising — the kind of fact people repeat to friends.
+- AVOID over-used facts that already flood YouTube Shorts (e.g. honey never spoils, bananas are berries, octopus has three hearts, sharks older than trees, we only use 10% of our brain, Cleopatra vs the pyramids, a day on Venus is longer than its year). Viewers have seen these a hundred times and skip instantly — pick something genuinely fresh and lesser-known.
 - Favor CONCRETE, VISUAL, RELATABLE subjects (animals, space, the human body, everyday objects, surprising history) — these get the most views. Avoid purely abstract or numbers-only facts that are hard to picture.
 - Phrase it as a topic line beginning with "Did you know", under 15 words.
 - It must be a COMPLETELY DIFFERENT SUBJECT (not just different wording) from every already-used topic below. If your candidate shares 2+ significant keywords with any of these, pick a different subject entirely:
@@ -92,8 +129,11 @@ Return ONLY the single topic line, nothing else.`;
       const formatOK = /^did you know/i.test(topic) && topic.length >= 12;
       const exactNew = !usedKeys.has(norm(topic));
       const subjectNew = !isTooSimilar(topic, used);
-      if (formatOK && exactNew && subjectNew) return topic;
-      if (formatOK && exactNew && !subjectNew) {
+      const notCliche = !isCliche(topic);
+      if (formatOK && exactNew && subjectNew && notCliche) return topic;
+      if (formatOK && exactNew && subjectNew && !notCliche) {
+        console.log(`  Topic is an over-used cliché, retrying...`);
+      } else if (formatOK && exactNew && !subjectNew) {
         console.log(`  Topic too similar to a used one, retrying...`);
       }
     } catch (err) {
