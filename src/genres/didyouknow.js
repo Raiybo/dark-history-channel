@@ -27,15 +27,21 @@ Return ONLY valid JSON, no markdown:
 }
 
 SCENE RULES — critical:
-- Exactly 8 scenes. They are spread evenly across the video, so each clip is on screen for an equal, calm beat (~4-5 seconds). Do NOT include a duration field.
-- "keyword" = Pexels stock VIDEO search query. Real footage. 2-4 words max.
-- "narration_moment" = roughly which part of the narration this clip covers (used only to pick relevant footage; split the narration into 8 ordered chunks).
-- The footage must literally SHOW the subject being spoken about, not a vague mood.
-  - Narrator says "bees make honey" -> keyword: "bees honeycomb closeup"
-  - Narrator says "ancient Egyptian tombs" -> keyword: "egyptian pyramids tomb"
-  - Narrator says "your brain at night" -> keyword: "brain scan neurons"
-- Vary the shots so it never feels static: closeups, nature, people, space, lab, archival-style.
-- Concrete subjects only. No abstractions.
+- Exactly 8 scenes. They are spread evenly across the video (~4-5s each). Do NOT include a duration field.
+- "keyword" = a Pexels stock VIDEO search query (2-4 words). Pexels has GENERIC stock — it does NOT have specific named people, branded products, or specific historical events. So:
+  - DO NOT search for specific people: "Steve Jobs" -> use "tech ceo presenting"; "Napoleon" -> "general on horseback battlefield"; "Mark Zuckerberg" -> "young man hoodie laptop".
+  - DO NOT search for specific events: "Black Plague" -> "medieval village dark"; "Watergate" -> "1970s washington dc"; "Wall Street crash" -> "stock market screens red".
+  - DO NOT search for branded products: "iPhone" -> "smartphone in hand"; "Coca-Cola" -> "soda glass bottle".
+  - Always use the GENERIC visual surrogate — era, setting, occupation, object type, mood.
+- "narration_moment" = roughly which part of the narration this clip covers (split the narration into 8 ordered chunks).
+- Each keyword must be DISTINCT (no two scenes asking for the same footage).
+- Examples of GOOD keywords by theme:
+  - Dark history: "medieval castle interior dim", "old battlefield smoke", "ancient ruins night", "victorian london street fog"
+  - Famous people (use occupation/era surrogates): "billionaire signing documents", "tech ceo presenting stage", "scientist lab microscope", "athlete stadium crowd"
+  - Money / power: "stock market trading screens", "luxury yacht ocean", "wall street skyscrapers", "private jet runway"
+  - Psychology: "person thinking close up", "crowd watching presentation", "brain scan animation", "two people conversation"
+- Vary the shots so it never feels static: closeups, wide shots, people, places, objects.
+- Concrete visual subjects only. No abstractions.
 - Portrait / vertical orientation.`;
 }
 

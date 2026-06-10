@@ -14,8 +14,48 @@ function loadUsedIdeas() {
 
 function saveUsedIdea(idea) {
   const used = loadUsedIdeas();
-  used.push({ topic: idea.topic, title: idea.title, genre: idea.genre, date: new Date().toISOString() });
+  used.push({
+    topic: idea.topic,
+    title: idea.title,
+    genre: idea.genre,
+    theme: idea.theme || null,
+    date: new Date().toISOString(),
+  });
   writeFileSync(USED_IDEAS_PATH, JSON.stringify(used, null, 2));
+}
+
+// The 4 content directions the channel mixes across each day. Every video is
+// tagged with one so we can enforce variety (no two back-to-back from the
+// same theme) and analyse which themes actually perform.
+const THEMES = {
+  dark_history: {
+    label: 'Dark / weird history',
+    guidance: 'A bizarre, dark, or hidden moment from history — scandals, mysteries, conspiracies that turned out true, twisted truths. Name real people/dates/places. Surprising and specific.',
+  },
+  famous_people: {
+    label: 'Untold stories about famous people',
+    guidance: 'A surprising, dark, or lesser-known fact about a real famous person — a billionaire, president, scientist, athlete, musician, founder, celebrity. Name them.',
+  },
+  money_power: {
+    label: 'Money / wealth / power',
+    guidance: 'A counter-intuitive fact about how money, business, or power actually works — hidden mechanics, surprising wealth moves, where the money really goes. Concrete numbers when possible.',
+  },
+  psychology: {
+    label: 'Psychology + life-hacks',
+    guidance: 'A psychology trick, persuasion principle, brain quirk, or actionable life hack a viewer can use today. Surprising AND useful.',
+  },
+};
+
+// Pick a theme that is under-represented in the most recent N picks so the
+// daily mix stays balanced. Falls back to a random theme if every theme is
+// equally represented.
+function pickUnderusedTheme(used) {
+  const recent = used.slice(-10).map(u => u.theme).filter(Boolean);
+  const counts = Object.fromEntries(Object.keys(THEMES).map(k => [k, 0]));
+  for (const t of recent) if (counts[t] !== undefined) counts[t]++;
+  const min = Math.min(...Object.values(counts));
+  const candidates = Object.keys(counts).filter(k => counts[k] === min);
+  return candidates[Math.floor(Math.random() * candidates.length)];
 }
 
 // Normalize a topic to a comparison key so near-duplicates (different wording,
@@ -137,24 +177,26 @@ Reply with ONLY one word: YES or NO.`;
   }
 }
 
-// Primary source: Gemini invents a fresh fact, steered away from everything
-// already used. Retries until it returns a genuinely new subject.
-async function generateFreshTopic(used, usedKeys) {
+// Primary source: Gemini invents a fresh fact in the assigned theme, steered
+// away from everything already used. Retries until it returns a genuinely
+// new subject. The theme is passed in so the daily mix stays balanced.
+async function generateFreshTopic(used, usedKeys, theme) {
   if (!process.env.GROQ_API_KEY) return null;
 
   const recent = used.slice(-250).map(u => `- ${u.topic}`).join('\n');
-  const categories = JSON.parse(readFileSync(TOPICS_PATH, 'utf-8')).map(c => c.category).join(', ');
+  const themeMeta = THEMES[theme] || THEMES.dark_history;
 
   for (let attempt = 0; attempt < 4; attempt++) {
     const prompt = `Invent ONE genuinely surprising, TRUE "Did You Know" fact for a YouTube Shorts channel.
-It can come from any field: ${categories}, or anything else fascinating.
+
+THIS VIDEO'S THEME: ${themeMeta.label}
+${themeMeta.guidance}
 
 Rules:
 - Must be 100% TRUE and verifiable.
 - Genuinely surprising — the kind of fact people repeat to friends.
-- AVOID over-used facts that already flood YouTube Shorts (e.g. honey never spoils, bananas are berries, octopus has three hearts, sharks older than trees, we only use 10% of our brain, Cleopatra vs the pyramids, a day on Venus is longer than its year). Viewers have seen these a hundred times and skip instantly — pick something genuinely fresh and lesser-known.
-- STRONGLY favor "visual reveal" facts — a surprising HIDDEN visual about a familiar thing that we could literally show on screen: what an animal/object looks like under UV light, X-ray, or a microscope; the secret or original color of a famous product; what is hidden inside an everyday object; a startling size or scale comparison you can picture. (Our best-retaining videos are exactly this: "platypuses glow green under UV", "Coca-Cola's secret original color".) These keep viewers watching to the end, which is what grows the channel.
-- Favor CONCRETE, VISUAL, RELATABLE subjects (animals, space, the human body, everyday objects, surprising history) — these get the most views. Avoid purely abstract or numbers-only facts that are hard to picture.
+- AVOID over-used facts that flood YouTube Shorts (honey never spoils, bananas are berries, octopus has three hearts, sharks older than trees, we use 10% of our brain, Cleopatra vs the pyramids, Venus day longer than year, Napoleon was short, etc.). Viewers have seen these a hundred times — pick something genuinely fresh and lesser-known.
+- Favor concrete, visual, name-specific subjects: actual people, places, dates, dollar amounts. Avoid vague abstractions.
 - Phrase it as a topic line beginning with "Did you know", under 15 words.
 - It must be a COMPLETELY DIFFERENT SUBJECT (not just different wording) from every already-used topic below. If your candidate shares 2+ significant keywords with any of these, pick a different subject entirely:
 ${recent || '(none yet)'}
@@ -198,14 +240,19 @@ export async function generateIdea(genre) {
   const used = loadUsedIdeas();
   const usedKeys = usedKeySet(used);
 
-  // 1) fresh AI topic (deduped), 2) unused curated pool, 3) last-ditch AI call.
-  let topic = await generateFreshTopic(used, usedKeys);
+  // Pick a theme that's under-represented in the last 10 picks so the 6-per-day
+  // mix stays balanced across dark history / famous people / money / psychology.
+  const theme = pickUnderusedTheme(used);
+  console.log(`  Theme: ${THEMES[theme].label}`);
+
+  // 1) fresh AI topic in this theme, 2) unused curated pool, 3) last-ditch AI call.
+  let topic = await generateFreshTopic(used, usedKeys, theme);
   if (!topic) topic = pickFromPool(usedKeys, used);
-  if (!topic) topic = await generateFreshTopic(used, new Set());
+  if (!topic) topic = await generateFreshTopic(used, new Set(), theme);
   if (!topic) throw new Error('Could not generate a unique topic (AI unavailable and pool exhausted).');
 
   console.log(`  Selected topic: ${topic}`);
-  const idea = { genre, topic, title: topic };
+  const idea = { genre, topic, title: topic, theme };
   saveUsedIdea(idea);
   return idea;
 }
