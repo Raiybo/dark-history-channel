@@ -88,6 +88,19 @@ async function downloadClip(url, outputPath) {
   await pipeline(res.body, writer);
 }
 
+// Pollinations is a free GET-based image generator. Used as a fallback for
+// scenes where Pexels has no relevant stock (named people, specific events,
+// branded products). Returns the image bytes directly — we save to disk and
+// the renderer detects the .jpg extension to render it as a Ken-Burns image
+// slide instead of a video clip.
+async function generateAiImage(keyword, outputPath) {
+  const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(keyword)}?width=1080&height=1920&nologo=true&model=flux`;
+  const res = await fetchWithTimeout(url, {}, 60000);
+  if (!res.ok) throw new Error(`Pollinations ${res.status}`);
+  const writer = createWriteStream(outputPath);
+  await pipeline(res.body, writer);
+}
+
 export async function fetchSceneVideos(scenes) {
   mkdirSync(VIDEOS_DIR, { recursive: true });
 
@@ -101,15 +114,25 @@ export async function fetchSceneVideos(scenes) {
     try {
       process.stdout.write(`  [${i + 1}/${scenes.length}] "${keyword}"... `);
       const video = await searchVideo(keyword, usedUrls);
-      if (!video) {
-        process.stdout.write('✗ (no fresh results)\n');
-        results.push(null);
-      } else {
+      if (video) {
         usedUrls.add(video.link);
         const clipPath = join(VIDEOS_DIR, `clip_${i}.mp4`);
         await downloadClip(video.link, clipPath);
         process.stdout.write('✓\n');
         results.push(`videos/clip_${i}.mp4`);
+      } else {
+        // Pexels has nothing fresh for this keyword (likely a specific named
+        // subject — person, event, brand). Fall back to AI image generation.
+        process.stdout.write('Pexels missed, generating AI image... ');
+        try {
+          const imgPath = join(VIDEOS_DIR, `clip_${i}.jpg`);
+          await generateAiImage(keyword, imgPath);
+          process.stdout.write('✓ AI image\n');
+          results.push(`videos/clip_${i}.jpg`);
+        } catch (err) {
+          process.stdout.write(`✗ AI image failed (${err.message})\n`);
+          results.push(null);
+        }
       }
     } catch (err) {
       process.stdout.write(`✗ (${err.message})\n`);

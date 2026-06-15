@@ -1,8 +1,20 @@
 import { OffthreadVideo, staticFile, useCurrentFrame, interpolate } from 'remotion';
+import { Slide } from './Slide.jsx';
 
 const FALLBACK_COLORS = ['#06080f', '#080610', '#06100a'];
+const IMAGE_RE = /\.(jpe?g|png|webp)$/i;
 
-export const VideoClip = ({ src, index, totalFrames, crossfade = 15, isFirst = false, isLast = false }) => {
+export const VideoClip = (props) => {
+  // AI-generated fallback images (Pollinations) come back as .jpg paths; render
+  // them as Ken-Burns slides instead of video. Keeps SlideshowVideo simple — it
+  // always uses <VideoClip> and we route here.
+  if (props.src && IMAGE_RE.test(props.src)) {
+    return <Slide {...props} />;
+  }
+  return <VideoClipInner {...props} />;
+};
+
+const VideoClipInner = ({ src, index, totalFrames, crossfade = 15, isFirst = false, isLast = false }) => {
   const frame = useCurrentFrame();
 
   const fadeIn  = isFirst ? 1 : interpolate(frame, [0, crossfade], [0, 1], { extrapolateRight: 'clamp' });

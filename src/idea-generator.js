@@ -24,10 +24,16 @@ function saveUsedIdea(idea) {
   writeFileSync(USED_IDEAS_PATH, JSON.stringify(used, null, 2));
 }
 
-// The 4 content directions the channel mixes across each day. Every video is
-// tagged with one so we can enforce variety (no two back-to-back from the
-// same theme) and analyse which themes actually perform.
+// Content directions the channel mixes. The audit (2026-06-15) showed that
+// "visual reveal" trivia is by far the channel's best-retaining format
+// (Coca-Cola green = 60% retention; Platypus UV = 55%; the entire top-5 are
+// visual reveals). The other 4 themes are still produced for variety but
+// visual_reveal is dominant by design.
 const THEMES = {
+  visual_reveal: {
+    label: 'Visual reveal trivia',
+    guidance: 'A surprising HIDDEN visual about a familiar thing we can literally show on screen — what an animal/object looks like under UV light, X-ray, microscope, or in slow motion; the secret or original color/shape of a famous product; what is hidden inside an everyday object; a startling size or scale comparison the viewer can picture. (Examples that performed best: "platypuses glow green under UV", "Coca-Cola was originally green", "vending machines kill more people than sharks".) These keep viewers watching to the end, which is what grows the channel.',
+  },
   dark_history: {
     label: 'Dark / weird history',
     guidance: 'A bizarre, dark, or hidden moment from history — scandals, mysteries, conspiracies that turned out true, twisted truths. Name real people/dates/places. Surprising and specific.',
@@ -46,15 +52,23 @@ const THEMES = {
   },
 };
 
-// Pick a theme that is under-represented in the most recent N picks so the
-// daily mix stays balanced. Falls back to a random theme if every theme is
-// equally represented.
+// Channel data shows visual_reveal massively out-performs everything else, so
+// we WEIGHT picks heavily toward it: 4 of every 6 reels are visual_reveal,
+// the remaining 2 rotate the other 4 themes for variety. Last-pick guard
+// prevents two visual_reveals back-to-back to keep some rhythm change.
 function pickUnderusedTheme(used) {
   const recent = used.slice(-10).map(u => u.theme).filter(Boolean);
-  const counts = Object.fromEntries(Object.keys(THEMES).map(k => [k, 0]));
+  const lastTheme = recent[recent.length - 1];
+
+  // ~65% chance for the winning format (unless the very last one was one).
+  if (lastTheme !== 'visual_reveal' && Math.random() < 0.65) return 'visual_reveal';
+
+  // Otherwise rotate among the 4 secondary themes, picking the least-used.
+  const others = ['dark_history', 'famous_people', 'money_power', 'psychology'];
+  const counts = Object.fromEntries(others.map(k => [k, 0]));
   for (const t of recent) if (counts[t] !== undefined) counts[t]++;
   const min = Math.min(...Object.values(counts));
-  const candidates = Object.keys(counts).filter(k => counts[k] === min);
+  const candidates = others.filter(k => counts[k] === min);
   return candidates[Math.floor(Math.random() * candidates.length)];
 }
 
@@ -108,21 +122,37 @@ function isTooSimilar(candidate, used) {
 // Over-saturated "did you know" facts that flood Shorts. Viewers have seen them
 // dozens of times, so they swipe on sight — which tanks retention and reach.
 // Any candidate sharing 2+ significant keywords with one of these is rejected.
+// Over-saturated facts. Variants matter — "sea otters hold paws while napping"
+// must trip the same filter as "sea otters hold hands sleeping". Audit (2026-06)
+// caught Sea Otters slipping through with a synonym, so we now list multiple
+// phrasings of each cliché AND extend the semantic LLM judge to treat the whole
+// list as "already published" (catches anything keyword overlap misses).
 const CLICHE_SUBJECTS = [
-  'honey never spoils', 'bananas are berries', 'strawberries are not berries',
-  'octopus three hearts blue blood', 'wombat cube shaped poop', 'sharks older than trees',
-  'cleopatra closer pyramids moon landing', 'venus day longer than year',
+  'honey never spoils', 'honey lasts forever', 'bananas are berries',
+  'strawberries are not berries', 'octopus three hearts blue blood',
+  'wombat cube shaped poop', 'sharks older than trees',
+  'cleopatra closer pyramids moon landing', 'cleopatra lived closer to moon landing',
+  'venus day longer than year', 'a day on venus is longer than a year',
   'humans share dna with bananas', 'goldfish three second memory',
-  'great wall visible from space', 'humans use ten percent of brain',
+  'goldfish memory only lasts seconds', 'great wall visible from space',
+  'humans use ten percent of brain', 'we only use ten percent of our brain',
   'bulls hate the color red', 'hair and nails grow after death',
   'eiffel tower taller in summer heat', 'nintendo started as playing cards',
   'oxford older than aztec empire', 'lightning never strikes twice',
-  'napoleon was actually short', 'cracking knuckles causes arthritis',
-  'flamingos pink from shrimp', 'koala fingerprints like humans',
+  'lightning can strike the same place twice', 'napoleon was actually short',
+  'cracking knuckles causes arthritis', 'flamingos pink from shrimp',
+  'koala fingerprints like humans', 'koala paws identical to human prints',
   'astronauts grow taller in space', 'mantis shrimp punch boiling',
   'tardigrades survive in space', 'hot water freezes faster mpemba',
-  'slugs snails have thousands of teeth', 'cows have best friends',
-  'sea otters hold hands sleeping', 'a group of flamingos is a flamboyance',
+  'slugs snails have thousands of teeth',
+  'cows have best friends', 'cows form lifelong friendships',
+  'sea otters hold hands sleeping', 'sea otters hold paws while napping',
+  'sea otters link paws to not drift apart',
+  'a group of flamingos is a flamboyance',
+  'platypuses glow green under uv', // ours — don't repeat
+  'coca-cola was originally green',  // ours — don't repeat
+  'shrimp punch nearly sun hot',     // ours — don't repeat
+  'vending machines kill more people than sharks', // ours — don't repeat
 ];
 
 function isCliche(topic) {
@@ -157,12 +187,16 @@ function pickFromPool(usedKeys, used) {
 // any error returns false so it never blocks the pipeline.
 async function isSemanticDuplicate(topic, used) {
   const recent = used.slice(-80).map(u => u.topic);
-  if (recent.length === 0) return false;
+  // Treat clichés as "already published" too — that closes the loophole where a
+  // reworded cliché ("sea otters hold paws while napping") slips past the
+  // keyword-overlap check on the actual CLICHE_SUBJECTS list.
+  const checkList = [...recent, ...CLICHE_SUBJECTS];
+  if (checkList.length === 0) return false;
   try {
     const prompt = `You are strictly deduplicating ideas for a "Did You Know" channel. We must NEVER publish the same core fact twice.
 
-ALREADY PUBLISHED:
-${recent.map((t, i) => `${i + 1}. ${t}`).join('\n')}
+ALREADY PUBLISHED (and over-used clichés to avoid):
+${checkList.map((t, i) => `${i + 1}. ${t}`).join('\n')}
 
 CANDIDATE: "${topic}"
 
