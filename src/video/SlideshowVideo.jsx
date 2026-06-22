@@ -16,16 +16,39 @@ const GENRE_GRADE = {
   },
 };
 
-// Even cadence: every clip gets an equal slice of the video, so the footage
-// changes on one steady, predictable beat from start to finish. Captions stay
-// word-synced to the voice separately — the two layers no longer fight.
-function buildTimings(count, durationInFrames) {
+// Footage is timed to the SPOKEN narration, not an even clock. Clip i covers its
+// 1/count slice of the actually-spoken words, so the visual on screen matches
+// what the narrator is saying at that moment — when the voice reaches "the crab
+// never ages", the crab clip is what's showing. The script writer assigns the 8
+// scenes in narration order, so word-slice i lines up with scene i's subject.
+// Falls back to an even split only if word timings are unavailable.
+function buildTimings(count, durationInFrames, wordTimings, fps) {
   if (count <= 0) return [];
-  return Array.from({ length: count }, (_, i) => {
+
+  const evenSplit = () => Array.from({ length: count }, (_, i) => {
     const from = Math.round((i / count) * durationInFrames);
     const next = Math.round(((i + 1) / count) * durationInFrames);
     return { from, frames: Math.max(1, next - from) };
   });
+
+  if (!wordTimings || wordTimings.length < count) return evenSplit();
+
+  const n = wordTimings.length;
+  const starts = [0];
+  for (let i = 1; i < count; i++) {
+    const t = wordTimings[Math.floor((i / count) * n)]?.start;
+    const frame = Number.isFinite(t) ? Math.round(t * fps) : Math.round((i / count) * durationInFrames);
+    starts.push(Math.min(frame, durationInFrames - 1));
+  }
+  starts.push(durationInFrames);
+  // Keep boundaries strictly increasing so no clip has a zero/negative span.
+  for (let i = 1; i < starts.length; i++) {
+    if (starts[i] <= starts[i - 1]) starts[i] = Math.min(starts[i - 1] + 1, durationInFrames);
+  }
+  return Array.from({ length: count }, (_, i) => ({
+    from: starts[i],
+    frames: Math.max(1, starts[i + 1] - starts[i]),
+  }));
 }
 
 export const SlideshowVideo = ({
@@ -44,7 +67,7 @@ export const SlideshowVideo = ({
 }) => {
   const { durationInFrames, fps } = useVideoConfig();
   const grade = GENRE_GRADE[genre] || GENRE_GRADE.didyouknow;
-  const timings = buildTimings((clips || []).length, durationInFrames);
+  const timings = buildTimings((clips || []).length, durationInFrames, wordTimings, fps);
 
   // End the hook overlay when the narrator actually finishes the spoken hook
   // line, so captions take over immediately (no silent dead-zone at the start).

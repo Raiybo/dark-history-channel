@@ -33,7 +33,8 @@ SCENE RULES — critical:
   - DO NOT search for specific events: "Black Plague" -> "medieval village dark"; "Watergate" -> "1970s washington dc"; "Wall Street crash" -> "stock market screens red".
   - DO NOT search for branded products: "iPhone" -> "smartphone in hand"; "Coca-Cola" -> "soda glass bottle".
   - Always use the GENERIC visual surrogate — era, setting, occupation, object type, mood.
-- "narration_moment" = roughly which part of the narration this clip covers (split the narration into 8 ordered chunks).
+- "narration_moment" = the EXACT words from the narration this clip plays over. Split the FULL narration into 8 equal, in-order chunks (chunk 1 = the first ~1/8 of the words, chunk 8 = the last) and quote each chunk verbatim. They must cover the whole narration with no gaps or overlap.
+- AUDIO-VISUAL SYNC IS CRITICAL: each scene is shown on screen exactly while its narration_moment is being SPOKEN. So scene i's keyword MUST depict the literal concrete subject the narrator says in chunk i. Walk through the narration in order: when a chunk says "the crab never ages", that scene's keyword is "crab closeup"; when a chunk says "the sun is a giant ball of plasma", that scene's keyword is "sun surface closeup". The viewer must SEE the thing at the same moment they HEAR it. Choose the keyword from the MAIN concrete noun in that chunk.
 - SCENE 1 IS THE MOST IMPORTANT: it must show the single most striking, instantly-recognizable shot of the reveal's core subject IMMEDIATELY — the visual that proves the hook. Never a slow or abstract establishing shot; the payoff visual must be on screen in the first second.
 - Each keyword must be DISTINCT (no two scenes asking for the same footage).
 - Examples of GOOD keywords by theme:
