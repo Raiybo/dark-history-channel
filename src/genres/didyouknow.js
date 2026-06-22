@@ -49,7 +49,7 @@ SCENE RULES — critical:
 
 export const DYK_VOICE = {
   // +10% slurred words; +4% keeps energy while staying crisp and clear.
-  name: 'en-US-AvaMultilingualNeural',
+  name: 'en-US-AndrewMultilingualNeural',
   rate: '+4%',
   pitch: '+0Hz',
 };
