@@ -56,6 +56,11 @@ export async function renderVideo(script, audio) {
     composition,
     serveUrl: bundled,
     codec: 'h264',
+    // Quality: capture frames at full JPEG quality (default 80 softens text and
+    // gradients) and encode near-visually-lossless (crf 18). File stays well
+    // under the 120MB check at 1080x1920.
+    jpegQuality: 100,
+    crf: 18,
     outputLocation: outputPath,
     inputProps,
     timeoutInMilliseconds: 60000,

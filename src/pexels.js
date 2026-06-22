@@ -18,16 +18,20 @@ function fetchWithTimeout(url, options, ms) {
 }
 
 function pickBestFile(videoFiles) {
-  const portrait = videoFiles.filter(f =>
-    f.file_type === 'video/mp4' && f.height > f.width
-  );
-  const candidates = portrait.length > 0
-    ? portrait
-    : videoFiles.filter(f => f.file_type === 'video/mp4');
+  const mp4 = videoFiles.filter(f => f.file_type === 'video/mp4');
+  const portrait = mp4.filter(f => f.height > f.width);
+  const pool = portrait.length > 0 ? portrait : mp4;
 
-  return candidates
-    .filter(f => f.width >= 720 && f.width <= 1920)
-    .sort((a, b) => b.width * b.height - a.width * a.height)[0] || null;
+  // Prefer footage whose width is AT LEAST our 1080-wide canvas so it never gets
+  // upscaled (upscaling 720p to 1080 is the soft/blurry look). Cap at UHD so the
+  // download stays reasonable, and pick the highest resolution in that band.
+  const sharp = pool
+    .filter(f => f.width >= 1080 && f.width <= 2160)
+    .sort((a, b) => b.width * b.height - a.width * a.height);
+  if (sharp.length > 0) return sharp[0];
+
+  // Nothing at canvas resolution — take the largest available rather than fail.
+  return pool.sort((a, b) => b.width * b.height - a.width * a.height)[0] || null;
 }
 
 async function searchVideo(keyword, usedUrls, minDuration = 4, attempt = 0) {

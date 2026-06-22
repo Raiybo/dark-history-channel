@@ -73,6 +73,24 @@ function buildWordTimings(segments, totalDuration) {
 // overall pace ~10% snappier alongside the faster voice rate.
 const GAP_SECONDS = 0.38;
 
+// Clean text before it reaches edge-tts. Dashes, brackets, slashes and smart
+// quotes make the neural voice stumble, mispronounce, or insert weird pauses —
+// the "glitchy / words not clear" symptom. We normalize to plain spoken words
+// and simple punctuation only. The VTT (and therefore captions) come from this
+// same cleaned text, so audio and on-screen words stay in sync.
+function sanitizeForTts(text) {
+  return (text || '')
+    .replace(/[“”]/g, '"').replace(/[‘’]/g, "'")  // smart quotes -> ascii
+    .replace(/\s*[—–-]\s*/g, ', ')                  // dashes -> a short comma pause
+    .replace(/[()[\]{}]/g, ' ')                      // brackets -> space
+    .replace(/[*_~`#|]/g, ' ')                       // stray markdown/symbols
+    .replace(/\s*&\s*/g, ' and ')                    // & -> and
+    .replace(/\s*\/\s*/g, ' or ')                    // slash -> or
+    .replace(/\s+([,.!?])/g, '$1')                   // no space before punctuation
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 function runEdgeTts(voice, text, mp3Path, vttPath) {
   const args = [
     '--voice', voice.name,
@@ -104,8 +122,8 @@ export async function generateAudio(narration, genre = 'didyouknow') {
   mkdirSync(AUDIO_DIR, { recursive: true });
   const voice = VOICES[genre] || VOICES.didyouknow;
 
-  const beatsText = narration.split('||').map(s => s.trim()).filter(Boolean);
-  const texts = beatsText.length > 0 ? beatsText : [narration.trim()];
+  const beatsText = narration.split('||').map(s => sanitizeForTts(s)).filter(Boolean);
+  const texts = beatsText.length > 0 ? beatsText : [sanitizeForTts(narration)];
 
   console.log(`  Generating voiceover (${voice.name}) — ${texts.length} beat(s)...`);
 
