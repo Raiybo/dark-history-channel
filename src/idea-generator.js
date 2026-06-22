@@ -24,53 +24,14 @@ function saveUsedIdea(idea) {
   writeFileSync(USED_IDEAS_PATH, JSON.stringify(used, null, 2));
 }
 
-// Content directions the channel mixes. The audit (2026-06-15) showed that
-// "visual reveal" trivia is by far the channel's best-retaining format
-// (Coca-Cola green = 60% retention; Platypus UV = 55%; the entire top-5 are
-// visual reveals). The other 4 themes are still produced for variety but
-// visual_reveal is dominant by design.
-const THEMES = {
-  visual_reveal: {
-    label: 'Visual reveal trivia',
-    guidance: 'A surprising HIDDEN visual about a familiar thing we can literally show on screen — what an animal/object looks like under UV light, X-ray, microscope, or in slow motion; the secret or original color/shape of a famous product; what is hidden inside an everyday object; a startling size or scale comparison the viewer can picture. (Examples that performed best: "platypuses glow green under UV", "Coca-Cola was originally green", "vending machines kill more people than sharks".) These keep viewers watching to the end, which is what grows the channel.',
-  },
-  dark_history: {
-    label: 'Dark / weird history',
-    guidance: 'A bizarre, dark, or hidden moment from history — scandals, mysteries, conspiracies that turned out true, twisted truths. Name real people/dates/places. Surprising and specific.',
-  },
-  famous_people: {
-    label: 'Untold stories about famous people',
-    guidance: 'A surprising, dark, or lesser-known fact about a real famous person — a billionaire, president, scientist, athlete, musician, founder, celebrity. Name them.',
-  },
-  money_power: {
-    label: 'Money / wealth / power',
-    guidance: 'A counter-intuitive fact about how money, business, or power actually works — hidden mechanics, surprising wealth moves, where the money really goes. Concrete numbers when possible.',
-  },
-  psychology: {
-    label: 'Psychology + life-hacks',
-    guidance: 'A psychology trick, persuasion principle, brain quirk, or actionable life hack a viewer can use today. Surprising AND useful.',
-  },
-};
-
-// Channel data shows visual_reveal massively out-performs everything else, so
-// we WEIGHT picks heavily toward it: 4 of every 6 reels are visual_reveal,
-// the remaining 2 rotate the other 4 themes for variety. Last-pick guard
-// prevents two visual_reveals back-to-back to keep some rhythm change.
-function pickUnderusedTheme(used) {
-  const recent = used.slice(-10).map(u => u.theme).filter(Boolean);
-  const lastTheme = recent[recent.length - 1];
-
-  // ~65% chance for the winning format (unless the very last one was one).
-  if (lastTheme !== 'visual_reveal' && Math.random() < 0.65) return 'visual_reveal';
-
-  // Otherwise rotate among the 4 secondary themes, picking the least-used.
-  const others = ['dark_history', 'famous_people', 'money_power', 'psychology'];
-  const counts = Object.fromEntries(others.map(k => [k, 0]));
-  for (const t of recent) if (counts[t] !== undefined) counts[t]++;
-  const min = Math.min(...Object.values(counts));
-  const candidates = others.filter(k => counts[k] === min);
-  return candidates[Math.floor(Math.random() * candidates.length)];
-}
+// The channel is FOCUSED on ONE format: "visual reveal" trivia. The data was
+// decisive — every high-retention video is a visual reveal (Coca-Cola green 60%,
+// Platypus UV 55%), while the mixed-in formats (dark history, famous people,
+// money/power, psychology) all retained UNDER 50% and dragged the channel below
+// the threshold where Shorts stops pushing, sending daily views from ~1,700 to
+// ~640. So the other genres were cleared on 2026-06-22 and we now produce ONLY
+// visual_reveal — one consistent format the algorithm can learn and push.
+const VISUAL_REVEAL_GUIDANCE = 'A surprising HIDDEN visual about a familiar thing we can literally SHOW on screen — what an animal/object looks like under UV light, X-ray, microscope, or in slow motion; the secret or original color/shape of a famous product; what is hidden inside an everyday object; a startling size or scale comparison the viewer can picture. (Examples that performed best: "platypuses glow green under UV", "Coca-Cola was originally green".) The fact MUST have a clear visual payoff we can show on screen — that visual is what holds viewers to the end, which is what grows the channel.';
 
 // Normalize a topic to a comparison key so near-duplicates (different wording,
 // same subject) are also treated as repeats: drop "did you know", punctuation,
@@ -214,23 +175,22 @@ Reply with ONLY one word: YES or NO.`;
 // Primary source: Gemini invents a fresh fact in the assigned theme, steered
 // away from everything already used. Retries until it returns a genuinely
 // new subject. The theme is passed in so the daily mix stays balanced.
-async function generateFreshTopic(used, usedKeys, theme) {
-  if (!process.env.GROQ_API_KEY) return null;
+async function generateFreshTopic(used, usedKeys) {
+  if (!process.env.GEMINI_API_KEY && !process.env.GROQ_API_KEY) return null;
 
   const recent = used.slice(-250).map(u => `- ${u.topic}`).join('\n');
-  const themeMeta = THEMES[theme] || THEMES.dark_history;
 
   for (let attempt = 0; attempt < 4; attempt++) {
     const prompt = `Invent ONE genuinely surprising, TRUE "Did You Know" fact for a YouTube Shorts channel.
 
-THIS VIDEO'S THEME: ${themeMeta.label}
-${themeMeta.guidance}
+THIS CHANNEL HAS ONE FORMAT — VISUAL REVEAL:
+${VISUAL_REVEAL_GUIDANCE}
 
 Rules:
 - Must be 100% TRUE and verifiable.
 - Genuinely surprising — the kind of fact people repeat to friends.
+- MUST be a visual reveal with something concrete we can SHOW on screen. Reject any idea that is just an abstract fact, a date, or a number with nothing to picture.
 - AVOID over-used facts that flood YouTube Shorts (honey never spoils, bananas are berries, octopus has three hearts, sharks older than trees, we use 10% of our brain, Cleopatra vs the pyramids, Venus day longer than year, Napoleon was short, etc.). Viewers have seen these a hundred times — pick something genuinely fresh and lesser-known.
-- Favor concrete, visual, name-specific subjects: actual people, places, dates, dollar amounts. Avoid vague abstractions.
 - Phrase it as a topic line beginning with "Did you know", under 15 words.
 - It must be a COMPLETELY DIFFERENT SUBJECT (not just different wording) from every already-used topic below. If your candidate shares 2+ significant keywords with any of these, pick a different subject entirely:
 ${recent || '(none yet)'}
@@ -274,15 +234,14 @@ export async function generateIdea(genre) {
   const used = loadUsedIdeas();
   const usedKeys = usedKeySet(used);
 
-  // Pick a theme that's under-represented in the last 10 picks so the 6-per-day
-  // mix stays balanced across dark history / famous people / money / psychology.
-  const theme = pickUnderusedTheme(used);
-  console.log(`  Theme: ${THEMES[theme].label}`);
+  // Single focused format now — visual reveal only (genres cleared 2026-06-22).
+  const theme = 'visual_reveal';
+  console.log('  Format: Visual reveal (only)');
 
-  // 1) fresh AI topic in this theme, 2) unused curated pool, 3) last-ditch AI call.
-  let topic = await generateFreshTopic(used, usedKeys, theme);
+  // 1) fresh AI topic, 2) unused curated pool, 3) last-ditch AI call.
+  let topic = await generateFreshTopic(used, usedKeys);
   if (!topic) topic = pickFromPool(usedKeys, used);
-  if (!topic) topic = await generateFreshTopic(used, new Set(), theme);
+  if (!topic) topic = await generateFreshTopic(used, new Set());
   if (!topic) throw new Error('Could not generate a unique topic (AI unavailable and pool exhausted).');
 
   console.log(`  Selected topic: ${topic}`);
