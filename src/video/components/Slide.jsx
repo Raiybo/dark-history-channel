@@ -10,6 +10,9 @@ const KEN_BURNS = [
 
 const FALLBACK_COLORS = ['#0a0a0f', '#050a0f', '#0a0f05'];
 
+// Pseudo-3D parallax: stack two scaled copies of the image with opposing drift
+// + a blurred background tier. AI-generated stills get a real cinematic-motion
+// feel without needing a depth model, which keeps the pipeline free.
 export const Slide = ({ src, index, totalFrames, crossfade = 15, isFirst = false, isLast = false }) => {
   const frame = useCurrentFrame();
   const preset = KEN_BURNS[index % KEN_BURNS.length];
@@ -18,6 +21,12 @@ export const Slide = ({ src, index, totalFrames, crossfade = 15, isFirst = false
   const scale = preset.startScale + (preset.endScale - preset.startScale) * progress;
   const tx = preset.startX + (preset.endX - preset.startX) * progress;
   const ty = preset.startY + (preset.endY - preset.startY) * progress;
+
+  // Background tier: bigger scale, opposite drift, heavy blur — reads as the
+  // out-of-focus environment behind the subject.
+  const bgScale = scale * 1.18;
+  const bgTx = -tx * 0.6;
+  const bgTy = -ty * 0.6;
 
   const fadeIn = isFirst ? 1 : interpolate(frame, [0, crossfade], [0, 1], { extrapolateRight: 'clamp' });
   const fadeOut = isLast ? 1 : interpolate(frame, [totalFrames, totalFrames + crossfade], [1, 0], { extrapolateRight: 'clamp' });
@@ -32,13 +41,28 @@ export const Slide = ({ src, index, totalFrames, crossfade = 15, isFirst = false
     );
   }
 
+  const imgSrc = staticFile(src);
+
   return (
     <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', opacity }}>
+      {/* Background tier — blurred, oppositely drifting copy for parallax depth */}
       <Img
-        src={staticFile(src)}
+        src={imgSrc}
         style={{
-          width: '100%',
-          height: '100%',
+          position: 'absolute', inset: 0,
+          width: '100%', height: '100%',
+          objectFit: 'cover',
+          transform: `scale(${bgScale}) translate(${bgTx}%, ${bgTy}%)`,
+          transformOrigin: 'center center',
+          filter: 'blur(14px) brightness(0.65) saturate(1.1)',
+        }}
+      />
+      {/* Foreground tier — sharp, moves with the main Ken Burns preset */}
+      <Img
+        src={imgSrc}
+        style={{
+          position: 'absolute', inset: 0,
+          width: '100%', height: '100%',
           objectFit: 'cover',
           transform: `scale(${scale}) translate(${tx}%, ${ty}%)`,
           transformOrigin: 'center center',

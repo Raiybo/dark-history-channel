@@ -1,8 +1,12 @@
-import { Audio, Img, staticFile, useVideoConfig, Sequence } from 'remotion';
+import { Audio, Img, staticFile, useVideoConfig, useCurrentFrame, Sequence } from 'remotion';
 import { VideoClip } from './components/VideoClip.jsx';
 import { HookScene, HOOK_FRAMES } from './components/HookScene.jsx';
 import { SlideshowSubtitles } from './components/SlideshowSubtitles.jsx';
 import { CtaCard } from './components/CtaCard.jsx';
+import { BrandSting, STING_FRAMES } from './components/BrandSting.jsx';
+import { SceneCallouts } from './components/SceneCallout.jsx';
+import { RevealStinger, STINGER_FRAMES } from './components/RevealStinger.jsx';
+import { ColorGrade } from './components/ColorGrade.jsx';
 
 const CROSSFADE = 15;
 
@@ -50,6 +54,44 @@ function buildTimings(count, durationInFrames, wordTimings, fps) {
     frames: Math.max(1, starts[i + 1] - starts[i]),
   }));
 }
+
+// Persistent top watermark — suppressed during the sting so the BrandSting
+// can own the watermark area as it animates into place.
+const TopWatermark = ({ grade, channelName, logo }) => {
+  const frame = useCurrentFrame();
+  if (frame < STING_FRAMES - 2) return null;
+  return (
+    <div style={{
+      position: 'absolute',
+      top: grade.watermarkTop,
+      left: 0, right: 0,
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      pointerEvents: 'none',
+    }}>
+      {logo ? (
+        <Img
+          src={staticFile(logo)}
+          style={{ width: 150, height: 150, objectFit: 'contain', opacity: 0.5, filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.7))' }}
+        />
+      ) : (
+        <span style={{
+          fontFamily: '"Arial Black", Impact, sans-serif',
+          fontSize: 20,
+          fontWeight: 900,
+          letterSpacing: 9,
+          textTransform: 'uppercase',
+          color: grade.watermark,
+          opacity: 0.55,
+          textShadow: '0 0 30px rgba(0,0,0,0.95)',
+        }}>
+          {channelName}
+        </span>
+      )}
+    </div>
+  );
+};
 
 export const SlideshowVideo = ({
   title,
@@ -102,6 +144,9 @@ export const SlideshowVideo = ({
       {/* Genre colour tint */}
       <div style={{ position: 'absolute', inset: 0, backgroundColor: grade.overlay, pointerEvents: 'none' }} />
 
+      {/* Brand color grade — warm shadows, cool blacks, edge vignette */}
+      <ColorGrade accent={grade.watermark} />
+
       {/* Deep vignette */}
       <div style={{ position: 'absolute', inset: 0, background: grade.vignette, pointerEvents: 'none' }} />
 
@@ -130,6 +175,11 @@ export const SlideshowVideo = ({
         <HookScene hookText={hookText || ''} genre={genre} endFrame={hookEndFrame} />
       </Sequence>
 
+      {/* Reveal stinger — fires the instant the hook hands off to captions */}
+      <Sequence from={Math.max(0, hookEndFrame - 4)} durationInFrames={STINGER_FRAMES}>
+        <RevealStinger accent={grade.watermark} />
+      </Sequence>
+
       {/* Subtitles */}
       <SlideshowSubtitles
         narration={narration}
@@ -139,42 +189,22 @@ export const SlideshowVideo = ({
         startFrame={hookEndFrame}
       />
 
+      {/* Per-scene lower-third callouts (skips scene 1, owned by the hook) */}
+      <SceneCallouts scenes={scenes} timings={timings} accent={grade.watermark} />
+
       {/* CTA card — last 3 seconds */}
       <Sequence from={durationInFrames - 90} durationInFrames={90}>
         <CtaCard accent={grade.watermark} logo={logo} />
       </Sequence>
 
-      {/* Persistent brand watermark, top-middle (anti-theft). Shows the faint
-          logo when provided, otherwise the channel wordmark. */}
-      <div style={{
-        position: 'absolute',
-        top: grade.watermarkTop,
-        left: 0, right: 0,
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        pointerEvents: 'none',
-      }}>
-        {logo ? (
-          <Img
-            src={staticFile(logo)}
-            style={{ width: 150, height: 150, objectFit: 'contain', opacity: 0.5, filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.7))' }}
-          />
-        ) : (
-          <span style={{
-            fontFamily: '"Arial Black", Impact, sans-serif',
-            fontSize: 20,
-            fontWeight: 900,
-            letterSpacing: 9,
-            textTransform: 'uppercase',
-            color: grade.watermark,
-            opacity: 0.55,
-            textShadow: '0 0 30px rgba(0,0,0,0.95)',
-          }}>
-            {channelName}
-          </span>
-        )}
-      </div>
+      {/* Persistent brand watermark, top-middle (anti-theft). Suppressed for
+          the first ~30 frames while BrandSting animates into the same spot. */}
+      <TopWatermark grade={grade} channelName={channelName} logo={logo} />
+
+      {/* Branded opener — runs frame 0 to STING_FRAMES, then disappears */}
+      <Sequence from={0} durationInFrames={STING_FRAMES + 2}>
+        <BrandSting accent={grade.watermark} logo={logo} channelName={channelName} />
+      </Sequence>
     </div>
   );
 };
