@@ -109,7 +109,11 @@ export async function uploadToYouTube(script, videoPath) {
       status: {
         privacyStatus: 'public',
         selfDeclaredMadeForKids: false,
-        madeForKids: false
+        madeForKids: false,
+        // Hide the extended public stats panel on the watch page. YouTube's
+        // dedicated "don't show how many viewers like this video" toggle is
+        // Studio-only and not in the API; this is the closest API equivalent.
+        publicStatsViewable: false
       }
     },
     media: {
