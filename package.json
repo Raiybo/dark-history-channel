@@ -21,6 +21,7 @@
     "get-audio-duration": "^4.0.1",
     "googleapis": "^140.0.1",
     "msedge-tts": "^2.0.5",
+    "puppeteer-core": "^23.11.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "remotion": "^4.0.0"

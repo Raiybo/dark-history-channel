@@ -134,5 +134,14 @@ export async function uploadToYouTube(script, videoPath) {
 
   await postEngagementComment(youtube, videoId, script);
 
+  // Hide the like count via Studio (the API can't do this). Best-effort: a
+  // failure here MUST NOT block the upload from being marked successful.
+  try {
+    const { hideLikes } = await import('../scripts/hide-likes.js');
+    await hideLikes(videoId);
+  } catch (err) {
+    console.log(`  hide-likes module unavailable: ${err.message}`);
+  }
+
   return { id: videoId, url };
 }
