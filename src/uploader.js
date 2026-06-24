@@ -12,8 +12,8 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 // #Shorts #Viral #Facts lead the evergreen set so every upload always carries
 // the high-reach boost tags the channel relies on, followed by the niche-
 // specific evergreens. Topic hashtags still go FIRST overall (above-title slots).
-const EVERGREEN_HASHTAGS = ['#Shorts', '#Viral', '#Facts', '#DidYouKnow', '#FunFacts', '#Trivia', '#LearnOnYouTube', '#InterestingFacts'];
-const EVERGREEN_TAGS = ['shorts', 'viral', 'viral shorts', 'facts', 'did you know', 'fun facts', 'trivia', 'interesting facts', 'educational', 'today i learned', 'knowledge', 'mind blowing facts'];
+const EVERGREEN_HASHTAGS = ['#Shorts', '#YouTubeShorts', '#Viral', '#Facts', '#DidYouKnow', '#FunFacts', '#AmazingFacts', '#InterestingFacts', '#Trending'];
+const EVERGREEN_TAGS = ['shorts', 'youtube shorts', 'viral', 'viral shorts', 'trending', 'facts', 'did you know', 'fun facts', 'amazing facts', 'interesting facts', 'educational', 'today i learned', 'knowledge', 'mind blowing facts'];
 
 function toHashtag(s) {
   const camel = (s || '').replace(/[^a-zA-Z0-9 ]/g, '').split(/\s+/).filter(Boolean)
@@ -22,14 +22,17 @@ function toHashtag(s) {
 }
 
 function buildHashtags(tags) {
-  const topic = (tags || []).slice(0, 3).map(toHashtag).filter(Boolean);
+  // Up to 5 topic-specific hashtags lead for topical discovery (the first 3 show
+  // above the title), then the high-reach evergreen discovery tags. Capped at 14
+  // because YouTube ignores ALL hashtags on a video that has more than 15.
+  const topic = (tags || []).slice(0, 5).map(toHashtag).filter(Boolean);
   const seen = new Set();
   const out = [];
   for (const h of [...topic, ...EVERGREEN_HASHTAGS]) {
     const k = h.toLowerCase();
     if (!seen.has(k)) { seen.add(k); out.push(h); }
   }
-  return out.slice(0, 12).join(' ');
+  return out.slice(0, 14).join(' ');
 }
 
 function buildTags(tags) {
