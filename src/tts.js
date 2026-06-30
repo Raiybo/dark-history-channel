@@ -36,36 +36,34 @@ function parseVtt(vttContent) {
   return segments;
 }
 
-// edge-tts gives sentence-level cues, so we split each cue into words and
-// estimate how long each word actually takes. Even splitting makes long words
-// (and spoken-out numbers) lag; weighting by syllables/length tracks the voice
-// much more closely. Each word is tagged with its sentence index so captions
-// can be grouped by the line being spoken.
-function speakWeight(word) {
-  const w = word.toLowerCase().replace(/[^a-z0-9]/g, '');
-  if (!w) return 1;
-  // Digits are read aloud (e.g. "2560" -> "twenty-five sixty"), so weigh them heavily.
-  const digits = (w.match(/[0-9]/g) || []).length;
-  const vowelGroups = (w.match(/[aeiouy]+/g) || []).length;
-  const syllables = Math.max(1, vowelGroups, Math.ceil(w.length / 3));
-  return syllables + digits * 1.5;
-}
-
-function buildWordTimings(segments, totalDuration) {
+// With `--words-in-cue 1` (set in runEdgeTts), edge-tts emits ONE cue per word
+// using the real word boundaries from the neural voice's synthesis engine.
+// No estimation, no syllable weighting — these are the actual on-screen times
+// the spoken word lands. Sentence grouping is reconstructed by detecting words
+// that end with sentence punctuation (., !, ?) — the NEXT word starts a new
+// sentence and gets segStart=true so the subtitle component groups correctly.
+function buildWordTimings(segments) {
   const wordTimings = [];
-  segments.forEach((seg, segIndex) => {
-    const words = seg.text.split(/\s+/).filter(Boolean);
-    const segDuration = seg.end - seg.start;
-    const weights = words.map(speakWeight);
-    const totalWeight = weights.reduce((a, b) => a + b, 0) || words.length;
-    let cursor = seg.start;
-    words.forEach((word, i) => {
-      const dur = segDuration * (weights[i] / totalWeight);
-      const start = cursor;
-      cursor = Math.min(cursor + dur, totalDuration);
-      wordTimings.push({ word, start, end: cursor, seg: segIndex, segStart: i === 0 });
+  let segIndex = 0;
+  let nextStartsSentence = true;
+  for (const seg of segments) {
+    const word = seg.text.trim();
+    if (!word) continue;
+    wordTimings.push({
+      word,
+      start: seg.start,
+      end: seg.end,
+      seg: segIndex,
+      segStart: nextStartsSentence,
     });
-  });
+    // If this word ends a sentence, the next one starts a new sentence index.
+    if (/[.!?]$/.test(word)) {
+      segIndex++;
+      nextStartsSentence = true;
+    } else {
+      nextStartsSentence = false;
+    }
+  }
   return wordTimings;
 }
 
@@ -92,11 +90,16 @@ function sanitizeForTts(text) {
 }
 
 function runEdgeTts(voice, text, mp3Path, vttPath) {
+  // --words-in-cue 1: each VTT cue is exactly one spoken word with the real
+  // start/end times from the neural voice's word-boundary events. This kills
+  // the drift the old syllable-estimator introduced, especially on long words
+  // and spoken-out numbers.
   const args = [
     '--voice', voice.name,
     `--rate=${voice.rate || '+0%'}`,
     `--pitch=${voice.pitch || '+0Hz'}`,
     '--text', text,
+    '--words-in-cue', '1',
     '--write-media', mp3Path,
     '--write-subtitles', vttPath,
   ];
@@ -141,7 +144,7 @@ export async function generateAudio(narration, genre = 'didyouknow') {
     const dur = await getAudioDurationInSeconds(mp3Path);
     const segs = parseVtt(readFileSync(vttPath, 'utf8'));
 
-    for (const w of buildWordTimings(segs, dur)) {
+    for (const w of buildWordTimings(segs)) {
       wordTimings.push({
         word: w.word,
         start: w.start + cursor,
