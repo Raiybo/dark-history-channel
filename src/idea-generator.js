@@ -142,6 +142,41 @@ function pickFromPool(usedKeys, used) {
   return available[Math.floor(Math.random() * available.length)];
 }
 
+// Score a candidate topic 1-10 on whether it is the kind of subject a general
+// audience actually wants to watch. This is the filter that kills "lame" picks
+// — obscure historical figures, niche 19th-century inventions, regional foods
+// nobody has heard of. We require a score >= TOPIC_INTEREST_THRESHOLD or the
+// generator retries. Failure (network/LLM) returns the threshold so we never
+// block the pipeline on the judge itself.
+const TOPIC_INTEREST_THRESHOLD = 7;
+
+async function judgeTopicInterest(topic) {
+  if (!topic) return 0;
+  const prompt = `You are a YouTube Shorts strategist for a "Did You Know" channel. Score this candidate topic 1-10 on how interesting it would be to a GENERAL audience of all ages on YouTube Shorts.
+
+TOPIC: "${topic}"
+
+Score 1-10 against ALL of these criteria together:
+- Subject recognizability — would a normal 13-year-old or a curious 40-year-old INSTANTLY know what the subject is? (Popular animals, the human body, space, famous landmarks, brands and foods people see weekly, recent scientific news = HIGH. Obscure historical figures, niche inventions, regional foods, micro-fields = LOW.)
+- Currency / relevance — does the subject feel like something people care about NOW? (Trending topics, popular animals, things in the news, daily-life subjects = HIGH. Forgotten 19th-century trivia = LOW.)
+- Surprise — is the angle genuinely fresh, not an over-told cliché?
+- Visual payoff — is there a concrete visual reveal we can SHOW?
+
+1-3: obscure, niche, dry, would flop. Subject most viewers don't recognize.
+4-6: ok-ish, recognizable subject but the fact is forgettable or abstract.
+7-8: strong — popular subject + fresh surprising angle + clear visual.
+9-10: instant-share material — famous subject, jaw-drop angle, instant visual.
+
+Reply with ONLY the integer score (1-10). Nothing else.`;
+  try {
+    const ans = (await chat(prompt, { temperature: 0, maxTokens: 256 })).trim();
+    const n = parseInt(ans.match(/\d+/)?.[0] || '0', 10);
+    return Number.isFinite(n) ? n : 0;
+  } catch {
+    return TOPIC_INTEREST_THRESHOLD; // judge unavailable → don't block
+  }
+}
+
 // Final, strictest dedup layer: ask the LLM whether the candidate is the SAME
 // core fact as any recent topic, even if worded completely differently —
 // catching reworded repeats that keyword overlap can never see. Best-effort:
@@ -180,7 +215,12 @@ async function generateFreshTopic(used, usedKeys) {
 
   const recent = used.slice(-250).map(u => `- ${u.topic}`).join('\n');
 
-  for (let attempt = 0; attempt < 4; attempt++) {
+  // Track the best-scoring candidate across attempts so we never fall back to
+  // the worst one when all attempts score below threshold.
+  let best = null;
+  let bestScore = -1;
+
+  for (let attempt = 0; attempt < 6; attempt++) {
     const prompt = `Invent ONE genuinely surprising, TRUE "Did You Know" fact for a YouTube Shorts channel.
 
 THIS CHANNEL HAS ONE FORMAT — VISUAL REVEAL:
@@ -190,7 +230,16 @@ Rules:
 - Must be 100% TRUE and verifiable.
 - Genuinely surprising — the kind of fact people repeat to friends.
 - MUST be a visual reveal with something concrete we can SHOW on screen. Reject any idea that is just an abstract fact, a date, or a number with nothing to picture.
-- HIGH-INTEREST, RECOMMENDABLE SUBJECT: anchor the fact to something MANY people already care about or actively search for — popular animals (sharks, octopus, big cats, dogs, snakes, deep-sea creatures), the human body, space and the planets, famous landmarks and places, well-known brands and everyday products, food people eat daily, the human brain, or a RECENT scientific discovery ("scientists recently found..."). Familiar + currently-relevant subjects get suggested and searched FAR more than obscure ones, so the video reaches more people. The winning combination is a FRESH, lesser-known angle on a subject people ALREADY find fascinating — never the overdone fact about it, and never a subject almost nobody has heard of.
+- HIGH-INTEREST, RECOMMENDABLE SUBJECT — STRICTLY REQUIRED: the subject must be something a normal 13-year-old would instantly recognize and find cool. Anchor every fact to ONE of these high-search categories:
+  * Popular animals (sharks, octopuses, big cats, dogs, snakes, dolphins, deep-sea creatures, dinosaurs)
+  * The human body and brain
+  * Space and the planets (Moon, Mars, black holes, the Sun)
+  * Famous landmarks and places (Pyramids, Eiffel Tower, Mount Everest, the ocean)
+  * Well-known brands and everyday products (phones, cars, money, food brands people see every week)
+  * Food people eat daily (pizza, chocolate, coffee, eggs, sugar)
+  * Recent scientific discovery — phrase as "scientists recently discovered..." or "in the last few years researchers found..."
+- AUTO-REJECT subjects that are obscure to a general audience: little-known historical figures, niche 19th-century inventions, micro-organisms most people have never heard of, regional foods, niche subcultures, technical fields without a popular hook. These produce "lame" videos that flop.
+- The winning combination is a FRESH, lesser-known ANGLE on a subject that is ALREADY famous — a hidden detail about something people see every day, never the overdone fact about it, and never an obscure subject.
 - AVOID over-used facts that flood YouTube Shorts (honey never spoils, bananas are berries, octopus has three hearts, sharks older than trees, we use 10% of our brain, Cleopatra vs the pyramids, Venus day longer than year, Napoleon was short, etc.). Viewers have seen these a hundred times — pick something genuinely fresh and lesser-known.
 - Phrase it as a topic line beginning with "Did you know", under 15 words.
 - It must be a COMPLETELY DIFFERENT SUBJECT (not just different wording) from every already-used topic below. If your candidate shares 2+ significant keywords with any of these, pick a different subject entirely:
@@ -216,7 +265,13 @@ Return ONLY the single topic line, nothing else.`;
         if (await isSemanticDuplicate(topic, used)) {
           console.log(`  Topic is a reworded repeat of an earlier one, retrying...`);
         } else {
-          return topic;
+          // Final gate: is the SUBJECT itself something a general audience cares
+          // about? Rejects obscure / niche / dry topics that historically flop.
+          const interest = await judgeTopicInterest(topic);
+          console.log(`  Topic interest judge: ${interest}/10 — "${topic}"`);
+          if (interest > bestScore) { best = topic; bestScore = interest; }
+          if (interest >= TOPIC_INTEREST_THRESHOLD) return topic;
+          console.log(`  Topic interest too low (${interest}/${TOPIC_INTEREST_THRESHOLD}), retrying for a more recognizable subject...`);
         }
       } else if (formatOK && exactNew && subjectNew && !notCliche) {
         console.log(`  Topic is an over-used cliché, retrying...`);
@@ -227,6 +282,12 @@ Return ONLY the single topic line, nothing else.`;
       console.log(`  Topic-gen attempt ${attempt + 1} failed (${err.message}); retrying...`);
       await new Promise(r => setTimeout(r, 3000));
     }
+  }
+  // All attempts fell below threshold — return the best one we saw rather than
+  // null, so the pipeline still produces a reel today (and we logged the score).
+  if (best) {
+    console.log(`  Falling back to best-scoring topic so far (${bestScore}/10): "${best}"`);
+    return best;
   }
   return null;
 }

@@ -13,13 +13,12 @@ async function judgeHook(hook) {
 
 HOOK: "${hook}"
 
-Score 1–10:
-- 1–4: generic, predictable, viewers will swipe
-- 5–6: ok, some curiosity, average
-- 7–8: strong — a real curiosity gap or shock value
-- 9–10: extraordinary — the kind of opening that holds 70%+ retention
+Score 1–10 on BOTH curiosity AND English quality. A hook scores LOW if EITHER fails — a strong fact phrased awkwardly is still a swipe.
 
-A strong hook makes a specific, surprising, concrete claim. Weak hooks are vague, abstract, or rely on words like "amazing"/"incredible"/"crazy" without saying what.
+- 1–4: generic, predictable, OR awkward English / dropped articles / telegraphic word-jamming ("DID YOU KNOW HONEY SPOILS NEVER", "DID YOU KNOW OCTOPUS THREE HEART"). Viewers will swipe.
+- 5–6: average curiosity, English is fine but the claim is vague or relies on filler words like "amazing"/"incredible"/"crazy" without saying what.
+- 7–8: strong — concrete surprising claim AND reads as a natural, grammatically clean sentence ("DID YOU KNOW THAT OCTOPUSES HAVE THREE HEARTS").
+- 9–10: extraordinary — the kind of opening that holds 70%+ retention. Concrete, specific, surprising, and the sentence flows perfectly when read aloud.
 
 Reply with ONLY the integer score (1–10). Nothing else.`;
   try {
