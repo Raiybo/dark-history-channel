@@ -29,7 +29,10 @@ export function checkScript(script) {
   if (!/^DID YOU KNOW/i.test(hook)) fail('script', `Hook must start with "DID YOU KNOW": "${hook}"`);
   if (hook !== hook.toUpperCase()) fail('script', `Hook must be ALL CAPS: "${hook}"`);
   const hookWords = hook.split(/\s+/).filter(Boolean).length;
-  if (hookWords > 8) fail('script', `Hook too long (${hookWords} words, max 7-8): "${hook}"`);
+  // Bumped from 8 to 13 to match the new "DID YOU KNOW THAT [complete sentence]"
+  // hook rule — the old 7-8 cap was rejecting every well-formed grammatical hook.
+  if (hookWords > 13) fail('script', `Hook too long (${hookWords} words, max 13): "${hook}"`);
+  if (hookWords < 5) fail('script', `Hook too short (${hookWords} words, min 5): "${hook}"`);
 
   // Narration
   const narr = (script?.narration || '').trim();
