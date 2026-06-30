@@ -31,16 +31,19 @@ Reply with ONLY the integer score (1–10). Nothing else.`;
 }
 
 async function generateOneScript(prompt) {
-  // 4096 leaves headroom for Gemini's thinking tokens on top of the full script
-  // JSON, so the response is never truncated into invalid JSON.
-  const text = await chatWithRetry(prompt, { temperature: 0.85, maxTokens: 4096, json: true });
-  // With json:true Groq returns strict JSON; still tolerate a wrapping match just in case.
+  // 8192 gives ample headroom for Gemini/Groq thinking tokens plus the full
+  // script JSON, so the response isn't truncated mid-output. Truncation was
+  // causing intermittent "non-JSON" pipeline failures.
+  const text = await chatWithRetry(prompt, { temperature: 0.85, maxTokens: 8192, json: true });
   try {
     return JSON.parse(text);
   } catch {
+    // Try to salvage a complete JSON object out of a possibly-wrapped response.
     const m = text.match(/\{[\s\S]*\}/);
-    if (!m) throw new Error(`LLM returned non-JSON: ${text.slice(0, 200)}`);
-    return JSON.parse(m[0]);
+    if (m) {
+      try { return JSON.parse(m[0]); } catch { /* fall through */ }
+    }
+    throw new Error(`LLM returned non-JSON: ${text.slice(0, 200)}`);
   }
 }
 
@@ -49,10 +52,20 @@ export async function generateScript(idea) {
 
   // Try up to N times to get a script whose hook scores high enough on the
   // scroll-stop judge. Keep the best-scoring one in case all attempts fall short.
+  // A JSON parse / LLM truncation failure on one attempt only skips THAT attempt
+  // and lets the next attempt try fresh — it never kills the pipeline.
   let best = null;
   let bestScore = -1;
+  let lastError = null;
   for (let attempt = 1; attempt <= MAX_HOOK_ATTEMPTS; attempt++) {
-    const script = await generateOneScript(prompt);
+    let script;
+    try {
+      script = await generateOneScript(prompt);
+    } catch (err) {
+      lastError = err;
+      console.log(`  Script attempt ${attempt} failed (${err.message.slice(0, 100)}), retrying fresh...`);
+      continue;
+    }
     const score = await judgeHook(script.hook_text);
     console.log(`  Hook judge: ${score}/10 — "${script.hook_text}"`);
     if (score > bestScore) { best = script; bestScore = score; }
@@ -60,5 +73,6 @@ export async function generateScript(idea) {
     if (attempt < MAX_HOOK_ATTEMPTS) console.log(`  Hook too weak (${score}/${HOOK_THRESHOLD}), regenerating...`);
   }
 
+  if (!best) throw lastError || new Error('All script-generation attempts failed');
   return { ...best, genre: idea.genre };
 }

@@ -83,7 +83,35 @@ jobs:
         run: |
           git config user.name "Distoir Bot"
           git config user.email "bot@distoir.auto"
+          # Bail early if this run didn't add anything (e.g. failed before idea-gen).
+          if git diff --quiet -- config/used-ideas.json; then
+            echo "No local additions to commit."
+            exit 0
+          fi
+          # Race-safe merge: another bot may have pushed entries while we ran.
+          # Snapshot OUR additions, sync to latest remote, then merge both sides
+          # by union (entries are objects so dedup on a composite key). With this
+          # neither bot's additions are lost on a concurrent push.
+          cp config/used-ideas.json /tmp/local-ideas.json
+          git fetch origin main
+          git reset --hard origin/main
+          jq -s '
+            (.[0] // []) + (.[1] // [])
+            | unique_by((.title // "") + "|" + (.topic // "") + "|" + (.date // ""))
+          ' config/used-ideas.json /tmp/local-ideas.json > /tmp/merged-ideas.json
+          mv /tmp/merged-ideas.json config/used-ideas.json
           git add config/used-ideas.json
-          git diff --staged --quiet || git commit -m "chore: mark used topics [skip ci]"
-          git pull --rebase origin main
-          git push
+          if git diff --staged --quiet; then
+            echo "Local additions already on remote — nothing to push."
+            exit 0
+          fi
+          git commit -m "chore: mark used topics [skip ci]"
+          # One retry on push race (another bot may have pushed in the last few ms).
+          for i in 1 2 3; do
+            if git push; then exit 0; fi
+            echo "Push race, refreshing and retrying ($i/3)..."
+            git pull --rebase -X theirs origin main || git rebase --abort
+            sleep 2
+          done
+          echo "Push failed after retries."
+          exit 1
