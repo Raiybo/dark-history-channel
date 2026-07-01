@@ -6,10 +6,9 @@ const { fontFamily } = loadFont();
 
 const GROUP_SIZE = 3;
 
-// With per-word VTT cues from edge-tts (--words-in-cue 1) the timings are the
-// real on-screen moments — no more estimation drift to correct for. A tiny
-// 0.05s lead just keeps the highlight from feeling like it trails the voice.
-const LEAD_SECONDS = 0.05;
+// Show the highlight slightly ahead of the audio so captions land on the beat
+// instead of trailing the voice. Reel captions normally lead by ~0.1-0.2s.
+const LEAD_SECONDS = 0.15;
 
 const GENRE_ACCENT = {
   didyouknow: '#FFC83D',
