@@ -230,15 +230,20 @@ Rules:
 - Must be 100% TRUE and verifiable.
 - Genuinely surprising — the kind of fact people repeat to friends.
 - MUST be a visual reveal with something concrete we can SHOW on screen. Reject any idea that is just an abstract fact, a date, or a number with nothing to picture.
-- HIGH-INTEREST, RECOMMENDABLE SUBJECT — STRICTLY REQUIRED: the subject must be something a normal 13-year-old would instantly recognize and find cool. Anchor every fact to ONE of these high-search categories:
-  * Popular animals (sharks, octopuses, big cats, dogs, snakes, dolphins, deep-sea creatures, dinosaurs)
+- AUDIENCE IS PRIMARILY AMERICAN (US, majority of viewers). Content that hits a NORMAL AMERICAN 13-40 year old dead-on gets pushed hardest by the algorithm. Anchor every fact to ONE of these high-search categories, PRIORITIZED for US relevance:
+  * American brands and everyday products people see weekly — McDonald's, Coca-Cola, Ford, Tesla, Apple, Amazon, Walmart, Costco, Starbucks, Disney, Netflix, YouTube itself
+  * American landmarks and places — Statue of Liberty, Mount Rushmore, Grand Canyon, Yellowstone, White House, Empire State Building, Golden Gate Bridge, Times Square, Route 66, Alcatraz, Hollywood sign
+  * NASA, the Moon landing, the space race, SpaceX, US space history (Americans love NASA content)
+  * US presidents and Founding Fathers — Washington, Lincoln, JFK, Roosevelt, Reagan, Nixon — surprising personal facts, hidden decisions, forgotten scandals
+  * US military and intelligence operations — SEAL Team Six, CIA, FBI, Special Forces, Navy, Air Force, Delta Force, historical operations (Bin Laden raid, Stealth aircraft, Manhattan Project, D-Day, Operation Ivy Bells, MKUltra declassified)
+  * Middle East operations and conflicts 2000-2026 — strategic plans and intelligence tradecraft that left people in awe (Stuxnet, Mossad Iran nuclear-archive theft, Hezbollah pager attack, Soleimani drone strike, Iron Dome, Saudi Aramco drone attack, Karine A interception, October 7 paragliding training, etc.). FRAME as strategy/intelligence/ingenuity — the surprising operational detail — NOT graphic violence or casualty counts. Educational documentary tone, no glorification of any side.
+  * American sports — NFL, NBA, MLB, Super Bowl trivia, Michael Jordan, Tom Brady, baseball history, Olympic legends
+  * Hollywood and American pop culture — famous movie sets, TV history, blockbusters, celebrity origin stories, Disney park secrets
+  * American food — fast food origins (Big Mac, Whopper, KFC), pizza history, hot dogs, cheeseburgers, Thanksgiving, root beer, Oreos
+  * Popular animals (sharks, big cats, deep-sea creatures, dinosaurs, US wildlife — bison, bald eagles, alligators, grizzly bears)
   * The human body and brain
   * Space and the planets (Moon, Mars, black holes, the Sun)
-  * Famous landmarks and places (Pyramids, Eiffel Tower, Mount Everest, the ocean)
-  * Well-known brands and everyday products (phones, cars, money, food brands people see every week)
-  * Food people eat daily (pizza, chocolate, coffee, eggs, sugar)
   * Recent scientific discovery — phrase as "scientists recently discovered..." or "in the last few years researchers found..."
-  * Middle East conflicts and military operations 2000-2026 — strategic plans, intelligence operations, ingenuity, and surprising operational details that left people in awe. Real, documented, widely-reported events ONLY (Stuxnet cyber-weapon, Bin Laden raid stealth helicopter, Mossad Iran nuclear-archive theft, Hezbollah pager attack supply-chain, Iron Dome interception logic, Soleimani drone strike, Saudi Aramco drone attack, Karine A weapons-ship interception, Houthi drone improvisation, ISIS oil revenue, etc.). FRAME as strategy/intelligence/ingenuity — the surprising operational detail — NOT graphic violence or casualty counts. No glorification of any side. Educational tone, like a documentary narrator.
 - AUTO-REJECT subjects that are obscure to a general audience: little-known historical figures, niche 19th-century inventions, micro-organisms most people have never heard of, regional foods, niche subcultures, technical fields without a popular hook. These produce "lame" videos that flop.
 - The winning combination is a FRESH, lesser-known ANGLE on a subject that is ALREADY famous — a hidden detail about something people see every day, never the overdone fact about it, and never an obscure subject.
 - AVOID over-used facts that flood YouTube Shorts (honey never spoils, bananas are berries, octopus has three hearts, sharks older than trees, we use 10% of our brain, Cleopatra vs the pyramids, Venus day longer than year, Napoleon was short, etc.). Viewers have seen these a hundred times — pick something genuinely fresh and lesser-known.

@@ -93,6 +93,78 @@
     ]
   },
   {
+    "category": "American Landmarks and Places",
+    "topics": [
+      "Did you know the Statue of Liberty was originally intended for Egypt",
+      "Did you know Mount Rushmore was supposed to include the presidents' entire bodies",
+      "Did you know the Grand Canyon is deep enough to fit the Empire State Building six times over",
+      "Did you know there is a secret apartment hidden inside the Eiffel Tower and a similar one on top of Grand Central Station",
+      "Did you know Yellowstone sits on top of a super volcano the size of Rhode Island",
+      "Did you know the White House has a hidden bowling alley under the west wing",
+      "Did you know Alcatraz prisoners could sometimes hear parties in San Francisco a mile and a half away",
+      "Did you know Times Square was originally called Longacre Square",
+      "Did you know the Hollywood sign originally said Hollywoodland",
+      "Did you know Route 66 is officially decommissioned and no longer exists on federal maps"
+    ]
+  },
+  {
+    "category": "NASA and the Space Race",
+    "topics": [
+      "Did you know NASA's Apollo guidance computer had less memory than a modern greeting card",
+      "Did you know the American flag on the Moon is now bleached completely white by the Sun",
+      "Did you know Neil Armstrong's spacesuit was made by a bra company",
+      "Did you know SpaceX rockets land themselves on autonomous ships named after science fiction novels",
+      "Did you know NASA astronauts trained for the Moon landing in Iceland because it looks like the lunar surface",
+      "Did you know the Voyager probes are still transmitting data after almost 50 years and carry a golden record for aliens",
+      "Did you know Buzz Aldrin took communion on the surface of the Moon"
+    ]
+  },
+  {
+    "category": "US Presidents",
+    "topics": [
+      "Did you know John F. Kennedy's brain went missing from the National Archives after his assassination",
+      "Did you know Abraham Lincoln was a licensed bartender before becoming president",
+      "Did you know Teddy Roosevelt gave a 90-minute speech right after being shot in the chest",
+      "Did you know George Washington had wooden teeth is a myth — his dentures were made from hippo ivory and human teeth",
+      "Did you know Richard Nixon secretly recorded almost every conversation in the Oval Office for years",
+      "Did you know Ronald Reagan survived being shot because the bullet stopped one inch from his heart"
+    ]
+  },
+  {
+    "category": "US Military and Intelligence",
+    "topics": [
+      "Did you know the CIA once tried to weaponize cats by implanting microphones in them",
+      "Did you know the SR-71 Blackbird spy plane could outrun every missile ever fired at it",
+      "Did you know the Navy SEALs use dolphins trained to find underwater mines",
+      "Did you know Delta Force operators are so secretive the government won't confirm the unit officially exists",
+      "Did you know America's B-2 stealth bomber has to be washed with special chemicals after every flight",
+      "Did you know the Manhattan Project employed 130,000 people and most of them had no idea they were building an atomic bomb"
+    ]
+  },
+  {
+    "category": "American Brands and Fast Food",
+    "topics": [
+      "Did you know Coca-Cola once contained actual cocaine and Coke isn't sold in only two countries on Earth",
+      "Did you know McDonald's Big Mac was invented by a franchisee in Pennsylvania in 1967",
+      "Did you know Amazon almost went bankrupt three times before becoming a trillion dollar company",
+      "Did you know the Ford Model T was available in any color as long as it was black to speed up drying time",
+      "Did you know Starbucks was originally named after the first mate in Moby Dick",
+      "Did you know KFC's original recipe is stored in a vault in Kentucky with just two people knowing the full formula",
+      "Did you know Disney owns the exclusive rights to the exact shade of red used on Mickey's shorts",
+      "Did you know the Nintendo Wii was originally going to be called the Revolution"
+    ]
+  },
+  {
+    "category": "American Sports",
+    "topics": [
+      "Did you know a Super Bowl commercial slot costs more than 7 million dollars for 30 seconds",
+      "Did you know Michael Jordan was cut from his high school varsity basketball team",
+      "Did you know baseballs used in the MLB are rubbed with special mud from a secret creek in New Jersey",
+      "Did you know NFL footballs are still made by hand in Ada, Ohio",
+      "Did you know Tom Brady was the 199th pick in the NFL draft"
+    ]
+  },
+  {
     "category": "Middle East Operations 2000-2026",
     "topics": [
       "Did you know the US and Israel destroyed Iran's nuclear centrifuges with a computer virus called Stuxnet",
