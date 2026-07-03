@@ -67,7 +67,12 @@ async function callGroq(prompt, { temperature, maxTokens, json }) {
 // Retry a single provider on transient errors (rate limit / 5xx / network).
 // Hard errors (bad key, billing block, other 4xx) throw immediately so chat()
 // can move on to the other provider without wasting time.
-async function withRetry(fn, label, retries = 3) {
+//
+// If the error message includes a "try again in Xs" hint (Groq's rate-limit
+// response does this), we HONOR that delay instead of the exponential default —
+// otherwise the retry fires while the bucket is still empty and just burns
+// another attempt.
+async function withRetry(fn, label, retries = 4) {
   let lastErr;
   for (let i = 0; i < retries; i++) {
     try {
@@ -77,8 +82,12 @@ async function withRetry(fn, label, retries = 3) {
       const msg = err.message || '';
       const transient = /(\b429\b|\b5\d\d\b|overloaded|unavailable|temporarily|ETIMEDOUT|ECONNRESET|fetch failed)/i.test(msg);
       if (!transient || i === retries - 1) throw err;
-      const delay = 1500 * Math.pow(2, i);
-      console.log(`  ${label} busy (${msg.slice(0, 80)}), retrying in ${delay / 1000}s...`);
+      // Honor "Please try again in Xs" or similar hints (Groq TPM messages).
+      const hinted = msg.match(/try again in\s*([\d.]+)\s*s/i);
+      const capped = 30_000;
+      let delay = 1500 * Math.pow(2, i);
+      if (hinted) delay = Math.min(capped, Math.ceil(parseFloat(hinted[1]) * 1000) + 500);
+      console.log(`  ${label} busy (${msg.slice(0, 80)}), retrying in ${(delay / 1000).toFixed(1)}s...`);
       await new Promise(r => setTimeout(r, delay));
     }
   }

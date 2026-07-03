@@ -213,7 +213,12 @@ Reply with ONLY one word: YES or NO.`;
 async function generateFreshTopic(used, usedKeys) {
   if (!process.env.GEMINI_API_KEY && !process.env.GROQ_API_KEY) return null;
 
-  const recent = used.slice(-250).map(u => `- ${u.topic}`).join('\n');
+  // Only the last 80 used topics are shown to the LLM per attempt. The full
+  // keyword-overlap dedup runs client-side against ALL used topics, and the
+  // semantic-duplicate LLM judge (isSemanticDuplicate) uses a wider window
+  // downstream — so shrinking THIS list just saves tokens without weakening
+  // dedup. Was 250, which pushed the prompt over Groq's 12k TPM ceiling.
+  const recent = used.slice(-80).map(u => `- ${u.topic}`).join('\n');
 
   // Track the best-scoring candidate across attempts so we never fall back to
   // the worst one when all attempts score below threshold.
@@ -230,33 +235,17 @@ Rules:
 - Must be 100% TRUE and verifiable.
 - Genuinely surprising — the kind of fact people repeat to friends.
 - MUST be a visual reveal with something concrete we can SHOW on screen. Reject any idea that is just an abstract fact, a date, or a number with nothing to picture.
-- AUDIENCE: primarily AMERICAN adults 30-50 years old who want to feel smarter AND make small healthier choices. This is NOT a teen trivia channel — it's an "interesting + useful for my life" channel. The winning combination is a jaw-dropping fact that ALSO teaches something the viewer can actually apply to their health, sleep, energy, focus, or longevity.
-- STRICT: DO NOT glorify unhealthy fast-food brands, sugary sodas, or products harmful to health (no McDonald's / KFC / Coca-Cola / Burger King / candy-brand origin stories that celebrate the product). If a food fact IS a health warning ("did you know one soda contains 39 grams of sugar, more than the WHO daily limit") it's fine — the FRAME must be health-aware, not celebratory.
-- Anchor every fact to ONE of these categories, ROUGHLY 60% HEALTH/LIFESTYLE and 40% CLASSIC INTERESTING FACTS so the feed feels like a mix, not a monotone lecture:
+- AUDIENCE: American adults 30-50 who want to feel smarter AND make small healthier choices. NOT a teen trivia channel. Winning fact = jaw-dropping AND useful for their health/sleep/energy/focus/longevity.
+- STRICT no-glorify: do NOT celebrate fast-food, sugary sodas, or unhealthy brands (no McDonald's/KFC/Coca-Cola/candy origin stories). A soda fact framed as a health warning is fine; a "fun origin story" of an unhealthy product is not.
+- Aim for ~60% HEALTH/LIFESTYLE, ~40% CLASSIC INTERESTING FACTS so the feed feels mixed:
 
-  HEALTH & LIFESTYLE (primary — ~60% of picks):
-  * Food & nutrition science — surprising combinations that boost absorption (turmeric + black pepper, iron + vitamin C, tomatoes + olive oil), hidden benefits of everyday foods (dark chocolate, blueberries, walnuts, olive oil, green tea, coffee), superfoods backed by real studies, foods that fight inflammation or sharpen the brain
-  * Sleep science — bedroom temperature, blue light, magnesium, morning sunlight, sleep cycles, why you wake at 3am, the truth about naps
-  * Longevity & Blue Zones — small daily habits linked to living past 90 (grip strength, walking, community, olive oil, purpose)
-  * Small everyday habits with outsized effects — 2-minute walks after meals, cold showers, humming, deep breathing, standing on one leg, morning sunlight
-  * Ancient practices validated by modern science — fasting, cold exposure, meditation, saunas, gratitude journaling, forest bathing
-  * The gut microbiome, the brain-gut axis, mental health effects of movement/nutrition/sunlight
-  * Practical mind hacks — how to focus, how to remember, how to break a habit in the researched 66 days
-  * Recent medical/nutrition discovery — phrase as "scientists recently found..." or "a new study shows..."
+  HEALTH/LIFESTYLE (~60%): nutrition science (absorption combos like turmeric+black pepper, iron+vitamin C; benefits of olive oil, dark chocolate, blueberries, green tea, coffee); sleep science (bedroom temp, morning sunlight, coffee naps, blue light); longevity & Blue Zones (grip strength, walking, purpose, 80% rule); everyday habits (2-min walks after meals, humming, cold exposure, nose breathing); ancient practices validated by science (fasting, cold, meditation, saunas); gut microbiome & brain-gut axis; practical focus/memory/habit-building hacks; recent medical/nutrition discovery ("scientists recently found...").
 
-  CLASSIC INTERESTING FACTS (~40% of picks — the "wow" content):
-  * US landmarks and places — Statue of Liberty, Mount Rushmore, Grand Canyon, Yellowstone, White House, Alcatraz, Route 66, Hollywood
-  * NASA, the Moon landing, the space race, SpaceX, US space history — Americans love NASA content
-  * US presidents and Founding Fathers — Washington, Lincoln, JFK, Reagan — surprising personal facts, hidden decisions, forgotten scandals
-  * US military and intelligence operations — SEAL Team Six, CIA, Delta Force, SR-71 Blackbird, Manhattan Project, MKUltra declassified
-  * Middle East operations and conflicts 2000-2026 — strategy/intelligence/ingenuity angle (Stuxnet, Mossad Iran archive theft, Hezbollah pager attack, Soleimani strike, Iron Dome, Saudi Aramco drone, Karine A). NEVER graphic violence, no glorification of any side — documentary tone.
-  * Popular animals (sharks, big cats, octopuses, deep-sea creatures, US wildlife)
-  * The human body and brain — surprising anatomy, hidden capacity
-  * Space and the planets
-  * Recent scientific discovery
-- AUTO-REJECT subjects that are obscure to a general audience: little-known historical figures, niche 19th-century inventions, micro-organisms most people have never heard of, regional foods, niche subcultures, technical fields without a popular hook. These produce "lame" videos that flop.
-- The winning combination is a FRESH, lesser-known ANGLE on a subject that is ALREADY famous — a hidden detail about something people see every day, never the overdone fact about it, and never an obscure subject.
-- AVOID over-used facts that flood YouTube Shorts (honey never spoils, bananas are berries, octopus has three hearts, sharks older than trees, we use 10% of our brain, Cleopatra vs the pyramids, Venus day longer than year, Napoleon was short, etc.). Viewers have seen these a hundred times — pick something genuinely fresh and lesser-known.
+  CLASSIC INTERESTING (~40%): US landmarks (Statue of Liberty, Grand Canyon, Yellowstone, White House, Alcatraz); NASA/space race/SpaceX; US presidents (Washington, Lincoln, JFK, Reagan); US military & intel ops (SEAL, CIA, SR-71, MKUltra); Middle East ops 2000-2026 (Stuxnet, Mossad archive theft, Hezbollah pagers, Soleimani, Iron Dome, Karine A) — strategy/ingenuity frame ONLY, no graphic violence, no glorification; popular animals; human body/brain; space & planets; recent scientific discovery.
+
+- AUTO-REJECT obscure subjects (little-known historical figures, niche inventions, micro-organisms, regional foods). These flop.
+- Winning combination: a FRESH lesser-known angle on an ALREADY famous subject.
+- AVOID over-used Shorts clichés (honey never spoils, bananas are berries, octopus 3 hearts, we use 10% of brain, Cleopatra vs pyramids, Venus day longer than year, Napoleon short).
 - Phrase it as a topic line beginning with "Did you know", under 15 words.
 - It must be a COMPLETELY DIFFERENT SUBJECT (not just different wording) from every already-used topic below. If your candidate shares 2+ significant keywords with any of these, pick a different subject entirely:
 ${recent || '(none yet)'}
