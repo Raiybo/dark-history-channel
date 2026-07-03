@@ -230,20 +230,30 @@ Rules:
 - Must be 100% TRUE and verifiable.
 - Genuinely surprising — the kind of fact people repeat to friends.
 - MUST be a visual reveal with something concrete we can SHOW on screen. Reject any idea that is just an abstract fact, a date, or a number with nothing to picture.
-- AUDIENCE IS PRIMARILY AMERICAN (US, majority of viewers). Content that hits a NORMAL AMERICAN 13-40 year old dead-on gets pushed hardest by the algorithm. Anchor every fact to ONE of these high-search categories, PRIORITIZED for US relevance:
-  * American brands and everyday products people see weekly — McDonald's, Coca-Cola, Ford, Tesla, Apple, Amazon, Walmart, Costco, Starbucks, Disney, Netflix, YouTube itself
-  * American landmarks and places — Statue of Liberty, Mount Rushmore, Grand Canyon, Yellowstone, White House, Empire State Building, Golden Gate Bridge, Times Square, Route 66, Alcatraz, Hollywood sign
-  * NASA, the Moon landing, the space race, SpaceX, US space history (Americans love NASA content)
-  * US presidents and Founding Fathers — Washington, Lincoln, JFK, Roosevelt, Reagan, Nixon — surprising personal facts, hidden decisions, forgotten scandals
-  * US military and intelligence operations — SEAL Team Six, CIA, FBI, Special Forces, Navy, Air Force, Delta Force, historical operations (Bin Laden raid, Stealth aircraft, Manhattan Project, D-Day, Operation Ivy Bells, MKUltra declassified)
-  * Middle East operations and conflicts 2000-2026 — strategic plans and intelligence tradecraft that left people in awe (Stuxnet, Mossad Iran nuclear-archive theft, Hezbollah pager attack, Soleimani drone strike, Iron Dome, Saudi Aramco drone attack, Karine A interception, October 7 paragliding training, etc.). FRAME as strategy/intelligence/ingenuity — the surprising operational detail — NOT graphic violence or casualty counts. Educational documentary tone, no glorification of any side.
-  * American sports — NFL, NBA, MLB, Super Bowl trivia, Michael Jordan, Tom Brady, baseball history, Olympic legends
-  * Hollywood and American pop culture — famous movie sets, TV history, blockbusters, celebrity origin stories, Disney park secrets
-  * American food — fast food origins (Big Mac, Whopper, KFC), pizza history, hot dogs, cheeseburgers, Thanksgiving, root beer, Oreos
-  * Popular animals (sharks, big cats, deep-sea creatures, dinosaurs, US wildlife — bison, bald eagles, alligators, grizzly bears)
-  * The human body and brain
-  * Space and the planets (Moon, Mars, black holes, the Sun)
-  * Recent scientific discovery — phrase as "scientists recently discovered..." or "in the last few years researchers found..."
+- AUDIENCE: primarily AMERICAN adults 30-50 years old who want to feel smarter AND make small healthier choices. This is NOT a teen trivia channel — it's an "interesting + useful for my life" channel. The winning combination is a jaw-dropping fact that ALSO teaches something the viewer can actually apply to their health, sleep, energy, focus, or longevity.
+- STRICT: DO NOT glorify unhealthy fast-food brands, sugary sodas, or products harmful to health (no McDonald's / KFC / Coca-Cola / Burger King / candy-brand origin stories that celebrate the product). If a food fact IS a health warning ("did you know one soda contains 39 grams of sugar, more than the WHO daily limit") it's fine — the FRAME must be health-aware, not celebratory.
+- Anchor every fact to ONE of these categories, ROUGHLY 60% HEALTH/LIFESTYLE and 40% CLASSIC INTERESTING FACTS so the feed feels like a mix, not a monotone lecture:
+
+  HEALTH & LIFESTYLE (primary — ~60% of picks):
+  * Food & nutrition science — surprising combinations that boost absorption (turmeric + black pepper, iron + vitamin C, tomatoes + olive oil), hidden benefits of everyday foods (dark chocolate, blueberries, walnuts, olive oil, green tea, coffee), superfoods backed by real studies, foods that fight inflammation or sharpen the brain
+  * Sleep science — bedroom temperature, blue light, magnesium, morning sunlight, sleep cycles, why you wake at 3am, the truth about naps
+  * Longevity & Blue Zones — small daily habits linked to living past 90 (grip strength, walking, community, olive oil, purpose)
+  * Small everyday habits with outsized effects — 2-minute walks after meals, cold showers, humming, deep breathing, standing on one leg, morning sunlight
+  * Ancient practices validated by modern science — fasting, cold exposure, meditation, saunas, gratitude journaling, forest bathing
+  * The gut microbiome, the brain-gut axis, mental health effects of movement/nutrition/sunlight
+  * Practical mind hacks — how to focus, how to remember, how to break a habit in the researched 66 days
+  * Recent medical/nutrition discovery — phrase as "scientists recently found..." or "a new study shows..."
+
+  CLASSIC INTERESTING FACTS (~40% of picks — the "wow" content):
+  * US landmarks and places — Statue of Liberty, Mount Rushmore, Grand Canyon, Yellowstone, White House, Alcatraz, Route 66, Hollywood
+  * NASA, the Moon landing, the space race, SpaceX, US space history — Americans love NASA content
+  * US presidents and Founding Fathers — Washington, Lincoln, JFK, Reagan — surprising personal facts, hidden decisions, forgotten scandals
+  * US military and intelligence operations — SEAL Team Six, CIA, Delta Force, SR-71 Blackbird, Manhattan Project, MKUltra declassified
+  * Middle East operations and conflicts 2000-2026 — strategy/intelligence/ingenuity angle (Stuxnet, Mossad Iran archive theft, Hezbollah pager attack, Soleimani strike, Iron Dome, Saudi Aramco drone, Karine A). NEVER graphic violence, no glorification of any side — documentary tone.
+  * Popular animals (sharks, big cats, octopuses, deep-sea creatures, US wildlife)
+  * The human body and brain — surprising anatomy, hidden capacity
+  * Space and the planets
+  * Recent scientific discovery
 - AUTO-REJECT subjects that are obscure to a general audience: little-known historical figures, niche 19th-century inventions, micro-organisms most people have never heard of, regional foods, niche subcultures, technical fields without a popular hook. These produce "lame" videos that flop.
 - The winning combination is a FRESH, lesser-known ANGLE on a subject that is ALREADY famous — a hidden detail about something people see every day, never the overdone fact about it, and never an obscure subject.
 - AVOID over-used facts that flood YouTube Shorts (honey never spoils, bananas are berries, octopus has three hearts, sharks older than trees, we use 10% of our brain, Cleopatra vs the pyramids, Venus day longer than year, Napoleon was short, etc.). Viewers have seen these a hundred times — pick something genuinely fresh and lesser-known.

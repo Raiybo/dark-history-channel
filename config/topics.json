@@ -142,16 +142,69 @@
     ]
   },
   {
-    "category": "American Brands and Fast Food",
+    "category": "Nutrition Science",
     "topics": [
-      "Did you know Coca-Cola once contained actual cocaine and Coke isn't sold in only two countries on Earth",
-      "Did you know McDonald's Big Mac was invented by a franchisee in Pennsylvania in 1967",
-      "Did you know Amazon almost went bankrupt three times before becoming a trillion dollar company",
-      "Did you know the Ford Model T was available in any color as long as it was black to speed up drying time",
-      "Did you know Starbucks was originally named after the first mate in Moby Dick",
-      "Did you know KFC's original recipe is stored in a vault in Kentucky with just two people knowing the full formula",
-      "Did you know Disney owns the exclusive rights to the exact shade of red used on Mickey's shorts",
-      "Did you know the Nintendo Wii was originally going to be called the Revolution"
+      "Did you know eating turmeric with black pepper increases its anti inflammatory absorption by 2000 percent",
+      "Did you know pairing iron rich foods with vitamin C triples the amount your body actually absorbs",
+      "Did you know drizzling olive oil on tomatoes multiplies the lycopene your body can use",
+      "Did you know eating dark chocolate improves blood flow to the brain within just 2 hours",
+      "Did you know green tea contains an amino acid that keeps you calm while staying alert",
+      "Did you know one tablespoon of olive oil a day is linked to a 20 percent lower risk of heart disease",
+      "Did you know blueberries can slow age related memory decline by up to 2 years",
+      "Did you know walnuts contain melatonin and eating a handful can improve your sleep quality",
+      "Did you know cinnamon on your morning coffee helps regulate your blood sugar for the whole day",
+      "Did you know fermented foods like kimchi can improve your mood in as little as 4 weeks",
+      "Did you know eating salmon twice a week is linked to a lower risk of depression in adults"
+    ]
+  },
+  {
+    "category": "Sleep Science",
+    "topics": [
+      "Did you know cooling your bedroom to 65 degrees dramatically improves deep sleep",
+      "Did you know 10 minutes of morning sunlight resets your entire 24 hour sleep cycle",
+      "Did you know your brain physically shrinks at night to wash away waste through the glymphatic system",
+      "Did you know a 20 minute coffee nap is more restorative than either a nap or coffee alone",
+      "Did you know sleeping on your left side improves digestion because of how your stomach is angled",
+      "Did you know the reason you wake up at 3am might be low blood sugar not stress",
+      "Did you know blue light before bed shifts your melatonin by up to 3 hours",
+      "Did you know weighted blankets increase serotonin and reduce nighttime cortisol"
+    ]
+  },
+  {
+    "category": "Longevity and Blue Zones",
+    "topics": [
+      "Did you know grip strength is one of the strongest predictors of how long you will live",
+      "Did you know Blue Zone residents who live past 100 all share one habit — daily walking after meals",
+      "Did you know standing on one leg for 30 seconds a day predicts your longevity better than blood tests",
+      "Did you know having strong friendships reduces your risk of early death more than quitting smoking",
+      "Did you know Okinawans stop eating when they feel 80 percent full — a rule called hara hachi bu",
+      "Did you know the world's longest lived people all follow a rough 12 hour eating window",
+      "Did you know having a strong sense of purpose adds up to 7 years to your life expectancy"
+    ]
+  },
+  {
+    "category": "Everyday Health Habits",
+    "topics": [
+      "Did you know walking for just 2 minutes after eating cuts your blood sugar spike in half",
+      "Did you know humming for 60 seconds increases nitric oxide in your nose by 15 times, helping fight infections",
+      "Did you know 5 minutes of cold water exposure can boost dopamine for hours",
+      "Did you know chewing your food 30 times per bite dramatically improves nutrient absorption",
+      "Did you know deep slow breathing through your nose activates the vagus nerve and drops your heart rate in seconds",
+      "Did you know 20 minutes in nature lowers your cortisol more than the average therapy session",
+      "Did you know smiling releases the same brain chemicals whether you feel happy or force it",
+      "Did you know a study found forest bathing for 2 hours boosts your immune system for weeks",
+      "Did you know drinking water before every meal can help you eat about 22 percent less without noticing"
+    ]
+  },
+  {
+    "category": "Mind and Brain",
+    "topics": [
+      "Did you know it takes an average of 66 days to build a new habit, not 21",
+      "Did you know your gut has 500 million neurons — more than a cat's brain — and produces 90 percent of your body's serotonin",
+      "Did you know your brain uses 20 percent of your energy but weighs only about 2 percent of your body",
+      "Did you know a Stanford study showed walking boosts creative thinking by an average of 60 percent",
+      "Did you know your memory is best encoded during the first 90 minutes after learning something new",
+      "Did you know exercise releases a protein called BDNF that literally grows new neurons in your brain"
     ]
   },
   {
