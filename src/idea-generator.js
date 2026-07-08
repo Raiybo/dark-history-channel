@@ -182,11 +182,10 @@ Reply with ONLY the integer score (1-10). Nothing else.`;
 // catching reworded repeats that keyword overlap can never see. Best-effort:
 // any error returns false so it never blocks the pipeline.
 async function isSemanticDuplicate(topic, used) {
-  const recent = used.slice(-80).map(u => u.topic);
-  // Treat clichés as "already published" too — that closes the loophole where a
-  // reworded cliché ("sea otters hold paws while napping") slips past the
-  // keyword-overlap check on the actual CLICHE_SUBJECTS list.
-  const checkList = [...recent, ...CLICHE_SUBJECTS];
+  // Token-frugal (Groq free tier): only the 25 most recent topics. The full
+  // keyword+stem dedup already runs against ALL history client-side, so this
+  // LLM pass is just a backstop for reworded repeats.
+  const checkList = used.slice(-25).map(u => u.topic);
   if (checkList.length === 0) return false;
   try {
     const prompt = `You are strictly deduplicating ideas for a "Did You Know" channel. We must NEVER publish the same core fact twice.
@@ -218,14 +217,14 @@ async function generateFreshTopic(used, usedKeys) {
   // semantic-duplicate LLM judge (isSemanticDuplicate) uses a wider window
   // downstream — so shrinking THIS list just saves tokens without weakening
   // dedup. Was 250, which pushed the prompt over Groq's 12k TPM ceiling.
-  const recent = used.slice(-80).map(u => `- ${u.topic}`).join('\n');
+  const recent = used.slice(-35).map(u => `- ${u.topic}`).join('\n');
 
   // Track the best-scoring candidate across attempts so we never fall back to
   // the worst one when all attempts score below threshold.
   let best = null;
   let bestScore = -1;
 
-  for (let attempt = 0; attempt < 6; attempt++) {
+  for (let attempt = 0; attempt < 3; attempt++) {
     const prompt = `Invent ONE fresh, specific "Top 5" theme for a viral countdown-style YouTube Shorts channel.
 
 FORMAT: every video counts down 5 surprising, TRUE, VISUAL things on one theme (number 5 up to number 1).
@@ -234,7 +233,7 @@ ${VISUAL_REVEAL_GUIDANCE}
 Rules:
 - Output a SINGLE theme line that begins with "Top 5" and names a clear category, UNDER 12 words. e.g. "Top 5 animals that glow under UV light", "Top 5 everyday objects with a hidden purpose", "Top 5 places on Earth that look like another planet", "Top 5 deep sea creatures that look fake".
 - The theme MUST have at least 5 real, distinct, genuinely surprising, VISUAL examples we can show on screen.
-- HIGH-INTEREST, RECOMMENDABLE: build it around subjects lots of people already find fascinating and search for — popular animals, space and planets, nature, famous landmarks and places, everyday objects, food, technology, natural phenomena, structures, vehicles. Familiar + visual = far more suggested by the algorithm.
+- MOST-WATCHED CATEGORIES ONLY: build it around the subjects that dominate YouTube Shorts views right now — strange / dangerous / adorable ANIMALS, the DEEP OCEAN and its creatures, SPACE and the planets, oddly-SATISFYING or optical-illusion visuals, EXTREMES (biggest, tiniest, fastest, most expensive, most powerful), HIDDEN or secret features of famous things, and jaw-dropping NATURE and natural phenomena. Familiar + visual + a little unbelievable = the algorithm suggests it widely. AVOID dry, niche, or academic subjects — they flop.
 - ABSOLUTELY NO health, medical, diet, nutrition, sleep, supplement, or wellness themes. That category is suppressed. Pure curiosity and wonder only.
 - Prefer subjects with instant, satisfying visuals (glowing, giant, tiny, hidden, transforming, color-changing, camouflaged, strange-looking).
 - AVOID over-used Shorts clichés (honey never spoils, bananas are berries, octopus 3 hearts, we use 10% of brain, Cleopatra vs pyramids, Venus day longer than year, Napoleon short).

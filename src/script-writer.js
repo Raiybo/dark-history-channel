@@ -2,7 +2,7 @@ import { chat, chatWithRetry } from './llm.js';
 import { getDidYouKnowPrompt } from './genres/didyouknow.js';
 
 const HOOK_THRESHOLD = 7;       // 1–10 scale, below this we regenerate (raised from 6 to lift first-2s retention)
-const MAX_HOOK_ATTEMPTS = 3;    // try a fresh script up to N times for a strong hook
+const MAX_HOOK_ATTEMPTS = 2;    // 2 keeps Groq's free-tier token budget in check
 
 // Score the hook 1–10 for scroll-stop power. We REJECT anything below threshold
 // so weak hooks don't reach render. Failure (network/LLM error) defaults to a
