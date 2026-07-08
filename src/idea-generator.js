@@ -291,15 +291,18 @@ export async function generateIdea(genre) {
   const used = loadUsedIdeas();
   const usedKeys = usedKeySet(used);
 
-  // Single focused format now — visual reveal only (genres cleared 2026-06-22).
+  // Single focused format now — Top 5 visual countdown (reworked 2026-07-08).
   const theme = 'visual_reveal';
-  console.log('  Format: Visual reveal (only)');
+  console.log('  Format: Top 5 countdown');
 
-  // 1) fresh AI topic, 2) unused curated pool, 3) last-ditch AI call.
+  // AI-only. The legacy curated pool (config/topics.json) is full of old
+  // "Did you know" single-fact topics that are the WRONG format (and often
+  // YMYL/health), so we NO LONGER fall back to it — serving one produced an
+  // off-format video that failed checks. Retry the generator; if no LLM is
+  // available, fail the run cleanly rather than upload something off-format.
   let topic = await generateFreshTopic(used, usedKeys);
-  if (!topic) topic = pickFromPool(usedKeys, used);
   if (!topic) topic = await generateFreshTopic(used, new Set());
-  if (!topic) throw new Error('Could not generate a unique topic (AI unavailable and pool exhausted).');
+  if (!topic) throw new Error('Could not generate a Top-5 theme — no LLM available (Gemini billing-blocked + Groq daily limit hit?). Skipping this run.');
 
   console.log(`  Selected topic: ${topic}`);
   const idea = { genre, topic, title: topic, theme };
