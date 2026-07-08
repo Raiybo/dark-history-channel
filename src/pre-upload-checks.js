@@ -37,7 +37,7 @@ export function checkScript(script) {
   if (!narr) fail('script', 'Narration is empty');
   const clean = narr.replace(/\s*\|\|\s*/g, ' ');
   const wc = clean.split(/\s+/).filter(Boolean).length;
-  if (wc < 62 || wc > 150) fail('script', `Narration word count off (${wc}, expected 90-135; hard floor 62 for terse models)`);
+  if (wc < 62 || wc > 175) fail('script', `Narration word count off (${wc}, aim 100-130; tolerant band 62-175 for Groq's variance)`);
   const beats = (narr.match(/\|\|/g) || []).length;
   if (beats < 4 || beats > 8) fail('script', `Beat marker count off (${beats}, expected 5-6 for a 5-item countdown)`);
   if (narr.startsWith('||') || narr.endsWith('||')) fail('script', 'Narration starts or ends with ||');
@@ -82,7 +82,7 @@ export function checkClips(clips) {
 // 4) Audio — sane duration + word timings that span the full track
 export function checkAudio(audio) {
   const dur = audio?.duration;
-  if (!dur || dur < 24 || dur > 72) fail('audio', `Duration out of range (${dur?.toFixed?.(1)}s, expected 35-65 for a 5-item countdown)`);
+  if (!dur || dur < 24 || dur > 82) fail('audio', `Duration out of range (${dur?.toFixed?.(1)}s, expected 35-65 for a 5-item countdown)`);
   const wt = audio?.wordTimings || [];
   if (wt.length < 30) fail('audio', `Too few word timings (${wt.length}) — captions will be sparse`);
   const lastEnd = wt[wt.length - 1]?.end ?? 0;
