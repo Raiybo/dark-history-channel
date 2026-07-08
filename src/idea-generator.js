@@ -39,7 +39,7 @@ const VISUAL_REVEAL_GUIDANCE = 'A surprising HIDDEN visual about a familiar thin
 function norm(s) {
   return (s || '')
     .toLowerCase()
-    .replace(/^\s*did you know/, '')
+    .replace(/^\s*(top\s*(5|five)|did you know)/, '')
     .replace(/[^a-z0-9\s]/g, ' ')
     .replace(/\b(the|a|an|that|this|is|are|was|were|of|to|in|on|for|and|or|your|you|why|how|what|can|do|does)\b/g, ' ')
     .replace(/\s+/g, ' ')
@@ -226,43 +226,33 @@ async function generateFreshTopic(used, usedKeys) {
   let bestScore = -1;
 
   for (let attempt = 0; attempt < 6; attempt++) {
-    const prompt = `Invent ONE genuinely surprising, TRUE "Did You Know" fact for a YouTube Shorts channel.
+    const prompt = `Invent ONE fresh, specific "Top 5" theme for a viral countdown-style YouTube Shorts channel.
 
-THIS CHANNEL HAS ONE FORMAT — VISUAL REVEAL:
+FORMAT: every video counts down 5 surprising, TRUE, VISUAL things on one theme (number 5 up to number 1).
 ${VISUAL_REVEAL_GUIDANCE}
 
 Rules:
-- Must be 100% TRUE and verifiable.
-- Genuinely surprising — the kind of fact people repeat to friends.
-- MUST be a visual reveal with something concrete we can SHOW on screen. Reject any idea that is just an abstract fact, a date, or a number with nothing to picture.
-- AUDIENCE: American adults 30-50 who want to feel smarter AND make small healthier choices. NOT a teen trivia channel. Winning fact = jaw-dropping AND useful for their health/sleep/energy/focus/longevity.
-- STRICT no-glorify: do NOT celebrate fast-food, sugary sodas, or unhealthy brands (no McDonald's/KFC/Coca-Cola/candy origin stories). A soda fact framed as a health warning is fine; a "fun origin story" of an unhealthy product is not.
-- Aim for ~60% HEALTH/LIFESTYLE, ~40% CLASSIC INTERESTING FACTS so the feed feels mixed:
-
-  HEALTH/LIFESTYLE (~60%): nutrition science (absorption combos like turmeric+black pepper, iron+vitamin C; benefits of olive oil, dark chocolate, blueberries, green tea, coffee); sleep science (bedroom temp, morning sunlight, coffee naps, blue light); longevity & Blue Zones (grip strength, walking, purpose, 80% rule); everyday habits (2-min walks after meals, humming, cold exposure, nose breathing); ancient practices validated by science (fasting, cold, meditation, saunas); gut microbiome & brain-gut axis; practical focus/memory/habit-building hacks; recent medical/nutrition discovery ("scientists recently found...").
-
-  CLASSIC INTERESTING (~40%): US landmarks (Statue of Liberty, Grand Canyon, Yellowstone, White House, Alcatraz); NASA/space race/SpaceX; US presidents (Washington, Lincoln, JFK, Reagan); US military & intel ops (SEAL, CIA, SR-71, MKUltra); Middle East ops 2000-2026 (Stuxnet, Mossad archive theft, Hezbollah pagers, Soleimani, Iron Dome, Karine A) — strategy/ingenuity frame ONLY, no graphic violence, no glorification; popular animals; human body/brain; space & planets; recent scientific discovery.
-
-- AUTO-REJECT obscure subjects (little-known historical figures, niche inventions, micro-organisms, regional foods). These flop.
-- Winning combination: a FRESH lesser-known angle on an ALREADY famous subject.
+- Output a SINGLE theme line that begins with "Top 5" and names a clear category, UNDER 12 words. e.g. "Top 5 animals that glow under UV light", "Top 5 everyday objects with a hidden purpose", "Top 5 places on Earth that look like another planet", "Top 5 deep sea creatures that look fake".
+- The theme MUST have at least 5 real, distinct, genuinely surprising, VISUAL examples we can show on screen.
+- HIGH-INTEREST, RECOMMENDABLE: build it around subjects lots of people already find fascinating and search for — popular animals, space and planets, nature, famous landmarks and places, everyday objects, food, technology, natural phenomena, structures, vehicles. Familiar + visual = far more suggested by the algorithm.
+- ABSOLUTELY NO health, medical, diet, nutrition, sleep, supplement, or wellness themes. That category is suppressed. Pure curiosity and wonder only.
+- Prefer subjects with instant, satisfying visuals (glowing, giant, tiny, hidden, transforming, color-changing, camouflaged, strange-looking).
 - AVOID over-used Shorts clichés (honey never spoils, bananas are berries, octopus 3 hearts, we use 10% of brain, Cleopatra vs pyramids, Venus day longer than year, Napoleon short).
-- Phrase it as a topic line beginning with "Did you know", under 15 words.
-- It must be a COMPLETELY DIFFERENT SUBJECT (not just different wording) from every already-used topic below. If your candidate shares 2+ significant keywords with any of these, pick a different subject entirely:
+- It must be a COMPLETELY DIFFERENT theme (not just different wording) from every already-used one below. If it shares 2+ significant keywords with any of these, pick a different theme entirely:
 ${recent || '(none yet)'}
 
-Return ONLY the single topic line, nothing else.`;
+Return ONLY the single "Top 5 ..." theme line, nothing else.`;
 
     try {
       // maxTokens must leave room for Gemini 2.5 Flash's hidden "thinking" tokens;
       // at 80 the topic came back truncated to the bare stub "Did you know".
       const text = await chat(prompt, { temperature: 0.95, maxTokens: 1024 });
       const topic = text.split('\n')[0].replace(/^["'\-\s]+|["'\s]+$/g, '').trim();
-      // Require real content AFTER the "did you know" prefix so a truncated stub
-      // can never be accepted as a topic (it would make the script writer fall
-      // back to the prompt's example fact).
-      const afterPrefix = topic.replace(/^did you know/i, '').replace(/[^a-z0-9]+/gi, ' ').trim();
+      // Require real content AFTER the "Top 5" prefix so a truncated stub
+      // ("Top 5") can never be accepted as a theme.
+      const afterPrefix = topic.replace(/^top\s*(5|five)/i, '').replace(/[^a-z0-9]+/gi, ' ').trim();
       const wordsAfter = afterPrefix ? afterPrefix.split(/\s+/).filter(w => w.length >= 3).length : 0;
-      const formatOK = /^did you know/i.test(topic) && topic.length >= 25 && wordsAfter >= 3;
+      const formatOK = /^top\s*(5|five)\b/i.test(topic) && topic.length >= 15 && wordsAfter >= 2;
       const exactNew = !usedKeys.has(norm(topic));
       const subjectNew = !isTooSimilar(topic, used);
       const notCliche = !isCliche(topic);
