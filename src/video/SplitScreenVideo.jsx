@@ -1,5 +1,5 @@
 import {
-  AbsoluteFill, Audio, Img, OffthreadVideo, staticFile, Loop,
+  AbsoluteFill, Img, OffthreadVideo, staticFile, Loop,
   useVideoConfig, useCurrentFrame, interpolate, Sequence,
 } from 'remotion';
 import { loadFont } from '@remotion/google-fonts/Montserrat';
@@ -15,7 +15,7 @@ const IMAGE_RE = /\.(jpe?g|png|webp)$/i;
 // frame. We wrap it in <Loop> sized to the clip's real (Pexels) duration — minus
 // a 2-frame margin so we always restart BEFORE the source runs out. clip is
 // { path, duration } (seconds); an AI-image fallback (.jpg) renders as a still.
-const LoopedClip = ({ clip, fps }) => {
+const LoopedClip = ({ clip, fps, muted = true }) => {
   if (!clip || !clip.path) {
     return <div style={{ position: 'absolute', inset: 0, backgroundColor: '#0a0a12' }} />;
   }
@@ -28,7 +28,7 @@ const LoopedClip = ({ clip, fps }) => {
     <Loop durationInFrames={loopFrames}>
       <OffthreadVideo
         src={staticFile(clip.path)}
-        muted
+        muted={muted}
         playbackRate={1}
         style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
       />
@@ -36,10 +36,13 @@ const LoopedClip = ({ clip, fps }) => {
   );
 };
 
+// Top clip plays with its OWN audio (no music). Only one top slot is active at a
+// time (they're sequenced), so exactly one audio source plays; the bottom loop
+// stays muted.
 const TopSlot = ({ clip, fps }) => {
   const frame = useCurrentFrame();
   const opacity = interpolate(frame, [0, CROSSFADE], [0, 1], { extrapolateRight: 'clamp' });
-  return <div style={{ position: 'absolute', inset: 0, opacity }}><LoopedClip clip={clip} fps={fps} /></div>;
+  return <div style={{ position: 'absolute', inset: 0, opacity }}><LoopedClip clip={clip} fps={fps} muted={false} /></div>;
 };
 
 function evenTimings(count, frames) {
@@ -93,8 +96,8 @@ export const SplitScreenVideo = ({
 
   return (
     <AbsoluteFill style={{ backgroundColor: '#000' }}>
-      {/* TOP HALF — trending-subject stock */}
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '50%', overflow: 'hidden' }}>
+      {/* TOP 70% — trending-subject clip (plays with its own audio) */}
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '70%', overflow: 'hidden' }}>
         {topClips.map((clip, i) => {
           const t = timings[i];
           if (!t) return null;
@@ -110,17 +113,15 @@ export const SplitScreenVideo = ({
         <EditTitle hookText={hookText} captionLines={captionLines} fps={fps} />
       </div>
 
-      {/* center seam */}
-      <div style={{ position: 'absolute', top: '50%', left: 0, right: 0, height: 4, marginTop: -2, backgroundColor: ACCENT, boxShadow: '0 0 24px rgba(0,0,0,0.9)', zIndex: 5 }} />
+      {/* seam at the 70/30 line */}
+      <div style={{ position: 'absolute', top: '70%', left: 0, right: 0, height: 4, marginTop: -2, backgroundColor: ACCENT, boxShadow: '0 0 24px rgba(0,0,0,0.9)', zIndex: 5 }} />
 
-      {/* BOTTOM HALF — royalty-free satisfying loop */}
-      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '50%', overflow: 'hidden' }}>
-        <LoopedClip clip={satisfyingClips[0]} fps={fps} />
+      {/* BOTTOM 30% — royalty-free satisfying loop (muted) */}
+      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '30%', overflow: 'hidden' }}>
+        <LoopedClip clip={satisfyingClips[0]} fps={fps} muted />
       </div>
 
-      {hasMusic && <Audio src={staticFile('music/background.mp3')} volume={0.6} loop />}
-
-      <div style={{ position: 'absolute', top: '50%', left: 0, right: 0, marginTop: 14, display: 'flex', justifyContent: 'center', pointerEvents: 'none', zIndex: 6 }}>
+      <div style={{ position: 'absolute', top: '70%', left: 0, right: 0, marginTop: 12, display: 'flex', justifyContent: 'center', pointerEvents: 'none', zIndex: 6 }}>
         {logo ? (
           <Img src={staticFile(logo)} style={{ width: 96, height: 96, objectFit: 'contain', opacity: 0.55 }} />
         ) : (

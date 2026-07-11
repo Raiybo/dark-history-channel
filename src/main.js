@@ -66,7 +66,7 @@ async function runSplitEdit() {
   const used = loadUsedIdeas();
   const recentSubjects = used.slice(-40).map(u => u.subject).filter(Boolean);
 
-  console.log('Step 1/5  Picking a trending subject...');
+  console.log('Step 1/4  Picking a trending subject...');
   const content = await generateSplitEdit(recentSubjects);
   if (!content) {
     console.log('  No usable trend for a split-edit — falling back to the countdown format.\n');
@@ -75,7 +75,7 @@ async function runSplitEdit() {
   console.log(`  Subject: "${content.subject}" → "${content.title}"`);
   console.log(`  Hook: "${content.hook_text}"\n`);
 
-  console.log('Step 2/5  Fetching footage (subject + satisfying)...');
+  console.log('Step 2/4  Fetching footage (subject + satisfying)...');
   const scenes = [
     ...content.top_keywords.map(k => ({ keyword: k })),
     { keyword: content.satisfying_keyword },
@@ -93,17 +93,14 @@ async function runSplitEdit() {
   }
   console.log(`  ${topClips.length} top clips + ${satisfyingClips.length} satisfying\n`);
 
-  console.log('Step 3/5  Preparing background music...');
-  const musicPath = await prepareMusic('splitedit');
-  console.log();
-
-  console.log('Step 4/5  Rendering split-screen video...');
-  const videoPath = await renderSplitScreenVideo(content, topClips, satisfyingClips, musicPath !== null);
+  // No music for split-edits — the top clip plays with its OWN audio.
+  console.log('Step 3/4  Rendering split-screen video (clip audio, no music)...');
+  const videoPath = await renderSplitScreenVideo(content, topClips, satisfyingClips, false);
   console.log(`  Saved to: ${videoPath}`);
   checkRender(videoPath);
   console.log();
 
-  console.log('Step 5/5  Publishing...');
+  console.log('Step 4/4  Publishing...');
   await publish(content, videoPath);
 
   saveUsedIdea({ topic: content.title, title: content.title, genre: 'splitedit', theme: 'trend', subject: content.subject });

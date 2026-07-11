@@ -6,15 +6,15 @@
 import { chat } from '../llm.js';
 import { fetchTrendCandidates, BLOCKED, sanitizeTrendTitle } from '../trends.js';
 
-// Royalty-free "satisfying" bottom-half subjects — all available as generic
-// Pexels stock (NOT copyrighted gameplay footage). One is chosen per video so
+// Satisfying bottom-half footage — real lawn-mowing / grass-cutting / cleaning
+// stock (the "oddly satisfying mowing" vibe), all available as generic Pexels
+// stock. NOT ripped from a copyrighted mowing game. One is chosen per video so
 // the bottom half varies day to day.
 export const SATISFYING_QUERIES = [
-  'kinetic sand cutting', 'hydraulic press crushing', 'soap cutting closeup',
-  'paint mixing swirl', 'slime stretching', 'glass blowing', 'resin pouring',
-  'water droplets slow motion', 'honey dripping closeup', 'ice carving',
-  'lava lamp closeup', 'sand falling slow motion', 'foam waves aerial',
-  'pressure washing clean', 'chocolate melting closeup',
+  'lawn mower cutting grass', 'tractor mowing field', 'ride on mower lawn',
+  'mowing tall grass', 'lawn mower stripes', 'grass cutting closeup',
+  'field harvester mowing', 'hedge trimming', 'grass trimmer edging',
+  'pressure washing dirty surface',
 ];
 
 function isRecent(subject, recentSubjects) {

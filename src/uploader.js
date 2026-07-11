@@ -107,7 +107,7 @@ export async function uploadToYouTube(script, videoPath) {
     requestBody: {
       snippet: {
         title: script.title,
-        description: `${buildHashtags(script.tags)}\n\n${(script.description || '').trim()}\n\n${MUSIC_CREDIT}`.trim(),
+        description: `${buildHashtags(script.tags)}\n\n${(script.description || '').trim()}${script.hasMusic ? '\n\n' + MUSIC_CREDIT : ''}`.trim(),
         tags: buildTags(script.tags),
         categoryId: '27',  // Education
         defaultLanguage: 'en',
