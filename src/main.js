@@ -91,7 +91,14 @@ async function run() {
     // Post-upload best-effort: classify into a themed playlist + save a cross-
     // post pack for TikTok/Reels/Reddit. Both are wrapped so any error here
     // never re-fails an already-successful upload.
-    await addVideoToThemedPlaylist(result.id, script);
+    // Playlist-add is OFF by default at 6 uploads/day: 6 x (1600 upload + ~50
+    // comment + ~51 playlist + 2 lookups) overflows the 10,000-unit daily API
+    // quota and the day's LAST upload would die on quotaExceeded. Without the
+    // playlist step we sit at ~9,912/day. Set ENABLE_PLAYLISTS=1 to re-enable
+    // if the cadence ever drops (<=5/day fits with playlists on).
+    if (process.env.ENABLE_PLAYLISTS === '1') {
+      await addVideoToThemedPlaylist(result.id, script);
+    }
     saveCrossPostPack(script, videoPath, result.id, result.url);
     console.log();
   } else {
