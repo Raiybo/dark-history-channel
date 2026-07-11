@@ -1,10 +1,11 @@
 import 'dotenv/config';
-import { generateIdea }     from './idea-generator.js';
+import { generateIdea, loadUsedIdeas, saveUsedIdea } from './idea-generator.js';
 import { generateScript }   from './script-writer.js';
+import { generateSplitEdit } from './genres/splitedit.js';
 import { generateAudio }    from './tts.js';
-import { fetchSceneVideos } from './pexels.js';
+import { fetchSceneVideos, fetchClipsWithDuration } from './pexels.js';
 import { prepareMusic }     from './music.js';
-import { renderVideo }      from './renderer.js';
+import { renderVideo, renderSplitScreenVideo } from './renderer.js';
 import { uploadToYouTube }  from './uploader.js';
 import { sendDraftToTikTok, tiktokConfigured } from './tiktok.js';
 import {
@@ -23,10 +24,93 @@ const REQUIRED_ENV = [
 
 const GENRE_LABELS = {
   didyouknow: 'Did You Know',
+  splitedit: 'Split-Screen Edit',
 };
 
 function getTodayGenre() {
   return 'didyouknow';
+}
+
+// Publish one video (YouTube + TikTok draft) and run post-upload extras. Shared
+// by both the countdown pipeline and the split-edit pipeline.
+async function publish(payload, videoPath) {
+  if (process.env.UPLOAD === '1') {
+    console.log('  Uploading to YouTube...');
+    const result = await uploadToYouTube(payload, videoPath);
+    console.log(`  Published: ${result.url}`);
+    if (process.env.ENABLE_PLAYLISTS === '1') {
+      await addVideoToThemedPlaylist(result.id, payload);
+    }
+    saveCrossPostPack(payload, videoPath, result.id, result.url);
+  } else {
+    console.log(`  Upload skipped (set UPLOAD=1). Video at: ${videoPath}`);
+  }
+  if (tiktokConfigured()) {
+    try {
+      const tk = await sendDraftToTikTok(videoPath);
+      console.log(`  TikTok draft delivered (publish_id ${tk.publish_id}).`);
+    } catch (err) {
+      console.log(`  TikTok draft skipped: ${err.message}`);
+    }
+  }
+}
+
+// Split-screen EDIT pipeline: trending subject stock (top) + royalty-free
+// satisfying loop (bottom) + music. No narration/TTS, no countdown. All footage
+// is licensed/CC/stock. Falls back to the countdown format if no trend fits.
+async function runSplitEdit() {
+  console.log('\n═══════════════════════════════════════');
+  console.log('   Split-Screen Edit');
+  console.log('═══════════════════════════════════════\n');
+
+  const used = loadUsedIdeas();
+  const recentSubjects = used.slice(-40).map(u => u.subject).filter(Boolean);
+
+  console.log('Step 1/5  Picking a trending subject...');
+  const content = await generateSplitEdit(recentSubjects);
+  if (!content) {
+    console.log('  No usable trend for a split-edit — falling back to the countdown format.\n');
+    return runCountdown();
+  }
+  console.log(`  Subject: "${content.subject}" → "${content.title}"`);
+  console.log(`  Hook: "${content.hook_text}"\n`);
+
+  console.log('Step 2/5  Fetching footage (subject + satisfying)...');
+  const scenes = [
+    ...content.top_keywords.map(k => ({ keyword: k })),
+    { keyword: content.satisfying_keyword },
+  ];
+  const clips = await fetchClipsWithDuration(scenes);
+  const topClips = clips.slice(0, content.top_keywords.length).filter(Boolean);
+  const satisfyingClips = clips.slice(content.top_keywords.length).filter(Boolean);
+  if (topClips.length < 3) {
+    console.log('  Too few top clips fetched — falling back to the countdown format.\n');
+    return runCountdown();
+  }
+  if (satisfyingClips.length === 0) {
+    console.log('  No satisfying clip — using an extra top clip on the bottom.');
+    satisfyingClips.push(topClips[topClips.length - 1]);
+  }
+  console.log(`  ${topClips.length} top clips + ${satisfyingClips.length} satisfying\n`);
+
+  console.log('Step 3/5  Preparing background music...');
+  const musicPath = await prepareMusic('splitedit');
+  console.log();
+
+  console.log('Step 4/5  Rendering split-screen video...');
+  const videoPath = await renderSplitScreenVideo(content, topClips, satisfyingClips, musicPath !== null);
+  console.log(`  Saved to: ${videoPath}`);
+  checkRender(videoPath);
+  console.log();
+
+  console.log('Step 5/5  Publishing...');
+  await publish(content, videoPath);
+
+  saveUsedIdea({ topic: content.title, title: content.title, genre: 'splitedit', theme: 'trend', subject: content.subject });
+
+  console.log('\n═══════════════════════════════════════');
+  console.log('   Done!');
+  console.log('═══════════════════════════════════════\n');
 }
 
 function checkEnv() {
@@ -37,10 +121,8 @@ function checkEnv() {
   }
 }
 
-async function run() {
-  checkEnv();
-
-  const genre = process.env.GENRE_OVERRIDE || getTodayGenre();
+async function runCountdown() {
+  const genre = 'didyouknow';
   const label = GENRE_LABELS[genre];
 
   console.log('\n═══════════════════════════════════════');
@@ -125,6 +207,15 @@ async function run() {
   console.log('═══════════════════════════════════════');
   console.log('   Done!');
   console.log('═══════════════════════════════════════\n');
+}
+
+// Dispatcher: GENRE_OVERRIDE=splitedit runs the split-screen edit pipeline;
+// anything else runs the countdown pipeline.
+async function run() {
+  checkEnv();
+  const genre = process.env.GENRE_OVERRIDE || getTodayGenre();
+  if (genre === 'splitedit') return runSplitEdit();
+  return runCountdown();
 }
 
 run().catch(err => {

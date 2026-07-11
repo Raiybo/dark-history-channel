@@ -12,6 +12,10 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 // #Shorts #Viral #Facts lead the evergreen set so every upload always carries
 // the high-reach boost tags the channel relies on, followed by the niche-
 // specific evergreens. Topic hashtags still go FIRST overall (above-title slots).
+// Kevin MacLeod tracks (music.js) are CC BY 3.0 — attribution is required, so it
+// goes in every description. Footage is Pexels/CC/public-domain (license-free).
+const MUSIC_CREDIT = 'Music: Kevin MacLeod (incompetech.com), licensed under Creative Commons BY 3.0.';
+
 const EVERGREEN_HASHTAGS = ['#Shorts', '#YouTubeShorts', '#Viral', '#Facts', '#DidYouKnow', '#FunFacts', '#AmazingFacts', '#InterestingFacts', '#Trending'];
 const EVERGREEN_TAGS = ['shorts', 'youtube shorts', 'viral', 'viral shorts', 'trending', 'facts', 'did you know', 'fun facts', 'amazing facts', 'interesting facts', 'educational', 'today i learned', 'knowledge', 'mind blowing facts'];
 
@@ -103,7 +107,7 @@ export async function uploadToYouTube(script, videoPath) {
     requestBody: {
       snippet: {
         title: script.title,
-        description: `${buildHashtags(script.tags)}\n\n${(script.description || '').trim()}`.trim(),
+        description: `${buildHashtags(script.tags)}\n\n${(script.description || '').trim()}\n\n${MUSIC_CREDIT}`.trim(),
         tags: buildTags(script.tags),
         categoryId: '27',  // Education
         defaultLanguage: 'en',

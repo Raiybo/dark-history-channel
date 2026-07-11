@@ -105,6 +105,45 @@ async function generateAiImage(keyword, outputPath) {
   await pipeline(res.body, writer);
 }
 
+// Like fetchSceneVideos but returns { path, duration } objects so the renderer
+// can loop each clip to its real length (Remotion's OffthreadVideo can't loop
+// on its own and freezes past a short clip's end). Used by the split-edit path.
+export async function fetchClipsWithDuration(scenes) {
+  mkdirSync(VIDEOS_DIR, { recursive: true });
+  const usedUrls = new Set();
+  const results = [];
+  for (let i = 0; i < scenes.length; i++) {
+    const { keyword } = scenes[i];
+    try {
+      process.stdout.write(`  [${i + 1}/${scenes.length}] "${keyword}"... `);
+      const video = await searchVideo(keyword, usedUrls);
+      if (video) {
+        usedUrls.add(video.link);
+        const clipPath = join(VIDEOS_DIR, `clip_${i}.mp4`);
+        await downloadClip(video.link, clipPath);
+        process.stdout.write('✓\n');
+        results.push({ path: `videos/clip_${i}.mp4`, duration: video.duration || 6 });
+      } else {
+        process.stdout.write('Pexels missed, generating AI image... ');
+        try {
+          const imgPath = join(VIDEOS_DIR, `clip_${i}.jpg`);
+          await generateAiImage(keyword, imgPath);
+          process.stdout.write('✓ AI image\n');
+          results.push({ path: `videos/clip_${i}.jpg`, duration: 6 });
+        } catch (err) {
+          process.stdout.write(`✗ AI image failed (${err.message})\n`);
+          results.push(null);
+        }
+      }
+    } catch (err) {
+      process.stdout.write(`✗ (${err.message})\n`);
+      results.push(null);
+    }
+    if (i < scenes.length - 1) await sleep(400);
+  }
+  return results;
+}
+
 export async function fetchSceneVideos(scenes) {
   mkdirSync(VIDEOS_DIR, { recursive: true });
 

@@ -7,6 +7,49 @@ import { fileURLToPath } from 'url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = join(__dirname, '..');
 
+const RENDER_OPTS = {
+  codec: 'h264',
+  jpegQuality: 100,
+  crf: 18,
+  timeoutInMilliseconds: 60000,
+  chromiumOptions: {
+    disableWebSecurity: true,
+    gl: 'swiftshader',
+    noSandbox: !!process.env.CI,
+  },
+};
+
+// Render the split-screen "edit": trending-subject stock on top, satisfying loop
+// on bottom, royalty-free music. content = split-edit object; topClips /
+// satisfyingClips are public-relative paths (e.g. 'videos/clip_0.mp4').
+export async function renderSplitScreenVideo(content, topClips, satisfyingClips, hasMusic) {
+  const inputProps = {
+    topClips: topClips || [],
+    satisfyingClips: satisfyingClips || [],
+    hookText: content.hook_text || '',
+    captionLines: content.caption_lines || [],
+    channelName: process.env.CHANNEL_NAME || 'Distoir',
+    logo: ['logo.png', 'logo.webp', 'logo.jpg'].find(f => existsSync(join(ROOT_DIR, 'public', f))) || null,
+    hasMusic: !!hasMusic,
+    durationSec: 30,
+  };
+  writeFileSync(join(ROOT_DIR, 'config', 'render-props.json'), JSON.stringify(inputProps, null, 2));
+
+  console.log('  Bundling Remotion project...');
+  const bundled = await bundle({ entryPoint: join(__dirname, 'index.jsx'), webpackOverride: (c) => c });
+  const composition = await selectComposition({ serveUrl: bundled, id: 'SplitScreenVideo', inputProps });
+
+  mkdirSync(join(ROOT_DIR, 'output'), { recursive: true });
+  const outputPath = join(ROOT_DIR, 'output', 'video.mp4');
+  console.log(`  Rendering ${composition.durationInFrames} frames (split-screen)...`);
+  await renderMedia({
+    composition, serveUrl: bundled, outputLocation: outputPath, inputProps, ...RENDER_OPTS,
+    onProgress: ({ progress }) => process.stdout.write(`\r  Progress: ${Math.round(progress * 100)}%   `),
+  });
+  process.stdout.write('\n');
+  return outputPath;
+}
+
 export async function renderVideo(script, audio) {
   const publicAudioDir = join(ROOT_DIR, 'public', 'audio');
   mkdirSync(publicAudioDir, { recursive: true });

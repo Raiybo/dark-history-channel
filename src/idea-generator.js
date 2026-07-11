@@ -8,7 +8,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const TOPICS_PATH = join(__dirname, '../config/topics.json');
 const USED_IDEAS_PATH = join(__dirname, '../config/used-ideas.json');
 
-function loadUsedIdeas() {
+export function loadUsedIdeas() {
   if (!existsSync(USED_IDEAS_PATH)) return [];
   // CI's merge step (jq unique_by on title|topic|date) re-sorts the file
   // ALPHABETICALLY by title, so on-disk order is not publish order. Every
@@ -18,13 +18,14 @@ function loadUsedIdeas() {
     .sort((a, b) => (a.date || '').localeCompare(b.date || ''));
 }
 
-function saveUsedIdea(idea) {
+export function saveUsedIdea(idea) {
   const used = loadUsedIdeas();
   used.push({
     topic: idea.topic,
     title: idea.title,
     genre: idea.genre,
     theme: idea.theme || null,
+    subject: idea.subject || null,
     date: new Date().toISOString(),
   });
   writeFileSync(USED_IDEAS_PATH, JSON.stringify(used, null, 2));

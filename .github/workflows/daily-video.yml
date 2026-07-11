@@ -82,7 +82,7 @@ jobs:
           TIKTOK_REFRESH_TOKEN: ${{ secrets.TIKTOK_REFRESH_TOKEN }}
           CI: 'true'
           UPLOAD: '1'
-          GENRE_OVERRIDE: didyouknow
+          GENRE_OVERRIDE: splitedit
         run: node src/main.js
 
       - name: Commit updated used-ideas.json
