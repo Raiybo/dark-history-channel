@@ -57,14 +57,15 @@ TRANSLATE the movie to a real-world stock subject, e.g.:
 - a shark or ocean film -> "great white shark", "deep ocean diving", "ocean waves aerial"
 - a space film -> "rocket launch", "planets space", "astronaut spacewalk", "nebula galaxy"
 - a monster or kaiju film -> "stormy ocean waves", "city skyline night", "lightning storm"
-Only pick real-world subjects STOCK clearly has (nature, cities, vehicles, animals, space, military, ocean, ruins). Never a subject with no stock footage.
+- a superhero or comic-book film -> "city skyline night", "skyscraper rooftops", "city aerial flyover"
+Pick the most CINEMATIC, DYNAMIC angle — scale, speed, spectacle, drama. NEVER a small literal prop: a superhero film is soaring city skylines and rooftops, NOT a closeup of a spider web. Only pick real-world subjects STOCK clearly has (nature, cities, vehicles, animals, space, military, ocean, ruins). Never a subject with no stock footage.
 
 Return ONLY valid JSON, no markdown:
 {
   "subject": "the REAL-WORLD stock subject in 1-3 words (e.g. roman colosseum, fighter jets, sand dunes)",
   "movie": "the trending movie/show/franchise this rides (context only; empty if none)",
   "title": "YouTube title UNDER 60 chars, hypey, that NAMES the movie so it rides the search (e.g. 'Real Life Top Gun Jets', 'Dune Made Me Obsessed With Deserts')",
-  "hook_text": "big on-screen headline. ALL CAPS, 4-7 words, punchy, no punctuation",
+  "hook_text": "big on-screen headline. ALL CAPS, 4-7 words, punchy, no punctuation. Must be SPECIFIC to the subject and hype — never generic filler like GET READY FOR ACTION. e.g. THIS CITY NEVER SLEEPS, FASTEST JETS EVER BUILT, ROME WAS RUTHLESS",
   "caption_lines": ["2 or 3 short hype lines, each under 26 characters"],
   "top_keywords": ["exactly 5 Pexels VIDEO queries for CINEMATIC, dramatic, high-quality real footage of the real-world subject, 2-4 words each, GENERIC (no movie characters/scenes, no named people/brands)"],
   "tags": ["5-7 tags: the movie name plus the real-world subject, most specific first"],
