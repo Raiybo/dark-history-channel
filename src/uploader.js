@@ -77,9 +77,16 @@ function extractQuestion(desc) {
 // scope) only logs — it never blocks the upload. NOTE: the Data API cannot PIN
 // a comment, so pin it by hand if you want it stuck to the top.
 async function postEngagementComment(youtube, videoId, script) {
-  const text = (script.pinned_comment || '').trim()
+  let text = (script.pinned_comment || '').trim()
     || extractQuestion(script.description)
     || 'Did this one surprise you? 👇';
+  // For AI-tools videos, always surface the actual tool website inside the
+  // auto-comment so viewers have a clickable link the moment they land. The
+  // Data API can't PIN a comment, but this comment is the top new one from the
+  // owner right after upload — Studio's "pin" UI is 1 tap if you want it stuck.
+  if (script.genre === 'aitools' && script.official_url) {
+    text = `${text}\n\n👉 ${script.official_url}`;
+  }
   try {
     await youtube.commentThreads.insert({
       part: ['snippet'],
