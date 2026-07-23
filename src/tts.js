@@ -4,11 +4,12 @@ import { getAudioDurationInSeconds } from 'get-audio-duration';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { DYK_VOICE } from './genres/didyouknow.js';
+import { AI_TOOLS_VOICE } from './genres/aitools.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const AUDIO_DIR = join(__dirname, '../output/audio');
 
-const VOICES = { didyouknow: DYK_VOICE };
+const VOICES = { didyouknow: DYK_VOICE, aitools: AI_TOOLS_VOICE };
 
 function parseTimestamp(ts) {
   const clean = ts.trim().replace(',', '.');

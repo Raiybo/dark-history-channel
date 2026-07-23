@@ -2,6 +2,8 @@ import 'dotenv/config';
 import { generateIdea, loadUsedIdeas, saveUsedIdea } from './idea-generator.js';
 import { generateScript }   from './script-writer.js';
 import { generateSplitEdit } from './genres/splitedit.js';
+import { generateAiToolsContent } from './genres/aitools.js';
+import { fetchToolScreenshots } from './screenshots.js';
 import { generateAudio }    from './tts.js';
 import { fetchSceneVideos, fetchClipsWithDuration } from './pexels.js';
 import { prepareMusic }     from './music.js';
@@ -9,7 +11,7 @@ import { renderVideo, renderSplitScreenVideo } from './renderer.js';
 import { uploadToYouTube }  from './uploader.js';
 import { sendDraftToTikTok, tiktokConfigured } from './tiktok.js';
 import {
-  checkTopic, checkScript, checkClips, checkAudio, checkRender,
+  checkTopic, checkScript, checkAiToolsScript, checkClips, checkAudio, checkRender,
 } from './pre-upload-checks.js';
 import { addVideoToThemedPlaylist } from './yt-playlists.js';
 import { saveCrossPostPack } from './cross-post.js';
@@ -25,6 +27,7 @@ const REQUIRED_ENV = [
 const GENRE_LABELS = {
   didyouknow: 'Did You Know',
   splitedit: 'Split-Screen Edit',
+  aitools: 'AI Tools & Tech Hacks',
 };
 
 function getTodayGenre() {
@@ -206,11 +209,91 @@ async function runCountdown() {
   console.log('═══════════════════════════════════════\n');
 }
 
-// Dispatcher: GENRE_OVERRIDE=splitedit runs the split-screen edit pipeline;
-// anything else runs the countdown pipeline.
+// AI Tools & Tech Hacks pipeline — real UI screenshots (no stock, no AI art)
+// captured by Puppeteer from the tool's own website, composited over the
+// existing SlideshowVideo (Ken Burns motion on .jpg clips already supported
+// via VideoClip → Slide). Fresh trending tool picked per run with a 90-day
+// cooldown so no tool is repeated inside the window.
+async function runAiTools() {
+  const genre = 'aitools';
+  console.log('\n═══════════════════════════════════════');
+  console.log(`   ${GENRE_LABELS[genre]}`);
+  console.log('═══════════════════════════════════════\n');
+
+  const used = loadUsedIdeas();
+
+  console.log('Step 1/6  Picking trending tool + writing script...');
+  const content = await generateAiToolsContent(used);
+  if (!content) {
+    console.log('  No usable trending tool today (all on cooldown or filters).');
+    process.exit(0);
+  }
+  console.log(`  Tool: ${content.tool_name}`);
+  console.log(`  Hook: "${content.hook_text}"`);
+  console.log(`  Script: ${content.narration.split(/\s+/).length} words`);
+  checkAiToolsScript(content);
+  console.log();
+
+  console.log('Step 2/6  Capturing real UI screenshots...');
+  const rawClips = await fetchToolScreenshots(content.scenes);
+  // Fill any single-scene capture miss with a reused successful capture, so one
+  // page 404 or timeout doesn't nuke the whole run. If EVERY capture failed,
+  // checkClips will still fail loudly and the pipeline exits before uploading.
+  const firstGood = rawClips.find(Boolean);
+  const clips = rawClips.map(c => c || firstGood || null);
+  const missCount = rawClips.filter(c => !c).length;
+  if (firstGood && missCount > 0) {
+    console.log(`  Filled ${missCount} failed capture(s) with a reused successful screenshot.`);
+  }
+  content.clips = clips;
+  checkClips(clips);
+  console.log();
+
+  console.log('Step 3/6  Generating voiceover...');
+  const audio = await generateAudio(content.narration, genre);
+  content.narration = content.narration.replace(/\s*\|\|\s*/g, ' ').trim();
+  checkAudio(audio);
+  console.log();
+
+  console.log('Step 4/6  Preparing background music...');
+  const musicPath = await prepareMusic(genre);
+  content.hasMusic = musicPath !== null;
+  console.log();
+
+  console.log('Step 5/6  Rendering video...');
+  // The renderer reads content.scenes for lower-third callouts; map our AI-tools
+  // scene shape to the {keyword} shape the SceneCallouts component expects.
+  const renderContent = {
+    ...content,
+    scenes: content.scenes.map(s => ({ keyword: s.caption || s.area })),
+  };
+  const videoPath = await renderVideo(renderContent, audio);
+  console.log(`  Saved to: ${videoPath}`);
+  checkRender(videoPath);
+  console.log();
+
+  console.log('Step 6/6  Publishing...');
+  await publish(content, videoPath);
+
+  saveUsedIdea({
+    topic: content.tool_name,
+    title: content.title,
+    genre: 'aitools',
+    tracking_slug: content.tracking_slug,
+    toolName: content.tool_name,
+    source: content.data_source,
+  });
+
+  console.log('\n═══════════════════════════════════════');
+  console.log('   Done!');
+  console.log('═══════════════════════════════════════\n');
+}
+
+// Dispatcher: GENRE_OVERRIDE picks the pipeline (aitools | splitedit | countdown).
 async function run() {
   checkEnv();
   const genre = process.env.GENRE_OVERRIDE || getTodayGenre();
+  if (genre === 'aitools') return runAiTools();
   if (genre === 'splitedit') return runSplitEdit();
   return runCountdown();
 }

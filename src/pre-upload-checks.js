@@ -94,6 +94,43 @@ export function checkAudio(audio) {
   pass('audio', `${dur.toFixed(1)}s, ${wt.length} word timings, ${beats.length} beats`);
 }
 
+// AI-Tools-specific script check. Different invariants from the Top-5 format
+// so we don't share checkScript — the hook shape, scene count, and narration
+// length all move.
+export function checkAiToolsScript(content) {
+  if (!content) fail('script', 'AI-tools content is null');
+  const hook = (content.hook_text || '').trim();
+  if (!hook) fail('script', 'Hook is empty');
+  if (hook !== hook.toUpperCase()) fail('script', `Hook must be ALL CAPS: "${hook}"`);
+  const hookWords = hook.split(/\s+/).filter(Boolean).length;
+  if (hookWords > 12 || hookWords < 4) fail('script', `Hook length off (${hookWords} words, expected 5-9)`);
+
+  const narr = (content.narration || '').trim();
+  if (!narr) fail('script', 'Narration empty');
+  const clean = narr.replace(/\s*\|\|\s*/g, ' ');
+  const wc = clean.split(/\s+/).filter(Boolean).length;
+  // Spec target 105-125; tolerant band 85-160 for LLM variance.
+  if (wc < 85 || wc > 160) fail('script', `Narration word count off (${wc}, target 100-130)`);
+  const beats = (narr.match(/\|\|/g) || []).length;
+  if (beats < 3 || beats > 7) fail('script', `Beat marker count off (${beats}, expected 4-6)`);
+
+  const title = (content.title || '').trim();
+  if (!title) fail('script', 'Title empty');
+  if (title.length > 90) fail('script', `Title too long (${title.length} chars, max 90)`);
+
+  const scenes = content.scenes || [];
+  if (scenes.length < 3 || scenes.length > 5) fail('script', `Scene count off (${scenes.length}, expected 4)`);
+  // Every scene URL must be reachable — screenshot fetcher will confirm at fetch time.
+  // Here we just enforce it's a valid URL string.
+  for (const [i, s] of scenes.entries()) {
+    if (!s?.url || !/^https?:\/\//i.test(s.url)) fail('script', `Scene ${i + 1} has no valid URL`);
+  }
+  if (!content.tracking_slug) fail('script', 'tracking_slug missing (needed for 90-day cooldown)');
+  if (!content.tool_name) fail('script', 'tool_name missing');
+
+  pass('script', `hook ${hookWords}w, narration ${wc}w with ${beats} beats, ${scenes.length} scenes, tool "${content.tool_name}"`);
+}
+
 // 5) Render — output sane size
 export function checkRender(videoPath) {
   let st;

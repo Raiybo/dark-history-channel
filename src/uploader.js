@@ -16,8 +16,18 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 // goes in every description. Footage is Pexels/CC/public-domain (license-free).
 const MUSIC_CREDIT = 'Music: Kevin MacLeod (incompetech.com), licensed under Creative Commons BY 3.0.';
 
-const EVERGREEN_HASHTAGS = ['#Shorts', '#YouTubeShorts', '#Viral', '#Facts', '#DidYouKnow', '#FunFacts', '#AmazingFacts', '#InterestingFacts', '#Trending'];
-const EVERGREEN_TAGS = ['shorts', 'youtube shorts', 'viral', 'viral shorts', 'trending', 'facts', 'did you know', 'fun facts', 'amazing facts', 'interesting facts', 'educational', 'today i learned', 'knowledge', 'mind blowing facts'];
+// Per-genre evergreen tags. AI-tools content uses tech/productivity discovery
+// hashtags; the original trivia format keeps the Did You Know / Fun Facts set.
+const EVERGREEN_HASHTAGS_BY_GENRE = {
+  aitools:    ['#Shorts', '#YouTubeShorts', '#AITools', '#TechHacks', '#Productivity', '#AI', '#ArtificialIntelligence', '#Tech', '#Startup', '#Founders'],
+  didyouknow: ['#Shorts', '#YouTubeShorts', '#Viral', '#Facts', '#DidYouKnow', '#FunFacts', '#AmazingFacts', '#InterestingFacts', '#Trending'],
+};
+const EVERGREEN_TAGS_BY_GENRE = {
+  aitools:    ['shorts', 'youtube shorts', 'ai tools', 'ai tools 2026', 'tech hacks', 'productivity', 'artificial intelligence', 'ai workflow', 'startup tools', 'ai for creators', 'chatgpt alternatives', 'ai apps', 'no code ai'],
+  didyouknow: ['shorts', 'youtube shorts', 'viral', 'viral shorts', 'trending', 'facts', 'did you know', 'fun facts', 'amazing facts', 'interesting facts', 'educational', 'today i learned', 'knowledge', 'mind blowing facts'],
+};
+const EVERGREEN_HASHTAGS = EVERGREEN_HASHTAGS_BY_GENRE.didyouknow;
+const EVERGREEN_TAGS = EVERGREEN_TAGS_BY_GENRE.didyouknow;
 
 function toHashtag(s) {
   const camel = (s || '').replace(/[^a-zA-Z0-9 ]/g, '').split(/\s+/).filter(Boolean)
@@ -25,25 +35,27 @@ function toHashtag(s) {
   return camel ? '#' + camel : '';
 }
 
-function buildHashtags(tags) {
+function buildHashtags(tags, genre = 'didyouknow') {
   // Up to 5 topic-specific hashtags lead for topical discovery (the first 3 show
-  // above the title), then the high-reach evergreen discovery tags. Capped at 14
-  // because YouTube ignores ALL hashtags on a video that has more than 15.
+  // above the title), then the high-reach evergreen discovery tags for THIS genre.
+  // Capped at 14 because YouTube ignores ALL hashtags on a video that has more than 15.
+  const evergreen = EVERGREEN_HASHTAGS_BY_GENRE[genre] || EVERGREEN_HASHTAGS_BY_GENRE.didyouknow;
   const topic = (tags || []).slice(0, 5).map(toHashtag).filter(Boolean);
   const seen = new Set();
   const out = [];
-  for (const h of [...topic, ...EVERGREEN_HASHTAGS]) {
+  for (const h of [...topic, ...evergreen]) {
     const k = h.toLowerCase();
     if (!seen.has(k)) { seen.add(k); out.push(h); }
   }
   return out.slice(0, 14).join(' ');
 }
 
-function buildTags(tags) {
+function buildTags(tags, genre = 'didyouknow') {
+  const evergreen = EVERGREEN_TAGS_BY_GENRE[genre] || EVERGREEN_TAGS_BY_GENRE.didyouknow;
   const seen = new Set();
   const out = [];
   let total = 0;
-  for (const t of [...(tags || []), ...EVERGREEN_TAGS]) {
+  for (const t of [...(tags || []), ...evergreen]) {
     const clean = (t || '').trim();
     const k = clean.toLowerCase();
     if (!clean || seen.has(k)) continue;
@@ -107,9 +119,11 @@ export async function uploadToYouTube(script, videoPath) {
     requestBody: {
       snippet: {
         title: script.title,
-        description: `${buildHashtags(script.tags)}\n\n${(script.description || '').trim()}${script.hasMusic ? '\n\n' + MUSIC_CREDIT : ''}`.trim(),
-        tags: buildTags(script.tags),
-        categoryId: '27',  // Education
+        description: `${buildHashtags(script.tags, script.genre)}\n\n${(script.description || '').trim()}${script.hasMusic ? '\n\n' + MUSIC_CREDIT : ''}`.trim(),
+        tags: buildTags(script.tags, script.genre),
+        // AI-tools content sits better under "Science & Technology" (28); the
+        // rest of the channel keeps Education (27).
+        categoryId: script.genre === 'aitools' ? '28' : '27',
         defaultLanguage: 'en',
         defaultAudioLanguage: 'en'
       },
