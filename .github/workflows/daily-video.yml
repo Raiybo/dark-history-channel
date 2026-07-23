@@ -10,18 +10,17 @@ on:
   # for EDT (UTC-4, summer). In winter (EST, UTC-5) each post lands 1h earlier
   # in local US time — nudge the crons -1h around early November if you want to
   # hold the exact same local times year-round.
-  schedule:
-    # Back to 6/day on 2026-07-11 (user decision) — now TREND-DRIVEN: each run
-    # pulls what's trending across Google Trends / Reddit / Wikipedia / YouTube
-    # and rides a different trending subject, so the six daily videos are far
-    # more varied than the old template (variety = less "mass-produced" signal).
-    - cron: '0 11 * * *'   # 07:00 EDT — US East morning commute
-    - cron: '30 15 * * *'  # 11:30 EDT — pre-lunch scroll
-    - cron: '0 17 * * *'   # 13:00 EDT — lunch break
-    - cron: '0 21 * * *'   # 17:00 EDT — evening commute
-    - cron: '30 23 * * *'  # 19:30 EDT — prime time
-    - cron: '0 3 * * *'    # 23:00 EDT — late-night scroll (previous day for US)
-  workflow_dispatch:        # Manual trigger from GitHub UI (posts one reel)
+  # PAUSED for niche pivot (AI Tools / Tech Hacks rebuild) — schedule commented
+  # out so no stale-format uploads ship while the new pipeline is being built.
+  # Re-enable by uncommenting once the AI-tools pipeline is verified end-to-end.
+  # schedule:
+  #   - cron: '0 11 * * *'   # 07:00 EDT — US East morning commute
+  #   - cron: '30 15 * * *'  # 11:30 EDT — pre-lunch scroll
+  #   - cron: '0 17 * * *'   # 13:00 EDT — lunch break
+  #   - cron: '0 21 * * *'   # 17:00 EDT — evening commute
+  #   - cron: '30 23 * * *'  # 19:30 EDT — prime time
+  #   - cron: '0 3 * * *'    # 23:00 EDT — late-night scroll
+  workflow_dispatch:        # Manual trigger from GitHub UI stays available
 
 # Serialize ALL runs (scheduled + manual). Parallel runs race on idea-generation
 # — they each read the same used-ideas.json before any has pushed, so Groq can
