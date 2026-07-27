@@ -13,13 +13,16 @@ on:
   # 6 reels/day. AI Tools & Tech Hacks pipeline verified end-to-end on
   # 2026-07-23 (first live upload: youtube.com/watch?v=sb6MjUAWJdU).
   # Times target US Eastern peaks (EDT summer). Pacific viewers are 3h earlier.
-  schedule:
-    - cron: '0 11 * * *'   # 07:00 EDT — US East morning commute
-    - cron: '30 15 * * *'  # 11:30 EDT — pre-lunch scroll
-    - cron: '0 17 * * *'   # 13:00 EDT — lunch break
-    - cron: '0 21 * * *'   # 17:00 EDT — evening commute
-    - cron: '30 23 * * *'  # 19:30 EDT — prime time
-    - cron: '0 3 * * *'    # 23:00 EDT — late-night scroll
+  # PAUSED 2026-07-13 for the channel rework — daily auto-posting is OFF so no
+  # new videos land while the channel is wiped/reworked. Re-enable by
+  # uncommenting the schedule block below.
+  # schedule:
+  #   - cron: '0 11 * * *'   # 07:00 EDT — US East morning commute
+  #   - cron: '30 15 * * *'  # 11:30 EDT — pre-lunch scroll
+  #   - cron: '0 17 * * *'   # 13:00 EDT — lunch break
+  #   - cron: '0 21 * * *'   # 17:00 EDT — evening commute
+  #   - cron: '30 23 * * *'  # 19:30 EDT — prime time
+  #   - cron: '0 3 * * *'    # 23:00 EDT — late-night scroll
   workflow_dispatch:        # Manual trigger stays available
 
 # Serialize ALL runs (scheduled + manual). Parallel runs race on idea-generation
