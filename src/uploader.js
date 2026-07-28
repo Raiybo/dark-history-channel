@@ -19,10 +19,12 @@ const MUSIC_CREDIT = 'Music: Kevin MacLeod (incompetech.com), licensed under Cre
 // Per-genre evergreen tags. AI-tools content uses tech/productivity discovery
 // hashtags; the original trivia format keeps the Did You Know / Fun Facts set.
 const EVERGREEN_HASHTAGS_BY_GENRE = {
+  consumer:   ['#Shorts', '#YouTubeShorts', '#ConsumerAwareness', '#ScamAlert', '#SaveMoney', '#KnowYourRights', '#FTC', '#Legal', '#Money', '#LifeHacks'],
   aitools:    ['#Shorts', '#YouTubeShorts', '#AITools', '#TechHacks', '#Productivity', '#AI', '#ArtificialIntelligence', '#Tech', '#Startup', '#Founders'],
   didyouknow: ['#Shorts', '#YouTubeShorts', '#Viral', '#Facts', '#DidYouKnow', '#FunFacts', '#AmazingFacts', '#InterestingFacts', '#Trending'],
 };
 const EVERGREEN_TAGS_BY_GENRE = {
+  consumer:   ['shorts', 'youtube shorts', 'consumer awareness', 'consumer rights', 'scam alert', 'ftc', 'save money', 'hidden fees', 'know your rights', 'money hacks', 'life hacks', 'consumer protection', 'americans need to know', 'financial literacy'],
   aitools:    ['shorts', 'youtube shorts', 'ai tools', 'ai tools 2026', 'tech hacks', 'productivity', 'artificial intelligence', 'ai workflow', 'startup tools', 'ai for creators', 'chatgpt alternatives', 'ai apps', 'no code ai'],
   didyouknow: ['shorts', 'youtube shorts', 'viral', 'viral shorts', 'trending', 'facts', 'did you know', 'fun facts', 'amazing facts', 'interesting facts', 'educational', 'today i learned', 'knowledge', 'mind blowing facts'],
 };
@@ -84,8 +86,13 @@ async function postEngagementComment(youtube, videoId, script) {
   // auto-comment so viewers have a clickable link the moment they land. The
   // Data API can't PIN a comment, but this comment is the top new one from the
   // owner right after upload — Studio's "pin" UI is 1 tap if you want it stuck.
-  if (script.genre === 'aitools' && script.official_url) {
-    text = `${text}\n\n👉 ${script.official_url}`;
+  // For AI-tools AND consumer-awareness videos, surface the source/tool URL in
+  // the auto-comment so viewers get a clickable primary source the moment they
+  // land. Consumer videos push the .gov / FTC / IRS URL — that's the whole
+  // credibility play for the niche.
+  const linkUrl = script.official_url || script.sourceUrl;
+  if ((script.genre === 'aitools' || script.genre === 'consumer') && linkUrl) {
+    text = `${text}\n\n👉 ${linkUrl}`;
   }
   try {
     await youtube.commentThreads.insert({
@@ -128,9 +135,10 @@ export async function uploadToYouTube(script, videoPath) {
         title: script.title,
         description: `${buildHashtags(script.tags, script.genre)}\n\n${(script.description || '').trim()}${script.hasMusic ? '\n\n' + MUSIC_CREDIT : ''}`.trim(),
         tags: buildTags(script.tags, script.genre),
-        // AI-tools content sits better under "Science & Technology" (28); the
-        // rest of the channel keeps Education (27).
-        categoryId: script.genre === 'aitools' ? '28' : '27',
+        // Category by genre: AI-tools → Science & Technology (28); consumer
+        // awareness → News & Politics (25) which the algorithm actually pushes
+        // hard for informational consumer content in 2026; else Education (27).
+        categoryId: script.genre === 'aitools' ? '28' : (script.genre === 'consumer' ? '25' : '27'),
         defaultLanguage: 'en',
         defaultAudioLanguage: 'en'
       },

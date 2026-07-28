@@ -4,14 +4,16 @@ import { generateScript }   from './script-writer.js';
 import { generateSplitEdit } from './genres/splitedit.js';
 import { generateAiToolsContent } from './genres/aitools.js';
 import { fetchToolScreenshots } from './screenshots.js';
+import { generateConsumerContent } from './genres/consumer.js';
+import { recordSceneMotion } from './screencast.js';
 import { generateAudio }    from './tts.js';
 import { fetchSceneVideos, fetchClipsWithDuration } from './pexels.js';
 import { prepareMusic }     from './music.js';
-import { renderVideo, renderSplitScreenVideo } from './renderer.js';
+import { renderVideo, renderSplitScreenVideo, renderSplitSludgeVideo } from './renderer.js';
 import { uploadToYouTube }  from './uploader.js';
 import { sendDraftToTikTok, tiktokConfigured } from './tiktok.js';
 import {
-  checkTopic, checkScript, checkAiToolsScript, checkClips, checkAudio, checkRender,
+  checkTopic, checkScript, checkAiToolsScript, checkConsumerScript, checkClips, checkAudio, checkRender,
 } from './pre-upload-checks.js';
 import { addVideoToThemedPlaylist } from './yt-playlists.js';
 import { saveCrossPostPack } from './cross-post.js';
@@ -28,6 +30,7 @@ const GENRE_LABELS = {
   didyouknow: 'Did You Know',
   splitedit: 'Split-Screen Edit',
   aitools: 'AI Tools & Tech Hacks',
+  consumer: 'Consumer Awareness & Rights',
 };
 
 function getTodayGenre() {
@@ -289,10 +292,104 @@ async function runAiTools() {
   console.log('═══════════════════════════════════════\n');
 }
 
-// Dispatcher: GENRE_OVERRIDE picks the pipeline (aitools | splitedit | countdown).
+// Satisfying loops for the bottom half of the split-sludge composition.
+// Any of these Pexels queries reliably returns portrait-friendly ~30-60s
+// loops we can crop into the bottom 40% of a 9:16 frame. One is picked per
+// run so viewers see visual variety across days.
+const SLUDGE_QUERIES = [
+  'lawn mower cutting grass', 'tractor mowing field', 'ride on mower lawn',
+  'mowing tall grass', 'lawn mower stripes', 'grass cutting closeup',
+  'pressure washing dirty surface', 'pressure wash driveway',
+  'soap cutting satisfying', 'kinetic sand cutting',
+  'hedge trimming', 'grass trimmer edging',
+];
+
+// Consumer Awareness pipeline: source-grounded script + real UI screencast on
+// top + muted satisfying loop on bottom (Split-Sludge composition). Every
+// upload ties to a primary source URL (FTC / CISA / IRS / USDA / CPSC) which
+// also gets auto-pinned in the top comment via uploader.js.
+async function runConsumerAwareness() {
+  const genre = 'consumer';
+  console.log('\n═══════════════════════════════════════');
+  console.log(`   ${GENRE_LABELS[genre]}`);
+  console.log('═══════════════════════════════════════\n');
+
+  const used = loadUsedIdeas();
+
+  console.log('Step 1/7  Picking source + writing grounded script...');
+  const content = await generateConsumerContent(used);
+  if (!content) {
+    console.log('  No usable source today (all on cooldown or filters).');
+    process.exit(0);
+  }
+  console.log(`  Source: ${content.sourceAuthority} — ${content.sourceUrl}`);
+  console.log(`  Hook: "${content.hook_text}"`);
+  console.log(`  Script: ${content.narration.split(/\s+/).length} words`);
+  checkConsumerScript(content);
+  console.log();
+
+  console.log('Step 2/7  Recording real UI screencasts (top half)...');
+  const rawClips = await recordSceneMotion(content.top_scenes);
+  // Fill any single-scene failure with the first successful recording so one
+  // 404 doesn't nuke the whole run.
+  const firstGood = rawClips.find(Boolean);
+  const topClips = rawClips.map(c => c || firstGood || null);
+  const missCount = rawClips.filter(c => !c).length;
+  if (firstGood && missCount > 0) {
+    console.log(`  Filled ${missCount} failed screencast(s) with a reused successful clip.`);
+  }
+  content.clips = topClips;
+  checkClips(topClips);
+  console.log();
+
+  console.log('Step 3/7  Fetching satisfying loop (bottom half)...');
+  const sludgeKeyword = SLUDGE_QUERIES[Math.floor(Math.random() * SLUDGE_QUERIES.length)];
+  console.log(`  Sludge: "${sludgeKeyword}"`);
+  const sludgeClips = await fetchSceneVideos([{ keyword: sludgeKeyword }]);
+  content.sludgeClip = sludgeClips[0] || null;
+  console.log();
+
+  console.log('Step 4/7  Generating voiceover...');
+  const audio = await generateAudio(content.narration, genre);
+  content.narration = content.narration.replace(/\s*\|\|\s*/g, ' ').trim();
+  checkAudio(audio);
+  console.log();
+
+  console.log('Step 5/7  Preparing background music...');
+  const musicPath = await prepareMusic(genre);
+  content.hasMusic = musicPath !== null;
+  console.log();
+
+  console.log('Step 6/7  Rendering Split-Sludge video...');
+  const videoPath = await renderSplitSludgeVideo(content, audio);
+  console.log(`  Saved to: ${videoPath}`);
+  checkRender(videoPath);
+  console.log();
+
+  console.log('Step 7/7  Publishing...');
+  await publish(content, videoPath);
+
+  saveUsedIdea({
+    topic: content.title,
+    title: content.title,
+    genre: 'consumer',
+    tracking_slug: content.tracking_slug,
+    sourceUrl: content.sourceUrl,
+    sourceAuthority: content.sourceAuthority,
+    topicCategory: content.topicCategory,
+  });
+
+  console.log('\n═══════════════════════════════════════');
+  console.log('   Done!');
+  console.log('═══════════════════════════════════════\n');
+}
+
+// Dispatcher: GENRE_OVERRIDE picks the pipeline
+// (consumer | aitools | splitedit | countdown).
 async function run() {
   checkEnv();
   const genre = process.env.GENRE_OVERRIDE || getTodayGenre();
+  if (genre === 'consumer') return runConsumerAwareness();
   if (genre === 'aitools') return runAiTools();
   if (genre === 'splitedit') return runSplitEdit();
   return runCountdown();

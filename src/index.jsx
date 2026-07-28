@@ -1,6 +1,7 @@
 import { Composition, registerRoot } from 'remotion';
 import { SlideshowVideo } from './video/SlideshowVideo';
 import { SplitScreenVideo } from './video/SplitScreenVideo';
+import { SplitSludge } from './video/SplitSludge';
 
 const FPS = 30;
 
@@ -51,6 +52,30 @@ export const RemotionRoot = () => {
         }}
         calculateMetadata={({ props }) => ({
           durationInFrames: Math.round((props.durationSec || 30) * FPS),
+        })}
+      />
+      <Composition
+        id="SplitSludge"
+        component={SplitSludge}
+        durationInFrames={1200}
+        fps={FPS}
+        width={1080}
+        height={1920}
+        defaultProps={{
+          title:         'Consumer Awareness Preview',
+          narration:     'The FTC just banned the hidden fee on car rentals. Here is what to do.',
+          audioDuration: 40,
+          wordTimings:   [],
+          beats:         [],
+          channelName:   'Distoir',
+          hookText:      'THE FTC JUST BANNED THIS SCAM',
+          clips:         [],
+          sludgeClip:    null,
+          hasMusic:      false,
+          logo:          null,
+        }}
+        calculateMetadata={({ props }) => ({
+          durationInFrames: Math.ceil((props.audioDuration + 1) * FPS),
         })}
       />
     </>

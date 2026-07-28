@@ -131,6 +131,45 @@ export function checkAiToolsScript(content) {
   pass('script', `hook ${hookWords}w, narration ${wc}w with ${beats} beats, ${scenes.length} scenes, tool "${content.tool_name}"`);
 }
 
+// Consumer Awareness script check — the new Split-Sludge format.
+// 4 top-half scenes (real UI screencasts), 100-125 spoken words, 35-45s target.
+// Every script MUST have a primary source URL — the grounding is what makes
+// this niche safe under YouTube's July 2025 "inauthentic content" policy.
+export function checkConsumerScript(content) {
+  if (!content) fail('script', 'Consumer content is null');
+
+  if (!content.sourceUrl || !/^https?:\/\//i.test(content.sourceUrl)) {
+    fail('script', 'sourceUrl missing or invalid — RAG grounding required for this genre');
+  }
+  if (!content.sourceAuthority) fail('script', 'sourceAuthority missing');
+
+  const hook = (content.hook_text || '').trim();
+  if (!hook) fail('script', 'Hook empty');
+  if (hook !== hook.toUpperCase()) fail('script', `Hook must be ALL CAPS: "${hook}"`);
+  const hookWords = hook.split(/\s+/).filter(Boolean).length;
+  if (hookWords > 12 || hookWords < 4) fail('script', `Hook length off (${hookWords} words, expected 5-9)`);
+
+  const narr = (content.narration || '').trim();
+  if (!narr) fail('script', 'Narration empty');
+  const clean = narr.replace(/\s*\|\|\s*/g, ' ');
+  const wc = clean.split(/\s+/).filter(Boolean).length;
+  if (wc < 85 || wc > 160) fail('script', `Narration word count off (${wc}, target 100-125)`);
+  const beats = (narr.match(/\|\|/g) || []).length;
+  if (beats < 3 || beats > 7) fail('script', `Beat marker count off (${beats}, expected 4-6)`);
+
+  const title = (content.title || '').trim();
+  if (!title) fail('script', 'Title empty');
+  if (title.length > 90) fail('script', `Title too long (${title.length} chars, max 90)`);
+
+  const scenes = content.top_scenes || [];
+  if (scenes.length < 3 || scenes.length > 5) fail('script', `top_scenes count off (${scenes.length}, expected 4)`);
+  for (const [i, s] of scenes.entries()) {
+    if (!s?.url || !/^https?:\/\//i.test(s.url)) fail('script', `Scene ${i + 1} has no valid URL`);
+  }
+
+  pass('script', `hook ${hookWords}w, narration ${wc}w with ${beats} beats, ${scenes.length} screencast scenes, sourced from ${content.sourceAuthority}`);
+}
+
 // 5) Render — output sane size
 export function checkRender(videoPath) {
   let st;

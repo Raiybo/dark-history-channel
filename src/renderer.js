@@ -50,6 +50,49 @@ export async function renderSplitScreenVideo(content, topClips, satisfyingClips,
   return outputPath;
 }
 
+// Render the Consumer Awareness "Split-Sludge" composition: real-UI screencast
+// on top (script.clips = .mp4 recordings from src/screencast.js), muted
+// satisfying loop on bottom (script.sludgeClip = a single .mp4 path). Reuses
+// the audio+beat pipeline exactly like renderVideo.
+export async function renderSplitSludgeVideo(content, audio) {
+  const publicAudioDir = join(ROOT_DIR, 'public', 'audio');
+  mkdirSync(publicAudioDir, { recursive: true });
+  const audioSrcDir = join(ROOT_DIR, 'output', 'audio');
+  for (const beat of audio.beats) {
+    copyFileSync(join(audioSrcDir, beat.file), join(publicAudioDir, beat.file));
+  }
+
+  const inputProps = {
+    title:         content.title,
+    narration:     content.narration,
+    audioDuration: audio.duration,
+    wordTimings:   audio.wordTimings || [],
+    beats:         audio.beats || [],
+    channelName:   process.env.CHANNEL_NAME || 'Distoir',
+    hookText:      content.hook_text,
+    clips:         content.clips || [],
+    sludgeClip:    content.sludgeClip || null,
+    hasMusic:      content.hasMusic || false,
+    logo:          ['logo.png', 'logo.webp', 'logo.jpg'].find(f => existsSync(join(ROOT_DIR, 'public', f))) || null,
+  };
+
+  writeFileSync(join(ROOT_DIR, 'config', 'render-props.json'), JSON.stringify(inputProps, null, 2));
+
+  console.log('  Bundling Remotion project...');
+  const bundled = await bundle({ entryPoint: join(__dirname, 'index.jsx'), webpackOverride: (c) => c });
+  const composition = await selectComposition({ serveUrl: bundled, id: 'SplitSludge', inputProps });
+
+  mkdirSync(join(ROOT_DIR, 'output'), { recursive: true });
+  const outputPath = join(ROOT_DIR, 'output', 'video.mp4');
+  console.log(`  Rendering ${composition.durationInFrames} frames (split-sludge)...`);
+  await renderMedia({
+    composition, serveUrl: bundled, outputLocation: outputPath, inputProps, ...RENDER_OPTS,
+    onProgress: ({ progress }) => process.stdout.write(`\r  Progress: ${Math.round(progress * 100)}%   `),
+  });
+  process.stdout.write('\n');
+  return outputPath;
+}
+
 export async function renderVideo(script, audio) {
   const publicAudioDir = join(ROOT_DIR, 'public', 'audio');
   mkdirSync(publicAudioDir, { recursive: true });
