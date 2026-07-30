@@ -4,12 +4,13 @@
 // (YouTube July 2025 policy) — because every claim ties to a real .gov, FTC,
 // USDA, or CISA page the pipeline can point at.
 //
-// The genre file passes the LLM a topic seed + this module's fetched context,
-// and constrains output to a "1 claim + 1 source URL + 1 action" script shape.
+// Every feed URL below was probed and confirmed live on 2026-07-30. Dead old
+// URLs (IRS Newsroom XML, Recalls.gov RSS, Benefits.gov API) were retired —
+// see the notes below each fetcher for what does and does not work today.
 
-const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36';
+const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0 Safari/537.36';
 
-function fetchWithTimeout(url, options = {}, ms = 15000) {
+function fetchWithTimeout(url, options = {}, ms = 20000) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), ms);
   return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(timer));
@@ -18,114 +19,188 @@ function fetchWithTimeout(url, options = {}, ms = 15000) {
 function decodeEntities(s) {
   return (s || '')
     .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"').replace(/&#0?39;/g, "'").replace(/&apos;/g, "'");
+    .replace(/&quot;/g, '"').replace(/&#0?39;/g, "'").replace(/&apos;/g, "'")
+    .replace(/&nbsp;/g, ' ');
 }
 
-// --- FTC consumer alerts (scams, refunds, dark patterns) ---
-async function fetchFtcAlerts() {
-  const res = await fetchWithTimeout('https://consumer.ftc.gov/consumer-alerts/feed', {
-    headers: { 'User-Agent': UA },
-  });
-  if (!res.ok) throw new Error(`ftc ${res.status}`);
-  const xml = await res.text();
-  const items = [...xml.matchAll(/<item>([\s\S]*?)<\/item>/g)].slice(0, 20);
+// Parse an RSS 2.0 feed body into {title, link, description} tuples. Handles
+// CDATA sections and the common Drupal escape-in-CDATA pattern.
+function parseRssItems(xml, maxItems = 20) {
+  const items = [...xml.matchAll(/<item>([\s\S]*?)<\/item>/g)].slice(0, maxItems);
   return items.map(m => {
     const block = m[1];
-    const title = decodeEntities((block.match(/<title>([^<]+)<\/title>/) || [])[1] || '').trim();
-    const link = decodeEntities((block.match(/<link>([^<]+)<\/link>/) || [])[1] || '').trim();
-    const desc = decodeEntities((block.match(/<description>([\s\S]*?)<\/description>/) || [])[1] || '')
+    const stripCdata = (s) => s.replace(/^<!\[CDATA\[/, '').replace(/\]\]>$/, '');
+    const title = decodeEntities(stripCdata(((block.match(/<title>([\s\S]*?)<\/title>/) || [])[1] || '').trim()));
+    const link  = decodeEntities(stripCdata(((block.match(/<link>([\s\S]*?)<\/link>/)  || [])[1] || '').trim()));
+    const desc  = decodeEntities(stripCdata(((block.match(/<description>([\s\S]*?)<\/description>/) || [])[1] || '')))
       .replace(/<[^>]+>/g, '').trim().slice(0, 500);
-    return {
-      source: 'ftc',
-      authority: 'Federal Trade Commission',
-      title,
-      url: link,
-      summary: desc,
-    };
-  }).filter(x => x.title && x.url);
+    return { title, link, description: desc };
+  }).filter(x => x.title && x.link);
 }
 
-// --- CISA cybersecurity alerts (phone scams, phishing, device security) ---
-async function fetchCisaAlerts() {
-  const res = await fetchWithTimeout('https://www.cisa.gov/news-events/cybersecurity-advisories/rss.xml', {
-    headers: { 'User-Agent': UA },
+// --- FTC Consumer Alerts (scams, refunds, dark patterns) — the highest-fit
+// feed for this niche. RSS 2.0. The old /feeds/consumer_alerts.xml path is
+// dead; the current path is /blog/gd-rss.xml. Note: <pubDate> is a
+// human-readable string, not RFC 822 — we don't need it.
+async function fetchFtcConsumerAlerts() {
+  const res = await fetchWithTimeout('https://consumer.ftc.gov/blog/gd-rss.xml', {
+    headers: { 'User-Agent': UA, 'Accept': 'application/rss+xml, application/xml, text/xml, */*' },
   });
-  if (!res.ok) throw new Error(`cisa ${res.status}`);
+  if (!res.ok) throw new Error(`ftc-consumer ${res.status}`);
   const xml = await res.text();
-  const items = [...xml.matchAll(/<item>([\s\S]*?)<\/item>/g)].slice(0, 15);
-  return items.map(m => {
-    const block = m[1];
-    const title = decodeEntities((block.match(/<title>([^<]+)<\/title>/) || [])[1] || '').trim();
-    const link = decodeEntities((block.match(/<link>([^<]+)<\/link>/) || [])[1] || '').trim();
-    const desc = decodeEntities((block.match(/<description>([\s\S]*?)<\/description>/) || [])[1] || '')
-      .replace(/<[^>]+>/g, '').trim().slice(0, 500);
-    return { source: 'cisa', authority: 'CISA', title, url: link, summary: desc };
-  }).filter(x => x.title && x.url);
+  return parseRssItems(xml, 20).map(x => ({
+    source: 'ftc-consumer',
+    authority: 'Federal Trade Commission — Consumer Alerts',
+    title: x.title,
+    url: x.link,
+    summary: x.description,
+  }));
 }
 
-// --- Recalls.gov (product safety, medication, food, cars) ---
-async function fetchRecalls() {
-  const res = await fetchWithTimeout('https://www.cpsc.gov/Newsroom/News-Releases/rss', {
-    headers: { 'User-Agent': UA },
+// --- FTC Press Releases (corporate fines, settlements, dark-pattern rulings) ---
+async function fetchFtcPressReleases() {
+  const res = await fetchWithTimeout('https://www.ftc.gov/feeds/press-release.xml', {
+    headers: { 'User-Agent': UA, 'Accept': 'application/rss+xml, application/xml, text/xml, */*' },
+  });
+  if (!res.ok) throw new Error(`ftc-press ${res.status}`);
+  const xml = await res.text();
+  return parseRssItems(xml, 15).map(x => ({
+    source: 'ftc-press',
+    authority: 'Federal Trade Commission — Press Releases',
+    title: x.title,
+    url: x.link,
+    summary: x.description,
+  }));
+}
+
+// --- CPSC recalls RSS. The path moved from /Recalls/rss to
+// /Newsroom/CPSC-RSS-Feed/Recalls-RSS. Rich source, includes safety hazards.
+async function fetchCpscRecalls() {
+  const res = await fetchWithTimeout('https://www.cpsc.gov/Newsroom/CPSC-RSS-Feed/Recalls-RSS', {
+    headers: { 'User-Agent': UA, 'Accept': 'application/rss+xml, application/xml, text/xml, */*' },
   });
   if (!res.ok) throw new Error(`cpsc ${res.status}`);
   const xml = await res.text();
-  const items = [...xml.matchAll(/<item>([\s\S]*?)<\/item>/g)].slice(0, 15);
-  return items.map(m => {
-    const block = m[1];
-    const title = decodeEntities((block.match(/<title>([^<]+)<\/title>/) || [])[1] || '').trim();
-    const link = decodeEntities((block.match(/<link>([^<]+)<\/link>/) || [])[1] || '').trim();
-    return { source: 'cpsc', authority: 'CPSC (Consumer Product Safety Commission)', title, url: link, summary: '' };
-  }).filter(x => x.title && x.url && /recall/i.test(x.title + x.url));
+  return parseRssItems(xml, 15).map(x => ({
+    source: 'cpsc',
+    authority: 'Consumer Product Safety Commission',
+    title: x.title,
+    url: x.link,
+    summary: x.description,
+  }));
 }
 
-// --- IRS news (deadlines, credits, refunds people miss) ---
-async function fetchIrsNews() {
-  const res = await fetchWithTimeout('https://www.irs.gov/newsroom/xml/newsreleases.xml', {
-    headers: { 'User-Agent': UA },
+// --- openFDA Food enforcement (recalls). JSON:API-shaped, always reachable,
+// no key needed for low volume. Only downside: dry corporate wording, needs
+// the LLM to translate to human-terms.
+async function fetchFdaFoodEnforcement() {
+  const url = 'https://api.fda.gov/food/enforcement.json?limit=15&sort=report_date:desc';
+  const res = await fetchWithTimeout(url, {
+    headers: { 'User-Agent': UA, 'Accept': 'application/json' },
   });
-  if (!res.ok) throw new Error(`irs ${res.status}`);
-  const xml = await res.text();
-  const items = [...xml.matchAll(/<item>([\s\S]*?)<\/item>/g)].slice(0, 15);
-  return items.map(m => {
-    const block = m[1];
-    const title = decodeEntities((block.match(/<title>([^<]+)<\/title>/) || [])[1] || '').trim();
-    const link = decodeEntities((block.match(/<link>([^<]+)<\/link>/) || [])[1] || '').trim();
-    return { source: 'irs', authority: 'IRS', title, url: link, summary: '' };
-  }).filter(x => x.title && x.url);
+  if (!res.ok) throw new Error(`fda-food ${res.status}`);
+  const data = await res.json();
+  return (data.results || []).map(r => ({
+    source: 'fda-food',
+    authority: 'FDA — Food Recall',
+    title: `${r.recalling_firm || 'FDA'} recall: ${(r.product_description || '').slice(0, 90)}`,
+    url: `https://www.fda.gov/safety/recalls-market-withdrawals-safety-alerts?search_api_fulltext=${encodeURIComponent(r.recall_number || '')}`,
+    summary: [
+      `Recalling firm: ${r.recalling_firm}`,
+      `Reason: ${r.reason_for_recall}`,
+      `Distribution: ${r.distribution_pattern}`,
+      `Classification: ${r.classification} — ${r.status}`,
+      `Report date: ${r.report_date}`,
+    ].filter(Boolean).join(' | ').slice(0, 500),
+  }));
 }
 
-// --- USDA food safety (recalls + Ask USDA) ---
-async function fetchUsdaSafety() {
-  const res = await fetchWithTimeout('https://www.fsis.usda.gov/fsis-content/rss/recalls.xml', {
-    headers: { 'User-Agent': UA },
+// --- openFDA Drug enforcement (recalls). Same shape as food. Useful because
+// pharmacy recalls affect millions of viewers directly.
+async function fetchFdaDrugEnforcement() {
+  const url = 'https://api.fda.gov/drug/enforcement.json?limit=10&sort=report_date:desc';
+  const res = await fetchWithTimeout(url, {
+    headers: { 'User-Agent': UA, 'Accept': 'application/json' },
   });
-  if (!res.ok) throw new Error(`usda ${res.status}`);
+  if (!res.ok) throw new Error(`fda-drug ${res.status}`);
+  const data = await res.json();
+  return (data.results || []).map(r => {
+    const openfda = r.openfda || {};
+    const brand = (openfda.brand_name || [])[0];
+    const generic = (openfda.generic_name || [])[0];
+    const label = brand || generic || (r.product_description || '').slice(0, 80);
+    return {
+      source: 'fda-drug',
+      authority: 'FDA — Drug Recall',
+      title: `${label} recall: ${(r.reason_for_recall || '').slice(0, 60)}`,
+      url: `https://www.fda.gov/safety/recalls-market-withdrawals-safety-alerts?search_api_fulltext=${encodeURIComponent(r.recall_number || '')}`,
+      summary: [
+        `Product: ${r.product_description}`,
+        `Reason: ${r.reason_for_recall}`,
+        `Firm: ${r.recalling_firm}`,
+        `Classification: ${r.classification} — ${r.status}`,
+      ].filter(Boolean).join(' | ').slice(0, 500),
+    };
+  });
+}
+
+// --- CFPB Newsroom (consumer-finance enforcement, scam warnings, bank fines).
+// The complaints database is Elasticsearch-shaped and slow for firehose use;
+// the newsroom RSS is fast and consumer-facing.
+async function fetchCfpbNewsroom() {
+  const res = await fetchWithTimeout('https://www.consumerfinance.gov/about-us/newsroom/feed/', {
+    headers: { 'User-Agent': UA, 'Accept': 'application/rss+xml, application/xml, text/xml, */*' },
+  });
+  if (!res.ok) throw new Error(`cfpb ${res.status}`);
   const xml = await res.text();
-  const items = [...xml.matchAll(/<item>([\s\S]*?)<\/item>/g)].slice(0, 10);
-  return items.map(m => {
-    const block = m[1];
-    const title = decodeEntities((block.match(/<title>([^<]+)<\/title>/) || [])[1] || '').trim();
-    const link = decodeEntities((block.match(/<link>([^<]+)<\/link>/) || [])[1] || '').trim();
-    return { source: 'usda', authority: 'USDA FSIS', title, url: link, summary: '' };
-  }).filter(x => x.title && x.url);
+  return parseRssItems(xml, 15).map(x => ({
+    source: 'cfpb',
+    authority: 'Consumer Financial Protection Bureau',
+    title: x.title,
+    url: x.link,
+    summary: x.description,
+  }));
+}
+
+// --- CISA cybersecurity advisories. all.xml is 2MB and includes ICS content;
+// filter to items whose URL is under /news-events/alerts/ or
+// /news-events/cybersecurity-advisories/ so we get consumer-facing security
+// content only (not industrial-control alerts).
+async function fetchCisaAdvisories() {
+  const res = await fetchWithTimeout('https://www.cisa.gov/cybersecurity-advisories/all.xml', {
+    headers: { 'User-Agent': UA, 'Accept': 'application/rss+xml, application/xml, text/xml, */*' },
+  });
+  if (!res.ok) throw new Error(`cisa ${res.status}`);
+  const xml = await res.text();
+  return parseRssItems(xml, 30)
+    .filter(x => /\/news-events\/(alerts|cybersecurity-advisories)\//.test(x.link))
+    .slice(0, 12)
+    .map(x => ({
+      source: 'cisa',
+      authority: 'CISA',
+      title: x.title,
+      url: x.link,
+      summary: x.description,
+    }));
 }
 
 // Fetch every source, tolerate individual failures, round-robin interleave.
 // Returns [{source, authority, title, url, summary}] — [] only if every
-// source failed (idea-generator falls back to its seed pool in that case).
+// source failed. Caller MUST handle the empty case loudly, not silently.
 export async function fetchConsumerSources() {
   const settled = await Promise.allSettled([
-    fetchFtcAlerts(),
-    fetchCisaAlerts(),
-    fetchRecalls(),
-    fetchIrsNews(),
-    fetchUsdaSafety(),
+    fetchFtcConsumerAlerts(),
+    fetchFtcPressReleases(),
+    fetchCpscRecalls(),
+    fetchFdaFoodEnforcement(),
+    fetchFdaDrugEnforcement(),
+    fetchCfpbNewsroom(),
+    fetchCisaAdvisories(),
   ]);
-  const names = ['ftc', 'cisa', 'cpsc', 'irs', 'usda'];
+  const names = ['ftc-consumer', 'ftc-press', 'cpsc', 'fda-food', 'fda-drug', 'cfpb', 'cisa'];
   const perSource = settled.map((s, i) => {
     if (s.status !== 'fulfilled') {
-      console.log(`  Consumer sources: ${names[i]} unavailable (${(s.reason?.message || '').slice(0, 60)})`);
+      console.log(`  Consumer sources: ${names[i]} unavailable (${(s.reason?.message || '').slice(0, 80)})`);
       return [];
     }
     console.log(`  Consumer sources: ${names[i]} → ${s.value.length} items`);
@@ -144,6 +219,7 @@ export async function fetchConsumerSources() {
       out.push(it);
     }
   }
+  console.log(`  Consumer sources: ${out.length} unique candidates total`);
   return out;
 }
 
@@ -152,10 +228,11 @@ export async function fetchConsumerSources() {
 // text-content, or null on any failure.
 export async function fetchSourceBody(url) {
   try {
-    const res = await fetchWithTimeout(url, { headers: { 'User-Agent': UA } }, 15000);
+    const res = await fetchWithTimeout(url, {
+      headers: { 'User-Agent': UA, 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' },
+    }, 15000);
     if (!res.ok) return null;
     const html = await res.text();
-    // Strip scripts, styles, nav — keep the readable body text.
     const cleaned = html
       .replace(/<script[\s\S]*?<\/script>/gi, ' ')
       .replace(/<style[\s\S]*?<\/style>/gi, ' ')
@@ -163,7 +240,6 @@ export async function fetchSourceBody(url) {
       .replace(/<header[\s\S]*?<\/header>/gi, ' ')
       .replace(/<footer[\s\S]*?<\/footer>/gi, ' ')
       .replace(/<[^>]+>/g, ' ')
-      .replace(/&nbsp;/g, ' ')
       .replace(/\s+/g, ' ')
       .trim();
     return decodeEntities(cleaned).slice(0, 4000);

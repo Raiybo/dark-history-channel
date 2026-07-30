@@ -319,8 +319,12 @@ async function runConsumerAwareness() {
   console.log('Step 1/7  Picking source + writing grounded script...');
   const content = await generateConsumerContent(used);
   if (!content) {
-    console.log('  No usable source today (all on cooldown or filters).');
-    process.exit(0);
+    // FAIL LOUD: a green CI run with zero uploads is misleading. If no source
+    // came back, either the feeds are broken, the LLM step failed, or every
+    // candidate was on cooldown — all cases we want to see in the Actions log
+    // as a red run, not a silent success that produces nothing.
+    console.error('  Pipeline failed: generateConsumerContent returned null (no source, all on cooldown, or LLM failure).');
+    process.exit(1);
   }
   console.log(`  Source: ${content.sourceAuthority} — ${content.sourceUrl}`);
   console.log(`  Hook: "${content.hook_text}"`);
