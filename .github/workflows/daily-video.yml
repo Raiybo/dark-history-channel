@@ -1,18 +1,19 @@
 name: Daily Did You Know Videos
 
 on:
-  # LAUNCH PHASE (first 30 days): 2 reels/day, per the 2026 research —
-  # above 3/day gains flatten, above 5-10/day risks spam suppression, and the
-  # algorithm needs 15-30 videos of consistent shape to classify the channel.
-  # Times target US Eastern peaks (EDT summer). Scale to 3/day at day 15 IF
-  # top-20% retention is >60%; scale to full 6/day only in month 3+ once the
-  # niche cluster is locked in.
-  #
-  # PAUSED right now — waiting on manual workflow_dispatch verification of
-  # the new consumer-awareness pipeline before turning the cron back on.
-  # schedule:
-  #   - cron: '0 12 * * *'   # 08:00 EDT — morning commute (launch cadence)
-  #   - cron: '30 23 * * *'  # 19:30 EDT — prime time (launch cadence)
+  # 6 reels/day (user override — the launch research recommended 2/day for the
+  # first 30 days, but user chose 6/day to get back to the historical cadence).
+  # Times target US Eastern peaks (EDT summer). Every 4 hours from 00:00 UTC.
+  # Verified end-to-end on 2026-07-30 with the fixed RAG source feeds; first
+  # live upload from the new Consumer Awareness pipeline:
+  # https://www.youtube.com/watch?v=bekRb6n0ERE
+  schedule:
+    - cron: '0 0 * * *'    # 20:00 EDT prev day — late-night US scroll
+    - cron: '0 4 * * *'    # 00:00 EDT — overnight US / EU morning
+    - cron: '0 8 * * *'    # 04:00 EDT — early US / EU commute
+    - cron: '0 12 * * *'   # 08:00 EDT — US East morning commute
+    - cron: '0 16 * * *'   # 12:00 EDT — US lunch break
+    - cron: '0 20 * * *'   # 16:00 EDT — US afternoon / evening commute
   workflow_dispatch:        # Manual trigger stays available
 
 # Serialize ALL runs (scheduled + manual). Parallel runs race on idea-generation
