@@ -88,8 +88,8 @@ Return ONLY valid JSON, no markdown, matching this exact schema:
   "narration": "the full spoken voiceover, 100-125 words. Open with the hook line VERBATIM as the first sentence. Use ' || ' between beats for TTS breath gaps — 4 to 6 markers total. NO markdown, no dashes/parentheses/brackets. Reference the source explicitly ('the FTC just published...', 'according to the IRS page...'). End with a specific action + 'the .gov link is in the comment below'.",
   "top_scenes": [
     {
-      "url": "the source URL (${source.url}) or a companion page a viewer would need — must be a real URL that Puppeteer can navigate",
-      "motion": "one of: landing | scrollDown | scrollScan (which cursor+scroll pattern to run over the page)",
+      "url": "REAL URL that Puppeteer can navigate. Scene 1 MUST be the primary source URL (${source.url}). Scenes 2-4 MUST introduce visual variety — a MIX of the primary source (with a different motion/scroll depth than scene 1) AND at least ONE companion page from the same agency or a related .gov page a viewer would need. Companion candidates: the agency's homepage (e.g. https://consumer.ftc.gov, https://www.ftc.gov, https://www.cpsc.gov, https://www.fda.gov, https://www.consumerfinance.gov, https://www.cisa.gov), the agency's 'report a scam / file a complaint' page (https://reportfraud.ftc.gov, https://www.consumerfinance.gov/complaint/, https://www.cisa.gov/report), or a related law/rule page. NEVER repeat the same URL more than twice across the four scenes.",
+      "motion": "one of: landing | scrollDown | scrollScan | hoverSelector. STRICTLY REQUIRED: use a DIFFERENT motion for each of the 4 scenes so no two scenes look identical. Suggested mapping: scene 1 = landing (idle at top, hero visible), scene 2 = scrollDown (viewer sees deeper detail), scene 3 = landing on the companion page (fresh visual), scene 4 = scrollScan (back on the source, showing the fix/report path).",
       "seconds": 6-10 integer — how long the top-half recording of this scene should be,
       "caption": "on-screen kinetic caption, ALL CAPS, UNDER 32 chars"
     }
@@ -140,12 +140,48 @@ Return the JSON, nothing else.`;
     .trim();
 
   // Map scene motion names to actual functions from the screencast module.
-  const scenes = (obj.top_scenes || []).slice(0, 5).map(s => ({
-    url: (s?.url || '').trim(),
-    motion: MOTIONS[s?.motion] || MOTIONS.scrollScan,
-    seconds: Math.max(5, Math.min(parseInt(s?.seconds) || 8, 12)),
-    caption: sanitizeTrendTitle(s?.caption || '').toUpperCase().slice(0, 40),
-  })).filter(s => s.url);
+  // Belt-and-suspenders defenses against duplicate visuals:
+  //   1) If the LLM handed us 4 identical URLs, replace slot 3 with a
+  //      companion homepage inferred from the source URL's origin so the
+  //      video shows at least TWO distinct pages instead of one page x4.
+  //   2) Force MOTION diversity by rotating through a fixed motion cycle
+  //      indexed by scene position, ignoring whatever the LLM proposed
+  //      when it produces a monoculture (e.g. scrollScan on all 4).
+  const MOTION_CYCLE = ['landing', 'scrollDown', 'landing', 'scrollScan'];
+  const rawScenes = (obj.top_scenes || []).slice(0, 5).filter(s => s?.url);
+
+  // Compute a companion URL from the source origin as a fallback (e.g.
+  // https://consumer.ftc.gov/consumer-alerts/... → https://consumer.ftc.gov).
+  let companionUrl = null;
+  try {
+    companionUrl = new URL(source.url).origin;
+  } catch { /* invalid source URL — no companion */ }
+
+  const urlCounts = new Map();
+  const scenes = rawScenes.map((s, i) => {
+    let url = (s.url || '').trim();
+    // If this URL has already appeared twice, swap to the companion once.
+    const seen = urlCounts.get(url) || 0;
+    if (seen >= 2 && companionUrl && url !== companionUrl) {
+      url = companionUrl;
+    }
+    urlCounts.set(url, (urlCounts.get(url) || 0) + 1);
+    // Pick the motion: prefer the LLM's choice, but if the LLM's motion
+    // matches an EARLIER scene's motion, override with the cycle so no
+    // two consecutive scenes ever use the same motion pattern.
+    const proposed = s.motion && MOTIONS[s.motion] ? s.motion : null;
+    const prev = i > 0 ? (rawScenes[i - 1].motion) : null;
+    const motionName = (proposed && proposed !== prev) ? proposed : MOTION_CYCLE[i % MOTION_CYCLE.length];
+    return {
+      url,
+      motion: MOTIONS[motionName] || MOTIONS.scrollScan,
+      seconds: Math.max(5, Math.min(parseInt(s.seconds) || 8, 12)),
+      caption: sanitizeTrendTitle(s.caption || '').toUpperCase().slice(0, 40),
+    };
+  });
+  // Log the final URL diversity so failures are visible in the pipeline output.
+  const uniqueUrlCount = new Set(scenes.map(s => s.url)).size;
+  console.log(`  Scene URL diversity: ${uniqueUrlCount} unique URL(s) across ${scenes.length} scenes`);
 
   return {
     genre: 'consumer',

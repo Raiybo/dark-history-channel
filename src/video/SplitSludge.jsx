@@ -58,10 +58,32 @@ function buildTopTimings(count, durationInFrames, wordTimings, fps) {
 // Detect .jpg vs .mp4 and pick the right Remotion element. Screenshots come
 // in as .jpg from src/screenshots.js; screencasts + Pexels clips come as .mp4.
 const IMAGE_RE = /\.(jpe?g|png|webp)$/i;
-const TopMedia = ({ src, opacity }) => {
+
+// Per-scene visual variance so that even if two scenes end up pointing at
+// the same source URL (because a topic simply doesn't have 4 companion
+// pages), the on-screen composition still LOOKS different — a different
+// crop region, a different subtle zoom drift, a different color grade tilt.
+// Indexed by scene position; wraps if there are more scenes than presets.
+const SCENE_TRANSFORMS = [
+  { scale: 1.05, panX:  0, panY:  0, hue:  0 },  // scene 1: near-neutral, hero-centered
+  { scale: 1.18, panX: -6, panY: -3, hue:  8 },  // scene 2: punch in + drift up-left, slight warm
+  { scale: 1.10, panX:  5, panY:  4, hue: -6 },  // scene 3: mid-zoom + drift down-right, slight cool
+  { scale: 1.22, panX: -4, panY:  6, hue:  4 },  // scene 4: max-zoom + drift down-left, warm-ish
+];
+
+const TopMedia = ({ src, opacity, sceneIndex = 0 }) => {
   if (!src) return <div style={{ position: 'absolute', inset: 0, backgroundColor: '#0a0a0f', opacity }} />;
   const isImage = IMAGE_RE.test(src);
-  const commonStyle = { position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity };
+  const t = SCENE_TRANSFORMS[sceneIndex % SCENE_TRANSFORMS.length];
+  const commonStyle = {
+    position: 'absolute', inset: 0,
+    width: '100%', height: '100%',
+    objectFit: 'cover',
+    opacity,
+    transform: `scale(${t.scale}) translate(${t.panX}%, ${t.panY}%)`,
+    transformOrigin: 'center center',
+    filter: t.hue !== 0 ? `hue-rotate(${t.hue}deg) saturate(1.05)` : 'none',
+  };
   if (isImage) return <Img src={staticFile(src)} style={commonStyle} />;
   return <OffthreadVideo src={staticFile(src)} muted playbackRate={1} style={commonStyle} />;
 };
@@ -105,7 +127,7 @@ export const SplitSludge = ({
           const seqDuration = isLast ? durationInFrames - t.from : t.frames + CROSSFADE;
           return (
             <Sequence key={i} from={t.from} durationInFrames={seqDuration}>
-              <TopClip src={clipPath} totalFrames={t.frames} crossfade={CROSSFADE} isFirst={i === 0} isLast={isLast} />
+              <TopClip src={clipPath} totalFrames={t.frames} crossfade={CROSSFADE} isFirst={i === 0} isLast={isLast} sceneIndex={i} />
             </Sequence>
           );
         })}
@@ -200,12 +222,12 @@ export const SplitSludge = ({
 // Extracted so we can reuse the fade-in / fade-out pattern without pulling in
 // the full VideoClip component (VideoClip covers image-vs-video branching for
 // the DYK layout, but here we know the shape of each source per prop).
-const TopClip = ({ src, totalFrames, crossfade, isFirst, isLast }) => {
+const TopClip = ({ src, totalFrames, crossfade, isFirst, isLast, sceneIndex }) => {
   const frame = useCurrentFrame();
   const fadeIn  = isFirst ? 1 : interpolate(frame, [0, crossfade], [0, 1], { extrapolateRight: 'clamp' });
   const fadeOut = isLast  ? 1 : interpolate(frame, [totalFrames, totalFrames + crossfade], [1, 0], { extrapolateRight: 'clamp' });
   const opacity = Math.min(fadeIn, fadeOut);
-  return <TopMedia src={src} opacity={opacity} />;
+  return <TopMedia src={src} opacity={opacity} sceneIndex={sceneIndex} />;
 };
 
 const TopWatermark = ({ grade, channelName, logo }) => {
