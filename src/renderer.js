@@ -93,6 +93,36 @@ export async function renderSplitSludgeVideo(content, audio) {
   return outputPath;
 }
 
+// Render the Kings of Ranks SILENT ranking (no voiceover — music + captions +
+// crown ranks). content = { items, title_card, ... }; clips = [{path,duration}]
+// aligned by index with items.
+export async function renderSilentKingsRanks(content, clips, hasMusic) {
+  const inputProps = {
+    items: content.items || [],
+    clips: clips || [],
+    titleCard: content.title_card || content.title || '',
+    channelName: process.env.CHANNEL_NAME || 'Kings of Ranks',
+    logo: ['logo.png', 'logo.webp', 'logo.jpg'].find(f => existsSync(join(ROOT_DIR, 'public', f))) || null,
+    hasMusic: !!hasMusic,
+    durationSec: 32,
+  };
+  writeFileSync(join(ROOT_DIR, 'config', 'render-props.json'), JSON.stringify(inputProps, null, 2));
+
+  console.log('  Bundling Remotion project...');
+  const bundled = await bundle({ entryPoint: join(__dirname, 'index.jsx'), webpackOverride: (c) => c });
+  const composition = await selectComposition({ serveUrl: bundled, id: 'KingsRanks', inputProps });
+
+  mkdirSync(join(ROOT_DIR, 'output'), { recursive: true });
+  const outputPath = join(ROOT_DIR, 'output', 'video.mp4');
+  console.log(`  Rendering ${composition.durationInFrames} frames (Kings of Ranks)...`);
+  await renderMedia({
+    composition, serveUrl: bundled, outputLocation: outputPath, inputProps, ...RENDER_OPTS,
+    onProgress: ({ progress }) => process.stdout.write(`\r  Progress: ${Math.round(progress * 100)}%   `),
+  });
+  process.stdout.write('\n');
+  return outputPath;
+}
+
 export async function renderVideo(script, audio) {
   const publicAudioDir = join(ROOT_DIR, 'public', 'audio');
   mkdirSync(publicAudioDir, { recursive: true });

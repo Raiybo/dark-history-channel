@@ -94,6 +94,22 @@ export function checkAudio(audio) {
   pass('audio', `${dur.toFixed(1)}s, ${wt.length} word timings, ${beats.length} beats`);
 }
 
+// Kings of Ranks (silent) — 5 structured ranked items, no narration.
+export function checkKingsRanks(content) {
+  if (!content) fail('script', 'Kings content is null');
+  if (!/^top\s*(5|five)\b/i.test((content.title || '').trim())) fail('script', `Title not "Top 5": "${content.title}"`);
+  const items = content.items || [];
+  if (items.length !== 5) fail('script', `Need 5 items, got ${items.length}`);
+  const ranks = items.map(i => i.rank).sort((a, b) => a - b).join(',');
+  if (ranks !== '1,2,3,4,5') fail('script', `Ranks must be exactly 1-5, got ${ranks}`);
+  if (items.some(i => !((i.label || '').trim()))) fail('script', 'An item has no label');
+  const kws = items.map(i => (i.keyword || '').trim().toLowerCase());
+  if (kws.some(k => !k)) fail('script', 'An item has no keyword');
+  if (new Set(kws).size !== 5) fail('script', 'Duplicate item keywords');
+  if (!(content.title_card || '').trim()) fail('script', 'title_card missing');
+  pass('script', `5 ranked items — "${content.title.slice(0, 45)}"`);
+}
+
 // AI-Tools-specific script check. Different invariants from the Top-5 format
 // so we don't share checkScript — the hook shape, scene count, and narration
 // length all move.

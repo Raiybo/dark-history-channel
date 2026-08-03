@@ -2,6 +2,7 @@ import { Composition, registerRoot } from 'remotion';
 import { SlideshowVideo } from './video/SlideshowVideo';
 import { SplitScreenVideo } from './video/SplitScreenVideo';
 import { SplitSludge } from './video/SplitSludge';
+import { KingsRanks } from './video/KingsRanks';
 
 const FPS = 30;
 
@@ -76,6 +77,26 @@ export const RemotionRoot = () => {
         }}
         calculateMetadata={({ props }) => ({
           durationInFrames: Math.ceil((props.audioDuration + 1) * FPS),
+        })}
+      />
+      <Composition
+        id="KingsRanks"
+        component={KingsRanks}
+        durationInFrames={960}
+        fps={FPS}
+        width={1080}
+        height={1920}
+        defaultProps={{
+          items:        [],
+          clips:        [],
+          titleCard:    'TOP 5 FASTEST ANIMALS',
+          channelName:  'Kings of Ranks',
+          logo:         null,
+          hasMusic:     false,
+          durationSec:  32,
+        }}
+        calculateMetadata={({ props }) => ({
+          durationInFrames: Math.round((props.durationSec || 32) * FPS),
         })}
       />
     </>

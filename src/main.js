@@ -2,6 +2,7 @@ import 'dotenv/config';
 import { generateIdea, loadUsedIdeas, saveUsedIdea } from './idea-generator.js';
 import { generateScript }   from './script-writer.js';
 import { generateSplitEdit } from './genres/splitedit.js';
+import { generateKingsItems } from './genres/kingsranks.js';
 import { generateAiToolsContent } from './genres/aitools.js';
 import { fetchToolScreenshots } from './screenshots.js';
 import { generateConsumerContent } from './genres/consumer.js';
@@ -388,14 +389,56 @@ async function runConsumerAwareness() {
   console.log('═══════════════════════════════════════\n');
 }
 
+// Kings of Ranks — SILENT ranking (no voiceover): music + captions + crown
+// ranks over legal stock/CC clips. Topic dedup comes from generateIdea (so no
+// repeated rankings); items are structured, one clip per rank.
+async function runKingsRanks() {
+  console.log('\n═══════════════════════════════════════');
+  console.log('   Kings of Ranks');
+  console.log('═══════════════════════════════════════\n');
+
+  console.log('Step 1/4  Picking a fresh ranking topic (deduped)...');
+  const idea = await generateIdea('kingsranks');   // trend-driven Top-5 + full dedup, saved to used-ideas
+  console.log(`  Topic: "${idea.topic}"`);
+  const content = await generateKingsItems(idea.topic);
+  if (!content) throw new Error('Could not build the ranking items for this topic.');
+  console.log(`  "${content.title}" — ${content.items.map(i => `#${i.rank} ${i.label}`).join(', ')}`);
+  checkKingsRanks(content);
+  console.log();
+
+  console.log('Step 2/4  Fetching one clip per rank...');
+  const clipsRaw = await fetchClipsWithDuration(content.items.map(i => ({ keyword: i.keyword })));
+  const firstValid = clipsRaw.find(Boolean);
+  if (!firstValid) throw new Error('No footage fetched for any rank.');
+  // Align by index; substitute the first valid clip for any that failed so no
+  // rank renders as a dead black slot.
+  const clips = content.items.map((_, i) => clipsRaw[i] || firstValid);
+  console.log(`  ${clipsRaw.filter(Boolean).length}/5 clips fetched\n`);
+
+  console.log('Step 3/4  Preparing hype music...');
+  const musicPath = await prepareMusic('didyouknow');
+  console.log();
+
+  console.log('Step 4/4  Rendering + publishing...');
+  const videoPath = await renderSilentKingsRanks(content, clips, musicPath !== null);
+  console.log(`  Saved to: ${videoPath}`);
+  checkRender(videoPath);
+  await publish(content, videoPath);
+
+  console.log('\n═══════════════════════════════════════');
+  console.log('   Done!');
+  console.log('═══════════════════════════════════════\n');
+}
+
 // Dispatcher: GENRE_OVERRIDE picks the pipeline
-// (consumer | aitools | splitedit | countdown).
+// (consumer | aitools | splitedit | kingsranks | countdown).
 async function run() {
   checkEnv();
   const genre = process.env.GENRE_OVERRIDE || getTodayGenre();
   if (genre === 'consumer') return runConsumerAwareness();
   if (genre === 'aitools') return runAiTools();
   if (genre === 'splitedit') return runSplitEdit();
+  if (genre === 'kingsranks') return runKingsRanks();
   return runCountdown();
 }
 
