@@ -13,19 +13,33 @@ function fetchWithTimeout(url, ms = 30000) {
     .finally(() => clearTimeout(timer));
 }
 
-// Kevin MacLeod — CC BY 3.0 (royalty-free, attribution in description)
+// Kevin MacLeod — CC BY 3.0 (royalty-free, attribution auto-added to every
+// description). Energetic / driving / tension beds for the Kings of Ranks
+// countdown vibe — all URL-verified downloadable. Shuffled per run so the music
+// varies video to video instead of always using the first track.
+const B = 'https://incompetech.com/music/royalty-free/mp3-royaltyfree';
 const TRACKS = {
   didyouknow: [
-    'https://incompetech.com/music/royalty-free/mp3-royaltyfree/Carefree.mp3',
-    'https://incompetech.com/music/royalty-free/mp3-royaltyfree/Wallpaper.mp3',
-    'https://incompetech.com/music/royalty-free/mp3-royaltyfree/Invariance.mp3',
+    `${B}/Fearless%20First.mp3`,   // epic, driving build
+    `${B}/The%20Descent.mp3`,      // dark tension
+    `${B}/Killers.mp3`,            // punchy, energetic
+    `${B}/Exit%20the%20Premises.mp3`, // fast, urgent
   ],
 };
+
+function shuffled(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
 
 export async function prepareMusic(genre) {
   mkdirSync(MUSIC_DIR, { recursive: true });
   const outputPath = join(MUSIC_DIR, 'background.mp3');
-  const urls = TRACKS[genre] || TRACKS.didyouknow || [];
+  const urls = shuffled(TRACKS[genre] || TRACKS.didyouknow || []);
 
   for (const url of urls) {
     try {
