@@ -63,6 +63,19 @@ const NICHES = {
     avoid: 'AVOID vague or listicle-bait themes ("Top 5 coolest machines"). Name a SPECIFIC extreme axis (biggest / fastest / most powerful / most over-built / deepest / tallest / most expensive).',
     noHealth: 'NO politics, war/weapons glorification, disasters, tragedy, or health topics. Pure engineering awe only.',
   },
+  // FUNNY animals/pets — the comedy-ranking channel. Themes must promise laughs
+  // AND be coverable by generic funny stock video (Pexels/Pixabay). Interest
+  // judge is skipped: funny-animal themes are inherently broad-appeal, and the
+  // "Did You Know recognizability" judge would wrongly mark them down.
+  funny: {
+    guidance: 'A FUNNY, wholesome ranking about animals or pets doing hilarious, cute, clumsy, dramatic, or ridiculous things — the kind of clip people laugh at and share. Must be a category with at least 5 funny moments we can show with GENERIC stock video of common animals (cats, dogs, puppies, kittens, farm animals, birds, zoo animals).',
+    examples: '"Top 5 funniest cat moments", "Top 5 dogs being dramatic", "Top 5 animals that forgot how to work", "Top 5 pets vs their own owners", "Top 5 funniest animal fails", "Top 5 cats caught being guilty"',
+    categories: 'ANIMALS & PETS ONLY, and always FUNNY: cats, dogs, puppies, kittens, birds, farm and zoo animals being silly, clumsy, dramatic, sneaky, greedy, or adorable. This is a COMEDY channel — every theme must promise laughs, never facts or lessons.',
+    prefer: 'Prefer themes with tons of funny stock video available (cats jumping/startled, dogs running/zooming, pets falling or sliding, animals begging or stealing food, puppies playing, surprised animals).',
+    avoid: 'AVOID anything sad, cruel, scary, or where an animal is hurt. Keep it light and wholesome. No dry facts, no danger, no gross-out, no specific named/famous pets.',
+    noHealth: 'NO politics, tragedy, animal cruelty, or health/vet topics. Pure wholesome comedy.',
+    skipInterestJudge: true,
+  },
 };
 
 // Normalize a topic to a comparison key so near-duplicates (different wording,
@@ -360,6 +373,11 @@ Return ONLY the single "Top 5 ..." theme line, nothing else.`;
       if (formatOK && exactNew && subjectNew && notCliche) {
         if (await isSemanticDuplicate(topic, used)) {
           console.log(`  Topic is a reworded repeat of an earlier one, retrying...`);
+        } else if (niche.skipInterestJudge) {
+          // Comedy themes are inherently broad-appeal; the recognizability judge
+          // (tuned for a facts channel) would wrongly reject them.
+          console.log(`  Selected funny theme: "${topic}"`);
+          return topic;
         } else {
           // Final gate: is the SUBJECT itself something a general audience cares
           // about? Rejects obscure / niche / dry topics that historically flop.
@@ -392,18 +410,16 @@ export async function generateIdea(genre) {
   const used = loadUsedIdeas();
   const usedKeys = usedKeySet(used);
 
-  // Kings of Ranks — locked to the HUMAN-MADE EXTREMES niche and scored on the
-  // signature Overkill Index. We deliberately SKIP the generic trend picker here:
-  // riding arbitrary trends (a wrestling event, a movie) pulls off-niche, which
-  // is exactly how "Top 5 SummerSlam surprises" slipped through. Evergreen
-  // human-made-extremes themes are effectively unlimited, so we never run dry.
+  // Kings of Ranks — a FUNNY animals/pets comedy-ranking channel. We SKIP the
+  // generic trend picker (it pulls off-niche) and generate evergreen funny-animal
+  // themes, which are effectively unlimited so we never run dry.
   if (genre === 'kingsranks') {
-    console.log('  Format: Top 5 human-made extremes (Overkill Index)');
-    let topic = await generateFreshTopic(used, usedKeys, NICHES.extremes);
-    if (!topic) topic = await generateFreshTopic(used, new Set(), NICHES.extremes);
-    if (!topic) throw new Error('Could not generate a human-made-extremes theme — no LLM available (Gemini billing-blocked + Groq limit?). Skipping this run.');
-    console.log(`  Selected topic (extremes): ${topic}`);
-    const idea = { genre, topic, title: topic, theme: 'extremes' };
+    console.log('  Format: Top 5 funniest animals (comedy ranking)');
+    let topic = await generateFreshTopic(used, usedKeys, NICHES.funny);
+    if (!topic) topic = await generateFreshTopic(used, new Set(), NICHES.funny);
+    if (!topic) throw new Error('Could not generate a funny-animals theme — no LLM available (Gemini billing-blocked + Groq limit?). Skipping this run.');
+    console.log(`  Selected topic (funny): ${topic}`);
+    const idea = { genre, topic, title: topic, theme: 'funny' };
     saveUsedIdea(idea);
     return idea;
   }

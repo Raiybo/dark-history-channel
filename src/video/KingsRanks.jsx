@@ -77,7 +77,7 @@ const TitleCard = ({ text }) => {
           {words.map((w, i) => <span key={i} style={{ display: 'inline-block', marginRight: 14, color: i % 3 === 1 ? GOLD : '#fff' }}>{w}</span>)}
         </span>
         <div style={{ fontFamily, fontWeight: 800, fontSize: 34, letterSpacing: 5, color: GOLD, marginTop: 26 }}>
-          COUNTING DOWN TO #1
+          WAIT FOR #1 😂
         </div>
       </div>
     </AbsoluteFill>
@@ -107,11 +107,11 @@ const Row = ({ item, state, pop }) => {
         <div style={{ fontFamily, fontWeight: 800, fontSize: active ? 32 : 27, lineHeight: 1.03, textTransform: 'uppercase', color: active ? '#1a1200' : (revealed ? '#fff' : 'rgba(255,255,255,0.4)'), textShadow: active ? 'none' : '0 2px 8px rgba(0,0,0,1)', whiteSpace: active ? 'normal' : 'nowrap', overflow: 'hidden', textOverflow: active ? 'clip' : 'ellipsis' }}>
           {revealed ? item.label : '• • •'}
         </div>
-        {active && item.verdict ? (
-          <div style={{ fontFamily, fontWeight: 700, fontSize: 22, lineHeight: 1.08, color: '#3a2c00', marginTop: 2 }}>{item.verdict}</div>
+        {active && (item.caption || item.verdict) ? (
+          <div style={{ fontFamily, fontWeight: 700, fontSize: 22, lineHeight: 1.08, color: '#3a2c00', marginTop: 2 }}>{item.caption || item.verdict}</div>
         ) : null}
       </div>
-      {active ? (
+      {active && item.score != null ? (
         <div style={{ width: 58, flexShrink: 0, textAlign: 'center', borderLeft: '2px solid rgba(58,44,0,0.35)', paddingLeft: 6 }}>
           <div style={{ fontFamily, fontWeight: 900, fontSize: 30, color: '#1a1200', lineHeight: 1 }}>{item.score}</div>
           <div style={{ fontFamily, fontWeight: 800, fontSize: 11, letterSpacing: 1, color: '#3a2c00' }}>/100</div>

@@ -407,21 +407,16 @@ async function runKingsRanks() {
   checkKingsRanks(content);
   console.log();
 
-  console.log('Step 2/4  Fetching real footage of each subject...');
-  const { clips: clipsRaw, credits } = await fetchRankFootage(content.items);
+  console.log('Step 2/4  Fetching a funny clip per rank...');
+  // Funny stock VIDEO (moving) per rank, keyed on each item's generic funny query.
+  // Pexels/Pixabay footage is license-free (no attribution needed).
+  const clipsRaw = await fetchClipsWithDuration(content.items.map(i => ({ keyword: i.keyword })));
   const firstValid = clipsRaw.find(Boolean);
   if (!firstValid) throw new Error('No footage fetched for any rank.');
   // Align by index; substitute the first valid clip for any that failed so no
   // rank renders as a dead black slot.
   const clips = content.items.map((_, i) => clipsRaw[i] || firstValid);
-  // Credit every real subject photo we pulled from Wikimedia (CC-BY / CC-BY-SA
-  // require it; public-domain/CC0 don't, but we list the source for good practice).
-  const wm = credits.filter(Boolean);
-  if (wm.length) {
-    const lines = wm.map(c => `• ${c.label} — ${c.artist} (${c.licenseShort})`);
-    content.description = `${content.description}\n\nPhotos of the actual subjects via Wikimedia Commons / Wikipedia:\n${lines.join('\n')}`.trim();
-  }
-  console.log(`  ${clipsRaw.filter(Boolean).length}/${content.items.length} clips fetched — ${wm.length} real subject photos\n`);
+  console.log(`  ${clipsRaw.filter(Boolean).length}/${content.items.length} clips fetched\n`);
 
   console.log('Step 3/4  Preparing upbeat music...');
   const musicPath = await prepareMusic('kingsranks');

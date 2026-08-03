@@ -1,53 +1,45 @@
 import { chat } from '../llm.js';
 
-// Kings of Ranks — HUMAN-MADE EXTREMES scored on the signature "OVERKILL INDEX".
-// Given an already-deduped "Top 5 ..." theme, produce the STRUCTURED ranking:
-// 5 real machines/structures/vehicles, each with an Overkill Index score (0-100),
-// a short LABEL, an ORIGINAL one-line VERDICT (the judgment that makes the video
-// non-generic — not a description of the footage), and a GENERIC legal stock
-// keyword (+ one fallback). Ranked by score; the on-screen score + verdict carry
-// the info (no voiceover). Returns null on failure (caller retries / fails loud).
-//
-// The Overkill Index = how absurdly far past what was necessary or normal a thing
-// was pushed. It is the channel's owned scale and the recurring hook: the biggest
-// or most famous entry is NOT automatically #1 — the most gratuitously over-built
-// one is. That non-obvious ordering is what earns the watch.
+// Kings of Ranks — a FUNNY "Top 5" comedy-ranking channel about animals/pets.
+// Given an already-deduped funny theme, produce the STRUCTURED ranking: 5 funny
+// moments, each with a short funny LABEL, a punchy funny CAPTION (the joke), and
+// a GENERIC stock VIDEO keyword that will find a funny clip of it. Ranked 1
+// (funniest) to 5. Silent format — the clip + caption carry the laugh. Returns
+// null on failure (caller retries / fails loud).
 export async function generateKingsItems(topic) {
-  const prompt = `You produce ONE episode of a faceless YouTube Shorts channel that ranks HUMAN-MADE EXTREMES (machines, vehicles, engines, aircraft, ships, rockets, megastructures, bridges, tunnels) on a single owned scale: the OVERKILL INDEX (0-100) — how absurdly far past what was necessary or normal the thing was pushed.
+  const prompt = `You make ONE episode of a faceless "Top 5" COMEDY Shorts channel that ranks the FUNNIEST animal / pet moments. It is silent — a funny stock clip plays while a caption delivers the joke, counting down to the #1 funniest.
 
 THEME: "${topic}"
 
-Pick 5 REAL, TRUE, famous-enough examples that fit the theme. Score each 80-99 on the Overkill Index. The most over-built one gets the HIGHEST score and becomes #1 — this is NOT always the biggest or most famous; the surprising ordering is the whole point.
+Pick 5 funny moments/types that fit the theme and rank them 1 (funniest) to 5.
 
-WRITE EVERYTHING IN SIMPLE, EVERYDAY ENGLISH — short words a 12-year-old instantly understands. No fancy, technical, or academic words.
+WRITE IN SIMPLE, EVERYDAY ENGLISH and keep it WHOLESOME and genuinely funny — the kind of thing that makes people laugh and tag a friend.
 
 Return ONLY valid JSON, no markdown:
 {
-  "title": "clear YouTube title under 55 chars, starts with 'Top 5', plain words, no lie",
-  "title_card": "opening card, ALL CAPS, 3-6 plain words (e.g. 'TOP 5 BIGGEST MACHINES')",
+  "title": "funny YouTube title under 50 chars, starts with 'Top 5', makes people smile",
+  "title_card": "opening card, ALL CAPS, 3-6 words (e.g. 'TOP 5 FUNNIEST CATS')",
   "items": [
-    {"score": 99, "label": "the common name people know, 1-3 words", "verdict": "one SIMPLE reason it is amazing, under 34 chars, plain words, a TAKE not a description of the clip", "keyword": "2-4 word GENERIC stock VIDEO query — no brand/model names", "keyword_alt": "different generic fallback query"}
-    // exactly 5 objects; we sort by score, so order does not matter here.
+    {"rank": 1, "label": "short funny name of the moment, 2-4 words", "caption": "the JOKE / punchline, under 36 chars, funny not descriptive", "keyword": "2-4 word GENERIC stock VIDEO search that finds a FUNNY clip of this — common animals only, no brands/names", "keyword_alt": "different generic funny fallback search"}
+    // exactly 5 objects, rank 1..5 (1 = funniest)
   ],
-  "tags": ["6 tags specific to the subject, most specific first"],
-  "description": "2 simple sentences that say the video ranks these from 5 to 1, ending with a question. No hashtags.",
-  "pinned_comment": "one short, simple question about the ranking ending with 👇"
+  "tags": ["6 funny/animal tags, most specific first"],
+  "description": "2 short, fun sentences that say we rank the funniest ones from 5 to 1, ending with a question. No hashtags.",
+  "pinned_comment": "one short, funny question about the ranking ending with 👇"
 }
 
 Rules:
-- Every item is a REAL thing humans actually built. No made-up entries.
-- The VERDICT is a simple, punchy reason this one is jaw-dropping — something you could NOT tell just from the clip (a comparison, a 'why this is crazy' line). Keep it plain and short. If a verdict would fit any other item with the nouns swapped, rewrite it.
-- LABEL may name the specific machine/structure. KEYWORD must stay GENERIC and brand-free (e.g. 'giant cargo plane', 'open pit mine', 'suspension bridge', 'rocket launch') so the stock footage is license-free and carries no logos.
-- Every keyword AND keyword_alt DISTINCT across items. No two items about the same object.
-- NO politics, war/weapons glorification, disasters, tragedy, or health claims. Pure engineering awe.`;
+- Every item is a common animal doing something funny we can actually FIND as generic stock video (a cat startled, a dog running, a puppy sliding, a pet begging). NOT specific famous pets.
+- The CAPTION is the JOKE — a punchy, funny one-liner, not a description of the clip. Each caption DIFFERENT.
+- KEYWORD must be GENERIC and brand-free (e.g. 'scared cat jump', 'dog running fast', 'puppy sliding', 'cat knocking things', 'dog begging food'). Every keyword AND keyword_alt DISTINCT.
+- Keep it WHOLESOME: nothing sad, cruel, scary, or where an animal is hurt. No politics, no health, no gross-out.`;
 
   // Retry — Groq (Gemini is billing-blocked) occasionally truncates or returns a
-  // slightly-off shape; one bad attempt must not kill the run. 4096 tokens leaves
-  // headroom so the JSON is never cut mid-array.
+  // slightly-off shape; one bad attempt must not kill the run.
   for (let attempt = 0; attempt < 3; attempt++) {
     let obj;
     try {
-      const text = await chat(prompt, { temperature: 0.85, maxTokens: 4096, json: true });
+      const text = await chat(prompt, { temperature: 0.9, maxTokens: 4096, json: true });
       try { obj = JSON.parse(text); }
       catch { const m = text.match(/\{[\s\S]*\}/); obj = m ? JSON.parse(m[0]) : null; }
     } catch (err) {
@@ -59,25 +51,21 @@ Rules:
     let items = obj.items
       .filter(it => it && it.label && it.keyword)
       .map(it => ({
-        score: Math.max(1, Math.min(100, Math.round(Number(it.score)) || 0)),
+        rank: Number(it.rank) || 0,
         label: String(it.label).trim().slice(0, 40),
-        verdict: String(it.verdict || it.caption || '').trim().slice(0, 48),
+        caption: String(it.caption || '').trim().slice(0, 44),
         keyword: String(it.keyword).trim().slice(0, 60),
         keyword_alt: String(it.keyword_alt || '').trim().slice(0, 60),
       }));
 
-    // Rank by Overkill Index (highest = #1), then force STRICTLY DESCENDING
-    // DISTINCT scores so the count-up graphic always reads cleanly.
-    items.sort((a, b) => b.score - a.score);
+    // Order by the model's rank (1 = funniest). If ranks are missing/dupes, fall
+    // back to array order. Then reassign clean ranks 1..5 (index 0 = funniest).
+    if (items.every(it => it.rank >= 1 && it.rank <= 5)) items.sort((a, b) => a.rank - b.rank);
     items = items.slice(0, 5);
     if (items.length !== 5) { console.log(`  Kings items: got ${items.length}/5 valid; retrying...`); continue; }
-    for (let i = 1; i < items.length; i++) {
-      if (items[i].score >= items[i - 1].score) items[i].score = items[i - 1].score - 1;
-    }
-    if (items[items.length - 1].score < 1) { console.log(`  Kings items: score spread collapsed; retrying...`); continue; }
-    items = items.map((it, i) => ({ ...it, rank: i + 1 })); // items[0] = rank 1 (best)
+    items = items.map((it, i) => ({ ...it, rank: i + 1 })); // items[0] = rank 1 (funniest)
 
-    // Display order for the countdown reveal: #5 first ... #1 (climax) last.
+    // Display order for the countdown reveal: #5 first ... #1 (funniest) last.
     items.reverse();
 
     // Force distinct keywords (dupes make the footage fetch reuse a clip): try
@@ -96,7 +84,7 @@ Rules:
       items,
       tags: (obj.tags || []).slice(0, 8),
       description: (obj.description || '').trim(),
-      pinned_comment: (obj.pinned_comment || 'Which one deserves the #1 Overkill Index? 👇').trim(),
+      pinned_comment: (obj.pinned_comment || 'Which one made you laugh? 👇').trim(),
     };
   }
   return null;
