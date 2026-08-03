@@ -10,11 +10,11 @@ import { recordSceneMotion } from './screencast.js';
 import { generateAudio }    from './tts.js';
 import { fetchSceneVideos, fetchClipsWithDuration } from './pexels.js';
 import { prepareMusic }     from './music.js';
-import { renderVideo, renderSplitScreenVideo, renderSplitSludgeVideo } from './renderer.js';
+import { renderVideo, renderSplitScreenVideo, renderSplitSludgeVideo, renderSilentKingsRanks } from './renderer.js';
 import { uploadToYouTube }  from './uploader.js';
 import { sendDraftToTikTok, tiktokConfigured } from './tiktok.js';
 import {
-  checkTopic, checkScript, checkAiToolsScript, checkConsumerScript, checkClips, checkAudio, checkRender,
+  checkTopic, checkScript, checkAiToolsScript, checkConsumerScript, checkClips, checkAudio, checkRender, checkKingsRanks,
 } from './pre-upload-checks.js';
 import { addVideoToThemedPlaylist } from './yt-playlists.js';
 import { saveCrossPostPack } from './cross-post.js';
@@ -402,7 +402,8 @@ async function runKingsRanks() {
   console.log(`  Topic: "${idea.topic}"`);
   const content = await generateKingsItems(idea.topic);
   if (!content) throw new Error('Could not build the ranking items for this topic.');
-  console.log(`  "${content.title}" — ${content.items.map(i => `#${i.rank} ${i.label}`).join(', ')}`);
+  content.genre = 'kingsranks';   // drives category (Science & Tech) + niche tags + music credit in the uploader
+  console.log(`  "${content.title}" — ${content.items.map(i => `#${i.rank} ${i.label} (${i.score})`).join(', ')}`);
   checkKingsRanks(content);
   console.log();
 
@@ -420,7 +421,8 @@ async function runKingsRanks() {
   console.log();
 
   console.log('Step 4/4  Rendering + publishing...');
-  const videoPath = await renderSilentKingsRanks(content, clips, musicPath !== null);
+  content.hasMusic = musicPath !== null;   // appends the Kevin MacLeod CC-BY credit to the description
+  const videoPath = await renderSilentKingsRanks(content, clips, content.hasMusic);
   console.log(`  Saved to: ${videoPath}`);
   checkRender(videoPath);
   await publish(content, videoPath);

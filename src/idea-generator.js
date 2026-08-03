@@ -40,6 +40,31 @@ export function saveUsedIdea(idea) {
 // visual_reveal — one consistent format the algorithm can learn and push.
 const VISUAL_REVEAL_GUIDANCE = 'A surprising HIDDEN visual about a familiar thing we can literally SHOW on screen — what an animal/object looks like under UV light, X-ray, microscope, or in slow motion; the secret or original color/shape of a famous product; what is hidden inside an everyday object; a startling size or scale comparison the viewer can picture. (Examples that performed best: "platypuses glow green under UV", "Coca-Cola was originally green".) The fact MUST have a clear visual payoff we can show on screen — that visual is what holds viewers to the end, which is what grows the channel.';
 
+// "Human-made extremes" niche for the Kings of Ranks / Overkill Index channel:
+// the machines, vehicles, structures and tech humans had no business building.
+// Every theme is scored on ONE signature scale (the Overkill Index) downstream.
+const EXTREMES_GUIDANCE = 'A category of HUMAN-MADE extremes we can SHOW with generic stock footage — machines, vehicles, engines, aircraft, ships, trains, rockets, megastructures, skyscrapers, bridges, tunnels, dams, or engineering/tech records. The theme must have at least 5 REAL, distinct, jaw-dropping examples that push absurdly far past what was necessary or normal (biggest, fastest, most powerful, most over-engineered, tallest, deepest, most expensive). Everything must be a real thing humans actually built and that we can show with generic footage — no named living people.';
+
+// Per-niche prompt inserts so generateFreshTopic can serve either channel.
+const NICHES = {
+  visual_reveal: {
+    guidance: VISUAL_REVEAL_GUIDANCE,
+    examples: '"Top 5 animals that glow under UV light", "Top 5 everyday objects with a hidden purpose", "Top 5 places on Earth that look like another planet", "Top 5 deep sea creatures that look fake"',
+    categories: 'MOST-WATCHED CATEGORIES ONLY: build it around the subjects that dominate YouTube Shorts views right now — strange / dangerous / adorable ANIMALS, the DEEP OCEAN and its creatures, SPACE and the planets, oddly-SATISFYING or optical-illusion visuals, EXTREMES (biggest, tiniest, fastest, most expensive, most powerful), HIDDEN or secret features of famous things, and jaw-dropping NATURE. Familiar + visual + a little unbelievable = the algorithm suggests it widely. AVOID dry, niche, or academic subjects.',
+    prefer: 'Prefer subjects with instant, satisfying visuals (glowing, giant, tiny, hidden, transforming, color-changing, camouflaged, strange-looking).',
+    avoid: 'AVOID over-used Shorts clichés (honey never spoils, bananas are berries, octopus 3 hearts, we use 10% of brain, Cleopatra vs pyramids, Venus day longer than year, Napoleon short).',
+    noHealth: 'ABSOLUTELY NO health, medical, diet, nutrition, sleep, supplement, or wellness themes. That category is suppressed. Pure curiosity and wonder only.',
+  },
+  extremes: {
+    guidance: EXTREMES_GUIDANCE,
+    examples: '"Top 5 machines so big they seem fake", "Top 5 vehicles that should not exist", "Top 5 most over-engineered machines ever built", "Top 5 megastructures that broke every rule", "Top 5 buildings that defy physics", "Top 5 fastest machines humans ever built"',
+    categories: 'STAY INSIDE THE NICHE: only HUMAN-MADE extremes — machines, vehicles, engines, aircraft, ships, trains, rockets, megastructures, skyscrapers, bridges, tunnels, dams, mining/construction equipment, and engineering or tech records. NEVER drift into nature, animals, space phenomena, people, sports, movies, or current events — those are a different channel. The wow-factor is always "humans actually built this and it is absurdly overkill".',
+    prefer: 'Prefer categories with 5+ real, famous-enough, visually massive examples the footage can show (huge engines roaring, giant ships, cranes, tunnels, jets, rockets, skyscrapers under construction).',
+    avoid: 'AVOID vague or listicle-bait themes ("Top 5 coolest machines"). Name a SPECIFIC extreme axis (biggest / fastest / most powerful / most over-built / deepest / tallest / most expensive).',
+    noHealth: 'NO politics, war/weapons glorification, disasters, tragedy, or health topics. Pure engineering awe only.',
+  },
+};
+
 // Normalize a topic to a comparison key so near-duplicates (different wording,
 // same subject) are also treated as repeats: drop "did you know", punctuation,
 // and filler words, then collapse whitespace.
@@ -286,7 +311,7 @@ Return ONLY the single "Top 5 ..." topic line (or NONE), nothing else.`;
 // Primary source: Gemini invents a fresh fact in the assigned theme, steered
 // away from everything already used. Retries until it returns a genuinely
 // new subject. The theme is passed in so the daily mix stays balanced.
-async function generateFreshTopic(used, usedKeys) {
+async function generateFreshTopic(used, usedKeys, niche = NICHES.visual_reveal) {
   if (!process.env.GEMINI_API_KEY && !process.env.GROQ_API_KEY) return null;
 
   // Only the last 80 used topics are shown to the LLM per attempt. The full
@@ -305,15 +330,15 @@ async function generateFreshTopic(used, usedKeys) {
     const prompt = `Invent ONE fresh, specific "Top 5" theme for a viral countdown-style YouTube Shorts channel.
 
 FORMAT: every video counts down 5 surprising, TRUE, VISUAL things on one theme (number 5 up to number 1).
-${VISUAL_REVEAL_GUIDANCE}
+${niche.guidance}
 
 Rules:
-- Output a SINGLE theme line that begins with "Top 5" and names a clear category, UNDER 12 words. e.g. "Top 5 animals that glow under UV light", "Top 5 everyday objects with a hidden purpose", "Top 5 places on Earth that look like another planet", "Top 5 deep sea creatures that look fake".
+- Output a SINGLE theme line that begins with "Top 5" and names a clear category, UNDER 12 words. e.g. ${niche.examples}.
 - The theme MUST have at least 5 real, distinct, genuinely surprising, VISUAL examples we can show on screen.
-- MOST-WATCHED CATEGORIES ONLY: build it around the subjects that dominate YouTube Shorts views right now — strange / dangerous / adorable ANIMALS, the DEEP OCEAN and its creatures, SPACE and the planets, oddly-SATISFYING or optical-illusion visuals, EXTREMES (biggest, tiniest, fastest, most expensive, most powerful), HIDDEN or secret features of famous things, and jaw-dropping NATURE and natural phenomena. Familiar + visual + a little unbelievable = the algorithm suggests it widely. AVOID dry, niche, or academic subjects — they flop.
-- ABSOLUTELY NO health, medical, diet, nutrition, sleep, supplement, or wellness themes. That category is suppressed. Pure curiosity and wonder only.
-- Prefer subjects with instant, satisfying visuals (glowing, giant, tiny, hidden, transforming, color-changing, camouflaged, strange-looking).
-- AVOID over-used Shorts clichés (honey never spoils, bananas are berries, octopus 3 hearts, we use 10% of brain, Cleopatra vs pyramids, Venus day longer than year, Napoleon short).
+- ${niche.categories}
+- ${niche.noHealth}
+- ${niche.prefer}
+- ${niche.avoid}
 - It must be a COMPLETELY DIFFERENT theme (not just different wording) from every already-used one below. If it shares 2+ significant keywords with any of these, pick a different theme entirely:
 ${recent || '(none yet)'}
 
@@ -366,6 +391,22 @@ Return ONLY the single "Top 5 ..." theme line, nothing else.`;
 export async function generateIdea(genre) {
   const used = loadUsedIdeas();
   const usedKeys = usedKeySet(used);
+
+  // Kings of Ranks — locked to the HUMAN-MADE EXTREMES niche and scored on the
+  // signature Overkill Index. We deliberately SKIP the generic trend picker here:
+  // riding arbitrary trends (a wrestling event, a movie) pulls off-niche, which
+  // is exactly how "Top 5 SummerSlam surprises" slipped through. Evergreen
+  // human-made-extremes themes are effectively unlimited, so we never run dry.
+  if (genre === 'kingsranks') {
+    console.log('  Format: Top 5 human-made extremes (Overkill Index)');
+    let topic = await generateFreshTopic(used, usedKeys, NICHES.extremes);
+    if (!topic) topic = await generateFreshTopic(used, new Set(), NICHES.extremes);
+    if (!topic) throw new Error('Could not generate a human-made-extremes theme — no LLM available (Gemini billing-blocked + Groq limit?). Skipping this run.');
+    console.log(`  Selected topic (extremes): ${topic}`);
+    const idea = { genre, topic, title: topic, theme: 'extremes' };
+    saveUsedIdea(idea);
+    return idea;
+  }
 
   console.log('  Format: Top 5 countdown (trend-driven)');
 

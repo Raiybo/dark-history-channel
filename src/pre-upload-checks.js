@@ -94,20 +94,42 @@ export function checkAudio(audio) {
   pass('audio', `${dur.toFixed(1)}s, ${wt.length} word timings, ${beats.length} beats`);
 }
 
-// Kings of Ranks (silent) — 5 structured ranked items, no narration.
+// Kings of Ranks (silent) — 5 items scored on the signature Overkill Index,
+// no narration. Enforces the score graphic, the non-obvious ordering, distinct
+// legal keywords, and an ORIGINAL verdict on every item (the anti-content-mill
+// element — a blank/duplicated verdict means the video is generic and must fail).
 export function checkKingsRanks(content) {
   if (!content) fail('script', 'Kings content is null');
   if (!/^top\s*(5|five)\b/i.test((content.title || '').trim())) fail('script', `Title not "Top 5": "${content.title}"`);
   const items = content.items || [];
   if (items.length !== 5) fail('script', `Need 5 items, got ${items.length}`);
-  const ranks = items.map(i => i.rank).sort((a, b) => a - b).join(',');
-  if (ranks !== '1,2,3,4,5') fail('script', `Ranks must be exactly 1-5, got ${ranks}`);
+
+  // Ranks 1-5 exactly, and the array is in countdown display order (#5 -> #1).
+  const ranks = items.map(i => i.rank);
+  if ([...ranks].sort((a, b) => a - b).join(',') !== '1,2,3,4,5') fail('script', `Ranks must be exactly 1-5, got ${ranks.join(',')}`);
+  if (ranks.join(',') !== '5,4,3,2,1') fail('script', `Items must be ordered #5 -> #1 for the countdown, got ${ranks.join(',')}`);
+
+  // Overkill Index scores: present, 1-100, and STRICTLY INCREASING as rank falls
+  // 5 -> 1 (so #1 owns the highest score — the reveal must always climb).
+  const scores = items.map(i => Number(i.score));
+  if (scores.some(s => !Number.isFinite(s) || s < 1 || s > 100)) fail('script', `Every item needs an Overkill Index score 1-100, got ${scores.join(',')}`);
+  for (let i = 1; i < scores.length; i++) {
+    if (scores[i] <= scores[i - 1]) fail('script', `Scores must strictly climb toward #1, got ${scores.join(',')}`);
+  }
+
   if (items.some(i => !((i.label || '').trim()))) fail('script', 'An item has no label');
+
+  // Original verdict on every item, and no two verdicts identical (a dup verdict
+  // is the tell of a nouns-swapped template).
+  const verdicts = items.map(i => (i.verdict || '').trim().toLowerCase());
+  if (verdicts.some(v => v.length < 4)) fail('script', 'An item is missing its original verdict line');
+  if (new Set(verdicts).size !== 5) fail('script', 'Duplicate verdicts — commentary is not original per item');
+
   const kws = items.map(i => (i.keyword || '').trim().toLowerCase());
   if (kws.some(k => !k)) fail('script', 'An item has no keyword');
   if (new Set(kws).size !== 5) fail('script', 'Duplicate item keywords');
   if (!(content.title_card || '').trim()) fail('script', 'title_card missing');
-  pass('script', `5 ranked items — "${content.title.slice(0, 45)}"`);
+  pass('script', `5 items on the Overkill Index [${scores.join('<')}] — "${content.title.slice(0, 45)}"`);
 }
 
 // AI-Tools-specific script check. Different invariants from the Top-5 format

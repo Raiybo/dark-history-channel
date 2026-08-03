@@ -22,11 +22,14 @@ const EVERGREEN_HASHTAGS_BY_GENRE = {
   consumer:   ['#Shorts', '#YouTubeShorts', '#ConsumerAwareness', '#ScamAlert', '#SaveMoney', '#KnowYourRights', '#FTC', '#Legal', '#Money', '#LifeHacks'],
   aitools:    ['#Shorts', '#YouTubeShorts', '#AITools', '#TechHacks', '#Productivity', '#AI', '#ArtificialIntelligence', '#Tech', '#Startup', '#Founders'],
   didyouknow: ['#Shorts', '#YouTubeShorts', '#Viral', '#Facts', '#DidYouKnow', '#FunFacts', '#AmazingFacts', '#InterestingFacts', '#Trending'],
+  // Kings of Ranks — human-made extremes ranked on the Overkill Index.
+  kingsranks: ['#Shorts', '#YouTubeShorts', '#Engineering', '#Megastructures', '#Machines', '#HowItsMade', '#Satisfying', '#Top5', '#Ranking', '#Mechanical'],
 };
 const EVERGREEN_TAGS_BY_GENRE = {
   consumer:   ['shorts', 'youtube shorts', 'consumer awareness', 'consumer rights', 'scam alert', 'ftc', 'save money', 'hidden fees', 'know your rights', 'money hacks', 'life hacks', 'consumer protection', 'americans need to know', 'financial literacy'],
   aitools:    ['shorts', 'youtube shorts', 'ai tools', 'ai tools 2026', 'tech hacks', 'productivity', 'artificial intelligence', 'ai workflow', 'startup tools', 'ai for creators', 'chatgpt alternatives', 'ai apps', 'no code ai'],
   didyouknow: ['shorts', 'youtube shorts', 'viral', 'viral shorts', 'trending', 'facts', 'did you know', 'fun facts', 'amazing facts', 'interesting facts', 'educational', 'today i learned', 'knowledge', 'mind blowing facts'],
+  kingsranks: ['shorts', 'youtube shorts', 'top 5', 'ranked', 'ranking', 'engineering', 'megastructures', 'biggest machines', 'most powerful', 'mega machines', 'how its made', 'satisfying', 'construction', 'heavy machinery', 'mind blowing'],
 };
 const EVERGREEN_HASHTAGS = EVERGREEN_HASHTAGS_BY_GENRE.didyouknow;
 const EVERGREEN_TAGS = EVERGREEN_TAGS_BY_GENRE.didyouknow;
@@ -138,7 +141,7 @@ export async function uploadToYouTube(script, videoPath) {
         // Category by genre: AI-tools → Science & Technology (28); consumer
         // awareness → News & Politics (25) which the algorithm actually pushes
         // hard for informational consumer content in 2026; else Education (27).
-        categoryId: script.genre === 'aitools' ? '28' : (script.genre === 'consumer' ? '25' : '27'),
+        categoryId: (script.genre === 'aitools' || script.genre === 'kingsranks') ? '28' : (script.genre === 'consumer' ? '25' : '27'),
         defaultLanguage: 'en',
         defaultAudioLanguage: 'en'
       },
