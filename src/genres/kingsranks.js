@@ -13,14 +13,24 @@ THEME: "${topic}"
 
 Pick 5 funny moments/types that fit the theme and rank them 1 (funniest) to 5.
 
-WRITE IN SIMPLE, EVERYDAY ENGLISH and keep it WHOLESOME and genuinely funny — the kind of thing that makes people laugh and tag a friend.
+COMEDY STYLE (this is what makes the channel funny — follow it exactly):
+- The CAPTION is the joke. Use the winning animal-Shorts formula: write the animal's INNER MONOLOGUE or a RELATABLE HUMAN PARALLEL — narrate what the pet is "thinking," or compare it to a relatable human moment. Short, deadpan, and a little unhinged.
+- Great examples of the voice (match this energy, don't reuse these):
+  • cat knocking a cup off a table → "For science."
+  • dog doing zoomies → "Remembered something from 2019."
+  • cat loafing → "Structural integrity: questionable."
+  • guilty-looking dog → "He planned this. For weeks."
+  • startled cat mid-air → "Gravity was not consulted."
+  • dog staring at food → "Negotiations have begun."
+  • puppy sneezing → "Even HE wasn't ready."
+- SIMPLE, everyday words. WHOLESOME. Punchy — the shorter and more unexpected, the funnier. Never just describe the clip.
 
 Return ONLY valid JSON, no markdown:
 {
   "title": "funny YouTube title under 50 chars, starts with 'Top 5', makes people smile",
   "title_card": "opening card, ALL CAPS, 3-6 words (e.g. 'TOP 5 FUNNIEST CATS')",
   "items": [
-    {"rank": 1, "label": "short funny name of the moment, 2-4 words", "caption": "the JOKE / punchline, under 36 chars, funny not descriptive", "keyword": "2-4 word GENERIC stock VIDEO search that finds a FUNNY clip of this — common animals only, no brands/names", "keyword_alt": "different generic funny fallback search"}
+    {"rank": 1, "label": "short funny name of the moment, 2-4 words", "caption": "the JOKE — inner monologue or relatable parallel, under 38 chars, punchy & deadpan", "keyword": "2-4 word GENERIC stock VIDEO search that finds a FUNNY clip of this — common animals only, no brands/names", "keyword_alt": "different generic funny fallback search"}
     // exactly 5 objects, rank 1..5 (1 = funniest)
   ],
   "tags": ["6 funny/animal tags, most specific first"],

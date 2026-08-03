@@ -132,6 +132,22 @@ const Leaderboard = ({ items }) => {
   );
 };
 
+// End-card CTA that pops in over the #1 reveal — drives the follow that grows
+// a fresh channel. Sits bottom-centre so it never covers the left leaderboard.
+const Outro = () => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const pop = spring({ frame, fps, config: { damping: 12, stiffness: 200, mass: 0.6 } });
+  return (
+    <div style={{ position: 'absolute', bottom: 150, left: 0, right: 0, display: 'flex', justifyContent: 'center', pointerEvents: 'none' }}>
+      <div style={{ transform: `scale(${0.7 + pop * 0.3})`, display: 'flex', alignItems: 'center', gap: 12, background: 'rgba(0,0,0,0.55)', border: `3px solid ${GOLD}`, borderRadius: 50, padding: '13px 30px' }}>
+        <span style={{ fontSize: 38, lineHeight: 1 }}>👑</span>
+        <span style={{ fontFamily, fontWeight: 900, fontSize: 40, letterSpacing: 2, color: GOLD, textShadow: '0 2px 10px rgba(0,0,0,1)' }}>FOLLOW FOR MORE</span>
+      </div>
+    </div>
+  );
+};
+
 // Kings of Ranks — SILENT ranking, no voiceover: upbeat music + a slim, persistent
 // left leaderboard (ranks 1-5) over real photos of the actual subjects (Wikimedia /
 // public domain) with generic stock as fallback. items are in countdown display
@@ -172,6 +188,10 @@ export const KingsRanks = ({
       {/* title card on top during the intro */}
       <Sequence from={0} durationInFrames={intro + 15}>
         <TitleCard text={titleCard} />
+      </Sequence>
+
+      <Sequence from={durationInFrames - Math.round(1.9 * fps)}>
+        <Outro />
       </Sequence>
     </AbsoluteFill>
   );
