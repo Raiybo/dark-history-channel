@@ -26,36 +26,51 @@ Return ONLY valid JSON, no markdown:
 }
 Rules: items MUST be ordered 5,4,3,2,1. Every label AND every keyword DISTINCT. NO politics, tragedy, disaster, or health/medical claims. Keywords are GENERIC stock queries (an animal, object, place, machine) — never a named person or brand.`;
 
-  let obj;
-  try {
-    const text = await chat(prompt, { temperature: 0.8, maxTokens: 2048, json: true });
-    try { obj = JSON.parse(text); }
-    catch { const m = text.match(/\{[\s\S]*\}/); obj = m ? JSON.parse(m[0]) : null; }
-  } catch {
-    return null;
+  // Retry — Groq (Gemini is billing-blocked) occasionally truncates or returns
+  // a slightly-off shape; one bad attempt must not kill the run. 4096 tokens
+  // leaves headroom so the JSON is never cut off mid-array.
+  for (let attempt = 0; attempt < 3; attempt++) {
+    let obj;
+    try {
+      const text = await chat(prompt, { temperature: 0.8, maxTokens: 4096, json: true });
+      try { obj = JSON.parse(text); }
+      catch { const m = text.match(/\{[\s\S]*\}/); obj = m ? JSON.parse(m[0]) : null; }
+    } catch (err) {
+      console.log(`  Kings items attempt ${attempt + 1} failed (${(err.message || '').slice(0, 80)}); retrying...`);
+      continue;
+    }
+    if (!obj || !Array.isArray(obj.items)) { console.log(`  Kings items: no items array; retrying...`); continue; }
+
+    let items = obj.items
+      .filter(it => it && it.label && it.keyword)
+      .map(it => ({
+        rank: Number(it.rank) || 0,
+        label: String(it.label).trim().slice(0, 40),
+        caption: String(it.caption || '').trim().slice(0, 30),
+        keyword: String(it.keyword).trim().slice(0, 60),
+      }));
+    if (items.every(it => it.rank >= 1 && it.rank <= 5)) items.sort((a, b) => b.rank - a.rank);
+    items = items.slice(0, 5).map((it, i) => ({ ...it, rank: 5 - i }));
+    if (items.length !== 5) { console.log(`  Kings items: got ${items.length}/5 valid; retrying...`); continue; }
+
+    // Force distinct keywords (dupes make the footage fetch skip a clip) by
+    // suffixing the label onto any repeat rather than failing the whole run.
+    const seen = new Set();
+    items = items.map(it => {
+      let k = it.keyword.toLowerCase();
+      if (seen.has(k)) it = { ...it, keyword: `${it.keyword} ${it.label}`.slice(0, 60) };
+      seen.add(it.keyword.toLowerCase());
+      return it;
+    });
+
+    return {
+      title: (obj.title || topic).slice(0, 90),
+      title_card: (obj.title_card || topic).toUpperCase().replace(/[^A-Z0-9 ]/g, '').replace(/\s+/g, ' ').trim().slice(0, 40),
+      items,
+      tags: (obj.tags || []).slice(0, 8),
+      description: (obj.description || '').trim(),
+      pinned_comment: (obj.pinned_comment || 'Which rank surprised you? 👇').trim(),
+    };
   }
-  if (!obj || !Array.isArray(obj.items)) return null;
-
-  let items = obj.items
-    .filter(it => it && it.label && it.keyword)
-    .map(it => ({
-      rank: Number(it.rank) || 0,
-      label: String(it.label).trim().slice(0, 40),
-      caption: String(it.caption || '').trim().slice(0, 30),
-      keyword: String(it.keyword).trim().slice(0, 60),
-    }));
-  // Order 5 -> 1. If the model gave clean ranks use them, else assign by order.
-  if (items.every(it => it.rank >= 1 && it.rank <= 5)) items.sort((a, b) => b.rank - a.rank);
-  items = items.slice(0, 5).map((it, i) => ({ ...it, rank: 5 - i }));
-  if (items.length !== 5) return null;
-  if (new Set(items.map(i => i.keyword.toLowerCase())).size !== 5) return null;
-
-  return {
-    title: (obj.title || topic).slice(0, 90),
-    title_card: (obj.title_card || topic).toUpperCase().replace(/[^A-Z0-9 ]/g, '').replace(/\s+/g, ' ').trim().slice(0, 40),
-    items,
-    tags: (obj.tags || []).slice(0, 8),
-    description: (obj.description || '').trim(),
-    pinned_comment: (obj.pinned_comment || 'Which rank surprised you? 👇').trim(),
-  };
+  return null;
 }
