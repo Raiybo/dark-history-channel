@@ -10,10 +10,11 @@ on:
   # Kings of Ranks — 2 shorts/day, two DIFFERENT styles at two strong US windows:
   #   15:30 UTC (11:30 EDT) → FUNNY animals ranking (kingsranks)
   #   23:30 UTC (19:30 EDT) → "Have you ever thought…" A vs B comparison (versus)
-  # Re-enabled 2026-08-03 after the funny + versus formats were verified live.
-  schedule:
-    - cron: '30 15 * * *'
-    - cron: '30 23 * * *'
+  # PAUSED 2026-08-03: channel wiped to start from zero; reworking the Top-5 funny
+  # script energy/style. Manual dispatch only until the new style is locked.
+  # schedule:
+  #   - cron: '30 15 * * *'
+  #   - cron: '30 23 * * *'
   workflow_dispatch:
     inputs:
       genre:
