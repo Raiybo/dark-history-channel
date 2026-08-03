@@ -7,6 +7,7 @@ import { BrandSting, STING_FRAMES } from './components/BrandSting.jsx';
 import { SceneCallouts } from './components/SceneCallout.jsx';
 import { RevealStinger, STINGER_FRAMES } from './components/RevealStinger.jsx';
 import { ColorGrade } from './components/ColorGrade.jsx';
+import { RankBadge } from './components/RankBadge.jsx';
 
 const CROSSFADE = 15;
 
@@ -191,6 +192,9 @@ export const SlideshowVideo = ({
 
       {/* Per-scene lower-third callouts (skips scene 1, owned by the hook) */}
       <SceneCallouts scenes={scenes} timings={timings} accent={grade.watermark} />
+
+      {/* Kings of Ranks — crown rank badge (#5 -> #1), synced to the countdown */}
+      <RankBadge timings={timings} startFrame={hookEndFrame} accent={grade.watermark} />
 
       {/* CTA card — last 3 seconds */}
       <Sequence from={durationInFrames - 90} durationInFrames={90}>
