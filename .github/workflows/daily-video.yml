@@ -7,13 +7,15 @@ on:
   # Verified end-to-end on 2026-07-30 with the fixed RAG source feeds; first
   # live upload from the new Consumer Awareness pipeline:
   # https://www.youtube.com/watch?v=bekRb6n0ERE
-  schedule:
-    - cron: '0 0 * * *'    # 20:00 EDT prev day — late-night US scroll
-    - cron: '0 4 * * *'    # 00:00 EDT — overnight US / EU morning
-    - cron: '0 8 * * *'    # 04:00 EDT — early US / EU commute
-    - cron: '0 12 * * *'   # 08:00 EDT — US East morning commute
-    - cron: '0 16 * * *'   # 12:00 EDT — US lunch break
-    - cron: '0 20 * * *'   # 16:00 EDT — US afternoon / evening commute
+  # PAUSED 2026-08-03 — channel wiped for a new prompt/design; the user is
+  # uploading manually, so all auto-posting is OFF. Re-enable by uncommenting.
+  # schedule:
+  #   - cron: '0 0 * * *'    # 20:00 EDT prev day — late-night US scroll
+  #   - cron: '0 4 * * *'    # 00:00 EDT — overnight US / EU morning
+  #   - cron: '0 8 * * *'    # 04:00 EDT — early US / EU commute
+  #   - cron: '0 12 * * *'   # 08:00 EDT — US East morning commute
+  #   - cron: '0 16 * * *'   # 12:00 EDT — US lunch break
+  #   - cron: '0 20 * * *'   # 16:00 EDT — US afternoon / evening commute
   workflow_dispatch:        # Manual trigger stays available
 
 # Serialize ALL runs (scheduled + manual). Parallel runs race on idea-generation
