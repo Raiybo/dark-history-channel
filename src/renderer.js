@@ -123,6 +123,40 @@ export async function renderSilentKingsRanks(content, clips, hasMusic) {
   return outputPath;
 }
 
+// Render the "Have you ever thought that…" comparison (silent — music + captions).
+// content = { question, hook, a, b, winner, answer, ... }; clips = [{path,duration}]
+// for [A, B], aligned by index.
+export async function renderVersusVideo(content, clips, hasMusic) {
+  const inputProps = {
+    question: content.question || '',
+    hook: content.hook || 'HAVE YOU EVER THOUGHT…',
+    a: content.a || {},
+    b: content.b || {},
+    winner: content.winner || 'a',
+    answer: content.answer || '',
+    clips: clips || [],
+    channelName: process.env.CHANNEL_NAME || 'Kings of Ranks',
+    logo: ['logo.png', 'logo.webp', 'logo.jpg'].find(f => existsSync(join(ROOT_DIR, 'public', f))) || null,
+    hasMusic: !!hasMusic,
+    durationSec: 30,
+  };
+  writeFileSync(join(ROOT_DIR, 'config', 'render-props.json'), JSON.stringify(inputProps, null, 2));
+
+  console.log('  Bundling Remotion project...');
+  const bundled = await bundle({ entryPoint: join(__dirname, 'index.jsx'), webpackOverride: (c) => c });
+  const composition = await selectComposition({ serveUrl: bundled, id: 'VersusVideo', inputProps });
+
+  mkdirSync(join(ROOT_DIR, 'output'), { recursive: true });
+  const outputPath = join(ROOT_DIR, 'output', 'video.mp4');
+  console.log(`  Rendering ${composition.durationInFrames} frames (Versus)...`);
+  await renderMedia({
+    composition, serveUrl: bundled, outputLocation: outputPath, inputProps, ...RENDER_OPTS,
+    onProgress: ({ progress }) => process.stdout.write(`\r  Progress: ${Math.round(progress * 100)}%   `),
+  });
+  process.stdout.write('\n');
+  return outputPath;
+}
+
 export async function renderVideo(script, audio) {
   const publicAudioDir = join(ROOT_DIR, 'public', 'audio');
   mkdirSync(publicAudioDir, { recursive: true });

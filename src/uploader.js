@@ -24,12 +24,15 @@ const EVERGREEN_HASHTAGS_BY_GENRE = {
   didyouknow: ['#Shorts', '#YouTubeShorts', '#Viral', '#Facts', '#DidYouKnow', '#FunFacts', '#AmazingFacts', '#InterestingFacts', '#Trending'],
   // Kings of Ranks — funny animals/pets comedy ranking.
   kingsranks: ['#Shorts', '#YouTubeShorts', '#FunnyAnimals', '#Cats', '#Dogs', '#Pets', '#Funny', '#Animals', '#Cute', '#TryNotToLaugh'],
+  // "Have you ever thought…" A vs B comparisons.
+  versus: ['#Shorts', '#YouTubeShorts', '#DidYouKnow', '#Comparison', '#VS', '#Facts', '#Interesting', '#WhoWouldWin', '#Amazing', '#Top5'],
 };
 const EVERGREEN_TAGS_BY_GENRE = {
   consumer:   ['shorts', 'youtube shorts', 'consumer awareness', 'consumer rights', 'scam alert', 'ftc', 'save money', 'hidden fees', 'know your rights', 'money hacks', 'life hacks', 'consumer protection', 'americans need to know', 'financial literacy'],
   aitools:    ['shorts', 'youtube shorts', 'ai tools', 'ai tools 2026', 'tech hacks', 'productivity', 'artificial intelligence', 'ai workflow', 'startup tools', 'ai for creators', 'chatgpt alternatives', 'ai apps', 'no code ai'],
   didyouknow: ['shorts', 'youtube shorts', 'viral', 'viral shorts', 'trending', 'facts', 'did you know', 'fun facts', 'amazing facts', 'interesting facts', 'educational', 'today i learned', 'knowledge', 'mind blowing facts'],
   kingsranks: ['shorts', 'youtube shorts', 'funny animals', 'funny cats', 'funny dogs', 'funny pets', 'cute animals', 'animal fails', 'try not to laugh', 'funny animal videos', 'pets', 'cats', 'dogs', 'top 5', 'funny'],
+  versus: ['shorts', 'youtube shorts', 'comparison', 'versus', 'vs', 'who would win', 'did you know', 'interesting facts', 'amazing facts', 'which is better', 'battle', 'facts', 'educational', 'mind blowing'],
 };
 const EVERGREEN_HASHTAGS = EVERGREEN_HASHTAGS_BY_GENRE.didyouknow;
 const EVERGREEN_TAGS = EVERGREEN_TAGS_BY_GENRE.didyouknow;

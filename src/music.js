@@ -36,6 +36,16 @@ const TRACKS = {
     `${B}/Pixel%20Peeker%20Polka%20-%20faster.mp3`, // silly polka romp
     `${B}/Carefree.mp3`,                       // happy, light
   ],
+  // "Have you ever thought…" comparison — energetic, curious, upbeat electronic
+  // (not goofy, not scary). All URL-verified 200. Shuffled per run.
+  versus: [
+    `${B}/Blippy%20Trance.mp3`,     // bright, driving electronic
+    `${B}/Electrodoodle.mp3`,       // playful, upbeat electronic
+    `${B}/Digital%20Lemonade.mp3`,  // sunny, poppy electronic
+    `${B}/Bit%20Shift.mp3`,         // energetic chiptune-electronic
+    `${B}/Getting%20it%20Done.mp3`, // upbeat, motivating drive
+    `${B}/Pixelland.mp3`,           // fun, bouncy chiptune
+  ],
 };
 
 function shuffled(arr) {

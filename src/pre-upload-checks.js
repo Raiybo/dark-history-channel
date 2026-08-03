@@ -124,6 +124,23 @@ export function checkKingsRanks(content) {
   pass('script', `5 funny ranked items — "${content.title.slice(0, 45)}"`);
 }
 
+// "Have you ever thought that…" comparison — two contenders, a true winner, and
+// an interesting answer. Enforces both contenders complete, distinct keywords,
+// a valid winner, and a non-empty payoff answer.
+export function checkVersus(content) {
+  if (!content) fail('script', 'Versus content is null');
+  if (!(content.question || '').trim()) fail('script', 'Question missing');
+  const a = content.a || {}, b = content.b || {};
+  if (!(a.name || '').trim() || !(b.name || '').trim()) fail('script', 'A contender has no name');
+  const ak = (a.keyword || '').trim().toLowerCase(), bk = (b.keyword || '').trim().toLowerCase();
+  if (!ak || !bk) fail('script', 'A contender has no keyword');
+  if (ak === bk) fail('script', 'Both contenders share a keyword (clips would be identical)');
+  if (content.winner !== 'a' && content.winner !== 'b') fail('script', `Winner must be 'a' or 'b', got "${content.winner}"`);
+  if (!(content.answer || '').trim()) fail('script', 'Answer (the payoff) is missing');
+  if (!(content.title || '').trim()) fail('script', 'Title missing');
+  pass('script', `versus: ${a.name} vs ${b.name} → ${content.winner === 'b' ? b.name : a.name}`);
+}
+
 // AI-Tools-specific script check. Different invariants from the Top-5 format
 // so we don't share checkScript — the hook shape, scene count, and narration
 // length all move.

@@ -56,7 +56,7 @@ const ClipLayer = ({ clip, fps }) => {
   return (
     <AbsoluteFill style={{ opacity: op }}>
       <LoopedClip clip={clip} fps={fps} />
-      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.2) 34%, rgba(0,0,0,0) 55%)', pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, rgba(0,0,0,0.42) 0%, rgba(0,0,0,0.12) 32%, rgba(0,0,0,0) 52%)', pointerEvents: 'none' }} />
       <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(0,0,0,0.4) 0%, transparent 14%, transparent 86%, rgba(0,0,0,0.5) 100%)', pointerEvents: 'none' }} />
     </AbsoluteFill>
   );
@@ -84,39 +84,29 @@ const TitleCard = ({ text }) => {
   );
 };
 
-// One compact row of the slim left-side leaderboard.
+// One row of the near-invisible left leaderboard. NO boxes/backgrounds — just
+// text with heavy shadow so the clip shows through everywhere. Only the active
+// row (gold, larger) and its caption stand out; locked rows are barely there.
 const Row = ({ item, state, pop }) => {
   const active = state === 'active';
   const revealed = state !== 'locked';
   const isWinner = item.rank === 1;
-  const scale = 1 + (active ? pop * 0.05 : 0);
+  const scale = 1 + (active ? pop * 0.06 : 0);
+  const shadow = '0 2px 10px rgba(0,0,0,0.95), 0 0 5px rgba(0,0,0,0.9)';
   return (
-    <div style={{
-      display: 'flex', alignItems: 'center', gap: 11,
-      transform: `scale(${scale})`, transformOrigin: 'left center',
-      background: active ? `linear-gradient(90deg, #ffd35a 0%, ${GOLD} 100%)` : 'rgba(0,0,0,0.34)',
-      border: active ? '2px solid #fff' : '1.5px solid rgba(255,255,255,0.1)',
-      borderRadius: 13, padding: '8px 11px',
-      boxShadow: active ? '0 8px 22px rgba(0,0,0,0.5)' : 'none',
-    }}>
-      <div style={{ minWidth: 46, textAlign: 'center' }}>
-        {isWinner && active && <div style={{ fontSize: 24, lineHeight: 1, marginBottom: -6 }}>👑</div>}
-        <span style={{ fontFamily, fontWeight: 900, fontSize: 46, letterSpacing: -2, color: active ? '#1a1200' : GOLD, textShadow: active ? 'none' : '0 2px 8px rgba(0,0,0,0.9)' }}>{item.rank}</span>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12, transform: `scale(${scale})`, transformOrigin: 'left center', opacity: revealed ? 1 : 0.42 }}>
+      <div style={{ minWidth: 44, textAlign: 'center' }}>
+        {isWinner && active && <div style={{ fontSize: 26, lineHeight: 1, marginBottom: -6, filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.95))' }}>👑</div>}
+        <span style={{ fontFamily, fontWeight: 900, fontSize: active ? 52 : 34, letterSpacing: -2, color: GOLD, textShadow: shadow, opacity: active ? 1 : 0.85 }}>{item.rank}</span>
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontFamily, fontWeight: 800, fontSize: active ? 32 : 27, lineHeight: 1.03, textTransform: 'uppercase', color: active ? '#1a1200' : (revealed ? '#fff' : 'rgba(255,255,255,0.4)'), textShadow: active ? 'none' : '0 2px 8px rgba(0,0,0,1)', whiteSpace: active ? 'normal' : 'nowrap', overflow: 'hidden', textOverflow: active ? 'clip' : 'ellipsis' }}>
+        <div style={{ fontFamily, fontWeight: 800, fontSize: active ? 36 : 25, lineHeight: 1.04, textTransform: 'uppercase', color: active ? GOLD : '#fff', textShadow: shadow, whiteSpace: active ? 'normal' : 'nowrap', overflow: 'hidden', textOverflow: active ? 'clip' : 'ellipsis' }}>
           {revealed ? item.label : '• • •'}
         </div>
         {active && (item.caption || item.verdict) ? (
-          <div style={{ fontFamily, fontWeight: 700, fontSize: 22, lineHeight: 1.08, color: '#3a2c00', marginTop: 2 }}>{item.caption || item.verdict}</div>
+          <div style={{ fontFamily, fontWeight: 700, fontSize: 24, lineHeight: 1.1, color: '#fff', textShadow: shadow, marginTop: 3 }}>{item.caption || item.verdict}</div>
         ) : null}
       </div>
-      {active && item.score != null ? (
-        <div style={{ width: 58, flexShrink: 0, textAlign: 'center', borderLeft: '2px solid rgba(58,44,0,0.35)', paddingLeft: 6 }}>
-          <div style={{ fontFamily, fontWeight: 900, fontSize: 30, color: '#1a1200', lineHeight: 1 }}>{item.score}</div>
-          <div style={{ fontFamily, fontWeight: 800, fontSize: 11, letterSpacing: 1, color: '#3a2c00' }}>/100</div>
-        </div>
-      ) : null}
     </div>
   );
 };
@@ -131,7 +121,7 @@ const Leaderboard = ({ items }) => {
   const { intro, W, activeIndex } = timing(frame, fps, durationInFrames, n);
   const rows = [...items].sort((a, b) => a.rank - b.rank); // #1 top ... #5 bottom
   return (
-    <div style={{ position: 'absolute', left: 24, top: 260, bottom: 260, width: 470, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 11, zIndex: 20 }}>
+    <div style={{ position: 'absolute', left: 30, top: 240, bottom: 240, width: 540, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 18, zIndex: 20 }}>
       {rows.map((item) => {
         const order = n - item.rank; // rank 5 revealed first (order 0) ... rank 1 last
         const state = activeIndex === order ? 'active' : (activeIndex >= order ? 'done' : 'locked');

@@ -3,6 +3,7 @@ import { generateIdea, loadUsedIdeas, saveUsedIdea } from './idea-generator.js';
 import { generateScript }   from './script-writer.js';
 import { generateSplitEdit } from './genres/splitedit.js';
 import { generateKingsItems } from './genres/kingsranks.js';
+import { generateVersusContent } from './genres/versus.js';
 import { generateAiToolsContent } from './genres/aitools.js';
 import { fetchToolScreenshots } from './screenshots.js';
 import { generateConsumerContent } from './genres/consumer.js';
@@ -10,11 +11,11 @@ import { recordSceneMotion } from './screencast.js';
 import { generateAudio }    from './tts.js';
 import { fetchSceneVideos, fetchClipsWithDuration, fetchRankFootage } from './pexels.js';
 import { prepareMusic }     from './music.js';
-import { renderVideo, renderSplitScreenVideo, renderSplitSludgeVideo, renderSilentKingsRanks } from './renderer.js';
+import { renderVideo, renderSplitScreenVideo, renderSplitSludgeVideo, renderSilentKingsRanks, renderVersusVideo } from './renderer.js';
 import { uploadToYouTube }  from './uploader.js';
 import { sendDraftToTikTok, tiktokConfigured } from './tiktok.js';
 import {
-  checkTopic, checkScript, checkAiToolsScript, checkConsumerScript, checkClips, checkAudio, checkRender, checkKingsRanks,
+  checkTopic, checkScript, checkAiToolsScript, checkConsumerScript, checkClips, checkAudio, checkRender, checkKingsRanks, checkVersus,
 } from './pre-upload-checks.js';
 import { addVideoToThemedPlaylist } from './yt-playlists.js';
 import { saveCrossPostPack } from './cross-post.js';
@@ -434,8 +435,46 @@ async function runKingsRanks() {
   console.log('═══════════════════════════════════════\n');
 }
 
+async function runVersus() {
+  console.log('\n═══════════════════════════════════════');
+  console.log('   Kings of Ranks — Have You Ever Thought…');
+  console.log('═══════════════════════════════════════\n');
+
+  console.log('Step 1/4  Picking a fresh comparison question (deduped)...');
+  const idea = await generateIdea('versus');
+  console.log(`  Question: "${idea.topic}"`);
+  const content = await generateVersusContent(idea.topic);
+  if (!content) throw new Error('Could not build the comparison for this question.');
+  content.genre = 'versus';   // uploader category/tags
+  console.log(`  "${content.title}" — ${content.a.name} vs ${content.b.name} → winner: ${content.winner === 'b' ? content.b.name : content.a.name}`);
+  checkVersus(content);
+  console.log();
+
+  console.log('Step 2/4  Fetching a clip for each contender...');
+  const clipsRaw = await fetchClipsWithDuration([{ keyword: content.a.keyword }, { keyword: content.b.keyword }]);
+  const firstValid = clipsRaw.find(Boolean);
+  if (!firstValid) throw new Error('No footage fetched for either contender.');
+  const clips = clipsRaw.map(c => c || firstValid);
+  console.log(`  ${clipsRaw.filter(Boolean).length}/2 clips fetched\n`);
+
+  console.log('Step 3/4  Preparing music...');
+  const musicPath = await prepareMusic('versus');
+  content.hasMusic = musicPath !== null;
+  console.log();
+
+  console.log('Step 4/4  Rendering + publishing...');
+  const videoPath = await renderVersusVideo(content, clips, content.hasMusic);
+  console.log(`  Saved to: ${videoPath}`);
+  checkRender(videoPath);
+  await publish(content, videoPath);
+
+  console.log('\n═══════════════════════════════════════');
+  console.log('   Done!');
+  console.log('═══════════════════════════════════════\n');
+}
+
 // Dispatcher: GENRE_OVERRIDE picks the pipeline
-// (consumer | aitools | splitedit | kingsranks | countdown).
+// (consumer | aitools | splitedit | kingsranks | versus | countdown).
 async function run() {
   checkEnv();
   const genre = process.env.GENRE_OVERRIDE || getTodayGenre();
@@ -443,6 +482,7 @@ async function run() {
   if (genre === 'aitools') return runAiTools();
   if (genre === 'splitedit') return runSplitEdit();
   if (genre === 'kingsranks') return runKingsRanks();
+  if (genre === 'versus') return runVersus();
   return runCountdown();
 }
 

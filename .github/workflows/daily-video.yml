@@ -7,15 +7,23 @@ on:
   # Verified end-to-end on 2026-07-30 with the fixed RAG source feeds; first
   # live upload from the new Consumer Awareness pipeline:
   # https://www.youtube.com/watch?v=bekRb6n0ERE
-  # Kings of Ranks — 2/day (research-backed safe cadence for a rebuilding
-  # channel), at two strong US windows. Re-enabled 2026-08-03.
-  # PAUSED 2026-08-03 for the Ranking Shorts Production Engine rework (new
-  # spec: signature rubric + original VO commentary + legal-sourced footage).
-  # Manual dispatch only until the new format is verified and re-enabled.
-  # schedule:
-  #   - cron: '30 15 * * *'  # 11:30 EDT — pre-lunch scroll
-  #   - cron: '30 23 * * *'  # 19:30 EDT — prime time
-  workflow_dispatch:        # Manual trigger stays available
+  # Kings of Ranks — 2 shorts/day, two DIFFERENT styles at two strong US windows:
+  #   15:30 UTC (11:30 EDT) → FUNNY animals ranking (kingsranks)
+  #   23:30 UTC (19:30 EDT) → "Have you ever thought…" A vs B comparison (versus)
+  # Re-enabled 2026-08-03 after the funny + versus formats were verified live.
+  schedule:
+    - cron: '30 15 * * *'
+    - cron: '30 23 * * *'
+  workflow_dispatch:
+    inputs:
+      genre:
+        description: 'Which video to make'
+        required: false
+        default: 'kingsranks'
+        type: choice
+        options:
+          - kingsranks
+          - versus
 
 # Serialize ALL runs (scheduled + manual). Parallel runs race on idea-generation
 # — they each read the same used-ideas.json before any has pushed, so Groq can
@@ -76,7 +84,9 @@ jobs:
           TIKTOK_REFRESH_TOKEN: ${{ secrets.TIKTOK_REFRESH_TOKEN }}
           CI: 'true'
           UPLOAD: '1'
-          GENRE_OVERRIDE: kingsranks
+          # 23:30 UTC cron → versus comparison; 15:30 UTC cron → funny ranking;
+          # manual dispatch → the chosen input (defaults to kingsranks).
+          GENRE_OVERRIDE: ${{ github.event_name == 'workflow_dispatch' && inputs.genre || (github.event.schedule == '30 23 * * *' && 'versus' || 'kingsranks') }}
         run: node src/main.js
 
       - name: Commit updated used-ideas.json

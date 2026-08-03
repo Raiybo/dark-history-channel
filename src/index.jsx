@@ -3,6 +3,7 @@ import { SlideshowVideo } from './video/SlideshowVideo';
 import { SplitScreenVideo } from './video/SplitScreenVideo';
 import { SplitSludge } from './video/SplitSludge';
 import { KingsRanks } from './video/KingsRanks';
+import { VersusVideo } from './video/VersusVideo';
 
 const FPS = 30;
 
@@ -97,6 +98,30 @@ export const RemotionRoot = () => {
         }}
         calculateMetadata={({ props }) => ({
           durationInFrames: Math.round((props.durationSec || 32) * FPS),
+        })}
+      />
+      <Composition
+        id="VersusVideo"
+        component={VersusVideo}
+        durationInFrames={900}
+        fps={FPS}
+        width={1080}
+        height={1920}
+        defaultProps={{
+          question:    'WHICH IS STRONGER?',
+          hook:        'HAVE YOU EVER THOUGHT…',
+          a:           { name: 'Gorilla', fact: 'Lifts 10x its body weight.' },
+          b:           { name: 'Grizzly Bear', fact: 'Bites through a bowling ball.' },
+          winner:      'b',
+          answer:      'The grizzly wins — pure size and bite force.',
+          clips:       [],
+          channelName: 'Kings of Ranks',
+          logo:        null,
+          hasMusic:    false,
+          durationSec: 30,
+        }}
+        calculateMetadata={({ props }) => ({
+          durationInFrames: Math.round((props.durationSec || 30) * FPS),
         })}
       />
     </>

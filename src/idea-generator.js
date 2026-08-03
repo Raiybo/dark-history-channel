@@ -406,9 +406,60 @@ Return ONLY the single "Top 5 ..." theme line, nothing else.`;
   return null;
 }
 
+// "Have you ever thought that…" comparison question. Produces ONE interesting
+// "which is X: A or B?" question with a real, surprising answer and two things
+// we can show with generic stock footage. Deduped against used topics.
+async function generateVersusTopic(used, usedKeys) {
+  if (!process.env.GEMINI_API_KEY && !process.env.GROQ_API_KEY) return null;
+  const recent = used.slice(-35).map(u => `- ${u.topic}`).join('\n');
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const prompt = `Invent ONE fascinating comparison QUESTION for a silent "Have you ever thought that…" Shorts channel that compares TWO things and reveals which wins.
+
+Rules:
+- Output a SINGLE question, UNDER 12 words, pitting TWO concrete things that BOTH have great generic stock video (animals, vehicles, nature, sports moves, everyday objects, space, food).
+- Examples: "Which is faster: a cheetah or a race car?", "Which is stronger: a gorilla or a grizzly bear?", "Which is older: sharks or trees?", "Which hits harder: a boxer or a kangaroo?", "Which is louder: a lion or a chainsaw?".
+- It MUST have a REAL, surprising, TRUE answer — not a coin flip.
+- Both things must be showable with GENERIC stock footage (no specific real people or brands).
+- Genuinely interesting and wholesome. NO politics, war, tragedy, gore, or health/medical.
+- Must be COMPLETELY DIFFERENT from every already-used one below (shares 2+ keywords = pick something else):
+${recent || '(none yet)'}
+
+Return ONLY the single question line, nothing else.`;
+    try {
+      const text = await chat(prompt, { temperature: 0.95, maxTokens: 1024 });
+      const topic = text.split('\n')[0].replace(/^["'\-\s]+|["'\s]+$/g, '').trim();
+      const words = topic.split(/\s+/).filter(Boolean).length;
+      if (!(topic.length >= 12 && words >= 4 && words <= 16 && /\bor\b|vs\.?|versus|:/i.test(topic))) {
+        console.log(`  Versus topic bad format, retrying: "${topic}"`); continue;
+      }
+      if (BLOCKED.test(topic)) { console.log('  Versus topic blocked subject, retrying...'); continue; }
+      if (usedKeys.has(norm(topic))) { console.log('  Versus topic exact repeat, retrying...'); continue; }
+      if (isTooSimilar(topic, used)) { console.log(`  Versus topic too similar, retrying: "${topic}"`); continue; }
+      return topic;
+    } catch (err) {
+      console.log(`  Versus topic attempt ${attempt + 1} failed (${err.message}); retrying...`);
+      await new Promise(r => setTimeout(r, 3000));
+    }
+  }
+  return null;
+}
+
 export async function generateIdea(genre) {
   const used = loadUsedIdeas();
   const usedKeys = usedKeySet(used);
+
+  // "Have you ever thought that…" — an A vs B comparison that answers an
+  // interesting question. Its own topic shape (a question, not a "Top 5" line).
+  if (genre === 'versus') {
+    console.log('  Format: Have you ever thought… (A vs B comparison)');
+    let topic = await generateVersusTopic(used, usedKeys);
+    if (!topic) topic = await generateVersusTopic(used, new Set());
+    if (!topic) throw new Error('Could not generate a versus question — no LLM available (Gemini billing-blocked + Groq limit?). Skipping this run.');
+    console.log(`  Selected question (versus): ${topic}`);
+    const idea = { genre, topic, title: topic, theme: 'versus' };
+    saveUsedIdea(idea);
+    return idea;
+  }
 
   // Kings of Ranks — a FUNNY animals/pets comedy-ranking channel. We SKIP the
   // generic trend picker (it pulls off-niche) and generate evergreen funny-animal
