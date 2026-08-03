@@ -19,13 +19,24 @@ const timing = (frame, fps, durationInFrames, n) => {
   return { intro, W, activeIndex };
 };
 
-// Fills its parent, LOOPING the source so short stock clips never freeze
+// A still photo with a slow Ken-Burns zoom so real subject photos feel like
+// footage rather than a frozen frame.
+const KenBurnsImage = ({ path }) => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const scale = 1.06 + Math.min(frame / (6.5 * fps), 1) * 0.14;
+  return (
+    <AbsoluteFill style={{ overflow: 'hidden' }}>
+      <Img src={staticFile(path)} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', transform: `scale(${scale})` }} />
+    </AbsoluteFill>
+  );
+};
+
+// Fills its parent, LOOPING video so short stock clips never freeze
 // (OffthreadVideo has no loop prop in Remotion 4.x). clip = { path, duration }.
 const LoopedClip = ({ clip, fps }) => {
   if (!clip || !clip.path) return <div style={{ position: 'absolute', inset: 0, backgroundColor: '#0a0a12' }} />;
-  if (IMAGE_RE.test(clip.path)) {
-    return <Img src={staticFile(clip.path)} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />;
-  }
+  if (IMAGE_RE.test(clip.path)) return <KenBurnsImage path={clip.path} />;
   const secs = Math.min(Math.max(clip.duration || 4, 1.5), 30);
   const loopFrames = Math.max(1, Math.floor(secs * fps) - 2);
   return (
@@ -36,16 +47,17 @@ const LoopedClip = ({ clip, fps }) => {
   );
 };
 
-// Full-screen background clip for one item + scrims for legibility (darker on
-// the left so the leaderboard always reads, and along the bottom).
+// Full-screen background clip for one item. Light scrims only — just enough on
+// the left for the slim leaderboard to read, and a soft bottom edge. The clip
+// stays the star of the frame.
 const ClipLayer = ({ clip, fps }) => {
   const frame = useCurrentFrame();
   const op = interpolate(frame, [0, CROSSFADE], [0, 1], { extrapolateRight: 'clamp' });
   return (
     <AbsoluteFill style={{ opacity: op }}>
       <LoopedClip clip={clip} fps={fps} />
-      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.5) 42%, rgba(0,0,0,0.05) 78%)', pointerEvents: 'none' }} />
-      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(0,0,0,0.5) 0%, transparent 18%, transparent 78%, rgba(0,0,0,0.7) 100%)', pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.2) 34%, rgba(0,0,0,0) 55%)', pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(0,0,0,0.4) 0%, transparent 14%, transparent 86%, rgba(0,0,0,0.5) 100%)', pointerEvents: 'none' }} />
     </AbsoluteFill>
   );
 };
@@ -72,7 +84,7 @@ const TitleCard = ({ text }) => {
   );
 };
 
-// One row of the persistent left-side leaderboard.
+// One compact row of the slim left-side leaderboard.
 const Row = ({ item, state, pop }) => {
   const active = state === 'active';
   const revealed = state !== 'locked';
@@ -80,46 +92,46 @@ const Row = ({ item, state, pop }) => {
   const scale = 1 + (active ? pop * 0.05 : 0);
   return (
     <div style={{
-      display: 'flex', alignItems: 'center', gap: 14,
+      display: 'flex', alignItems: 'center', gap: 11,
       transform: `scale(${scale})`, transformOrigin: 'left center',
-      background: active ? `linear-gradient(90deg, #ffd35a 0%, ${GOLD} 100%)` : 'rgba(0,0,0,0.5)',
-      border: active ? `3px solid #fff` : '2px solid rgba(255,255,255,0.14)',
-      borderRadius: 18, padding: '14px 16px',
-      boxShadow: active ? '0 10px 30px rgba(0,0,0,0.55)' : 'none',
+      background: active ? `linear-gradient(90deg, #ffd35a 0%, ${GOLD} 100%)` : 'rgba(0,0,0,0.34)',
+      border: active ? '2px solid #fff' : '1.5px solid rgba(255,255,255,0.1)',
+      borderRadius: 13, padding: '8px 11px',
+      boxShadow: active ? '0 8px 22px rgba(0,0,0,0.5)' : 'none',
     }}>
-      <div style={{ minWidth: 70, textAlign: 'center' }}>
-        {isWinner && active && <div style={{ fontSize: 32, lineHeight: 1, marginBottom: -8 }}>👑</div>}
-        <span style={{ fontFamily, fontWeight: 900, fontSize: 64, letterSpacing: -3, color: active ? '#1a1200' : GOLD, textShadow: active ? 'none' : '0 3px 10px rgba(0,0,0,0.9)' }}>{item.rank}</span>
+      <div style={{ minWidth: 46, textAlign: 'center' }}>
+        {isWinner && active && <div style={{ fontSize: 24, lineHeight: 1, marginBottom: -6 }}>👑</div>}
+        <span style={{ fontFamily, fontWeight: 900, fontSize: 46, letterSpacing: -2, color: active ? '#1a1200' : GOLD, textShadow: active ? 'none' : '0 2px 8px rgba(0,0,0,0.9)' }}>{item.rank}</span>
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontFamily, fontWeight: 800, fontSize: active ? 44 : 40, lineHeight: 1.02, textTransform: 'uppercase', color: active ? '#1a1200' : (revealed ? '#fff' : 'rgba(255,255,255,0.45)'), textShadow: active ? 'none' : '0 2px 10px rgba(0,0,0,1)' }}>
+        <div style={{ fontFamily, fontWeight: 800, fontSize: active ? 32 : 27, lineHeight: 1.03, textTransform: 'uppercase', color: active ? '#1a1200' : (revealed ? '#fff' : 'rgba(255,255,255,0.4)'), textShadow: active ? 'none' : '0 2px 8px rgba(0,0,0,1)', whiteSpace: active ? 'normal' : 'nowrap', overflow: 'hidden', textOverflow: active ? 'clip' : 'ellipsis' }}>
           {revealed ? item.label : '• • •'}
         </div>
         {active && item.verdict ? (
-          <div style={{ fontFamily, fontWeight: 700, fontSize: 29, lineHeight: 1.08, color: '#3a2c00', marginTop: 4 }}>{item.verdict}</div>
+          <div style={{ fontFamily, fontWeight: 700, fontSize: 22, lineHeight: 1.08, color: '#3a2c00', marginTop: 2 }}>{item.verdict}</div>
         ) : null}
       </div>
       {active ? (
-        <div style={{ width: 86, flexShrink: 0, textAlign: 'center', borderLeft: '2px solid rgba(58,44,0,0.35)', paddingLeft: 8 }}>
-          <div style={{ fontFamily, fontWeight: 900, fontSize: 44, color: '#1a1200', lineHeight: 1 }}>{item.score}</div>
-          <div style={{ fontFamily, fontWeight: 800, fontSize: 13, letterSpacing: 1, color: '#3a2c00' }}>/100</div>
+        <div style={{ width: 58, flexShrink: 0, textAlign: 'center', borderLeft: '2px solid rgba(58,44,0,0.35)', paddingLeft: 6 }}>
+          <div style={{ fontFamily, fontWeight: 900, fontSize: 30, color: '#1a1200', lineHeight: 1 }}>{item.score}</div>
+          <div style={{ fontFamily, fontWeight: 800, fontSize: 11, letterSpacing: 1, color: '#3a2c00' }}>/100</div>
         </div>
       ) : null}
     </div>
   );
 };
 
-// The persistent leaderboard — ranks 1 (top) to 5 (bottom), always on the left.
-// Numbers show the whole time; each name is hidden ("• • •") until the countdown
-// reaches it, so the board visibly fills up toward the #1 reveal.
+// Slim persistent leaderboard — ranks 1 (top) to 5 (bottom), kept on the left.
+// Compact and semi-transparent so the clip stays visible; numbers show the whole
+// time, each name hides ("• • •") until the countdown reaches it.
 const Leaderboard = ({ items }) => {
   const frame = useCurrentFrame();
   const { fps, durationInFrames } = useVideoConfig();
   const n = Math.max(1, items.length);
   const { intro, W, activeIndex } = timing(frame, fps, durationInFrames, n);
-  const rows = [...items].sort((a, b) => a.rank - b.rank); // #1 at top ... #5 at bottom
+  const rows = [...items].sort((a, b) => a.rank - b.rank); // #1 top ... #5 bottom
   return (
-    <div style={{ position: 'absolute', left: 32, top: 150, bottom: 150, width: 660, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 16, zIndex: 20 }}>
+    <div style={{ position: 'absolute', left: 24, top: 260, bottom: 260, width: 470, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 11, zIndex: 20 }}>
       {rows.map((item) => {
         const order = n - item.rank; // rank 5 revealed first (order 0) ... rank 1 last
         const state = activeIndex === order ? 'active' : (activeIndex >= order ? 'done' : 'locked');
@@ -130,9 +142,10 @@ const Leaderboard = ({ items }) => {
   );
 };
 
-// Kings of Ranks — SILENT ranking, no voiceover: upbeat music + a persistent
-// left leaderboard (ranks 1-5) over legal stock/CC clips. items are in countdown
-// display order (#5 -> #1) and aligned by index with clips.
+// Kings of Ranks — SILENT ranking, no voiceover: upbeat music + a slim, persistent
+// left leaderboard (ranks 1-5) over real photos of the actual subjects (Wikimedia /
+// public domain) with generic stock as fallback. items are in countdown display
+// order (#5 -> #1) and aligned by index with clips.
 export const KingsRanks = ({
   items = [], clips = [], titleCard = '', channelName = 'Kings of Ranks', logo = null, hasMusic = false,
 }) => {
@@ -155,7 +168,7 @@ export const KingsRanks = ({
         );
       })}
 
-      {/* persistent left leaderboard */}
+      {/* slim persistent left leaderboard */}
       <Leaderboard items={items} />
 
       {hasMusic && <Audio src={staticFile('music/background.mp3')} volume={0.62} loop />}

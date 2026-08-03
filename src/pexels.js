@@ -2,6 +2,7 @@ import { createWriteStream, mkdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { pipeline } from 'stream/promises';
+import { fetchSubjectImage } from './wikimedia.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const VIDEOS_DIR = join(__dirname, '../public/videos');
@@ -86,7 +87,14 @@ async function searchVideo(keyword, usedUrls, minDuration = 4, attempt = 0) {
 }
 
 async function downloadClip(url, outputPath) {
-  const res = await fetchWithTimeout(url, {}, 120000);
+  // A descriptive User-Agent is REQUIRED by Wikimedia's file servers (a bare
+  // fetch gets 429/403) and is harmless for Pexels. Retry once on 429.
+  const headers = { 'User-Agent': 'KingsOfRanksBot/1.0 (faceless YouTube Shorts; raybouhabib2005@gmail.com)' };
+  let res = await fetchWithTimeout(url, { headers }, 120000);
+  if (res.status === 429) {
+    await sleep(3000);
+    res = await fetchWithTimeout(url, { headers }, 120000);
+  }
   if (!res.ok) throw new Error(`Download ${res.status}`);
   const writer = createWriteStream(outputPath);
   await pipeline(res.body, writer);
@@ -142,6 +150,83 @@ export async function fetchClipsWithDuration(scenes) {
     if (i < scenes.length - 1) await sleep(400);
   }
   return results;
+}
+
+// Kings of Ranks footage: for each ranked item, PREFER a real photo of the
+// specific subject (item.label) from Wikimedia Commons / Wikipedia — legal
+// (CC / public-domain) and it actually shows the thing. Fall back to a generic
+// Pexels VIDEO (item.keyword), then an AI image. Returns aligned arrays:
+//   { clips: [{path,duration}|null], credits: [{label,artist,licenseShort,requiresAttribution}|null] }
+// A non-null credit means that rank uses a Wikimedia photo we should credit.
+export async function fetchRankFootage(items) {
+  mkdirSync(VIDEOS_DIR, { recursive: true });
+  const usedUrls = new Set();
+  const clips = [];
+  const credits = [];
+
+  for (let i = 0; i < items.length; i++) {
+    const label = (items[i].label || '').trim();
+    const keyword = (items[i].keyword || label).trim();
+    let placed = false;
+
+    // 1) Real photo of the actual subject (legal + credited).
+    try {
+      process.stdout.write(`  [${i + 1}/${items.length}] "${label}" (Wikimedia)... `);
+      const img = label ? await fetchSubjectImage(label) : null;
+      if (img && !usedUrls.has(img.url)) {
+        usedUrls.add(img.url);
+        await downloadClip(img.url, join(VIDEOS_DIR, `clip_${i}.jpg`));
+        clips.push({ path: `videos/clip_${i}.jpg`, duration: 6 });
+        credits.push({ label, artist: img.artist, licenseShort: img.licenseShort, requiresAttribution: img.requiresAttribution });
+        process.stdout.write(`✓ real photo (${img.licenseShort})\n`);
+        placed = true;
+      } else {
+        process.stdout.write('none; ');
+      }
+    } catch (err) {
+      process.stdout.write(`fail (${(err.message || '').slice(0, 40)}); `);
+    }
+
+    // 2) Generic Pexels stock video.
+    if (!placed) {
+      try {
+        process.stdout.write(`Pexels "${keyword}"... `);
+        const video = await searchVideo(keyword, usedUrls);
+        if (video) {
+          usedUrls.add(video.link);
+          await downloadClip(video.link, join(VIDEOS_DIR, `clip_${i}.mp4`));
+          clips.push({ path: `videos/clip_${i}.mp4`, duration: video.duration || 6 });
+          credits.push(null);
+          process.stdout.write('✓ stock\n');
+          placed = true;
+        } else {
+          process.stdout.write('none; ');
+        }
+      } catch (err) {
+        process.stdout.write(`fail (${(err.message || '').slice(0, 40)}); `);
+      }
+    }
+
+    // 3) AI image, last resort.
+    if (!placed) {
+      try {
+        process.stdout.write('AI image... ');
+        await generateAiImage(keyword, join(VIDEOS_DIR, `clip_${i}.jpg`));
+        clips.push({ path: `videos/clip_${i}.jpg`, duration: 6 });
+        credits.push(null);
+        process.stdout.write('✓ AI\n');
+        placed = true;
+      } catch (err) {
+        process.stdout.write(`✗ (${(err.message || '').slice(0, 40)})\n`);
+        clips.push(null);
+        credits.push(null);
+      }
+    }
+
+    if (i < items.length - 1) await sleep(300);
+  }
+
+  return { clips, credits };
 }
 
 export async function fetchSceneVideos(scenes) {

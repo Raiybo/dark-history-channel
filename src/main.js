@@ -8,7 +8,7 @@ import { fetchToolScreenshots } from './screenshots.js';
 import { generateConsumerContent } from './genres/consumer.js';
 import { recordSceneMotion } from './screencast.js';
 import { generateAudio }    from './tts.js';
-import { fetchSceneVideos, fetchClipsWithDuration } from './pexels.js';
+import { fetchSceneVideos, fetchClipsWithDuration, fetchRankFootage } from './pexels.js';
 import { prepareMusic }     from './music.js';
 import { renderVideo, renderSplitScreenVideo, renderSplitSludgeVideo, renderSilentKingsRanks } from './renderer.js';
 import { uploadToYouTube }  from './uploader.js';
@@ -407,14 +407,21 @@ async function runKingsRanks() {
   checkKingsRanks(content);
   console.log();
 
-  console.log('Step 2/4  Fetching one clip per rank...');
-  const clipsRaw = await fetchClipsWithDuration(content.items.map(i => ({ keyword: i.keyword })));
+  console.log('Step 2/4  Fetching real footage of each subject...');
+  const { clips: clipsRaw, credits } = await fetchRankFootage(content.items);
   const firstValid = clipsRaw.find(Boolean);
   if (!firstValid) throw new Error('No footage fetched for any rank.');
   // Align by index; substitute the first valid clip for any that failed so no
   // rank renders as a dead black slot.
   const clips = content.items.map((_, i) => clipsRaw[i] || firstValid);
-  console.log(`  ${clipsRaw.filter(Boolean).length}/5 clips fetched\n`);
+  // Credit every real subject photo we pulled from Wikimedia (CC-BY / CC-BY-SA
+  // require it; public-domain/CC0 don't, but we list the source for good practice).
+  const wm = credits.filter(Boolean);
+  if (wm.length) {
+    const lines = wm.map(c => `• ${c.label} — ${c.artist} (${c.licenseShort})`);
+    content.description = `${content.description}\n\nPhotos of the actual subjects via Wikimedia Commons / Wikipedia:\n${lines.join('\n')}`.trim();
+  }
+  console.log(`  ${clipsRaw.filter(Boolean).length}/${content.items.length} clips fetched — ${wm.length} real subject photos\n`);
 
   console.log('Step 3/4  Preparing upbeat music...');
   const musicPath = await prepareMusic('kingsranks');
