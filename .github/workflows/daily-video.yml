@@ -9,9 +9,12 @@ on:
   # https://www.youtube.com/watch?v=bekRb6n0ERE
   # Kings of Ranks — 2/day (research-backed safe cadence for a rebuilding
   # channel), at two strong US windows. Re-enabled 2026-08-03.
-  schedule:
-    - cron: '30 15 * * *'  # 11:30 EDT — pre-lunch scroll
-    - cron: '30 23 * * *'  # 19:30 EDT — prime time
+  # PAUSED 2026-08-03 for the Ranking Shorts Production Engine rework (new
+  # spec: signature rubric + original VO commentary + legal-sourced footage).
+  # Manual dispatch only until the new format is verified and re-enabled.
+  # schedule:
+  #   - cron: '30 15 * * *'  # 11:30 EDT — pre-lunch scroll
+  #   - cron: '30 23 * * *'  # 19:30 EDT — prime time
   workflow_dispatch:        # Manual trigger stays available
 
 # Serialize ALL runs (scheduled + manual). Parallel runs race on idea-generation
