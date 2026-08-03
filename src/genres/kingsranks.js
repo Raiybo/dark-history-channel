@@ -17,24 +17,26 @@ export async function generateKingsItems(topic) {
 
 THEME: "${topic}"
 
-Pick 5 REAL, TRUE, famous-enough examples that fit the theme. Score each 80-99 on the Overkill Index. The most gratuitously over-built one gets the HIGHEST score and becomes #1 — this is NOT always the biggest or most famous; the surprising ordering is the whole point.
+Pick 5 REAL, TRUE, famous-enough examples that fit the theme. Score each 80-99 on the Overkill Index. The most over-built one gets the HIGHEST score and becomes #1 — this is NOT always the biggest or most famous; the surprising ordering is the whole point.
+
+WRITE EVERYTHING IN SIMPLE, EVERYDAY ENGLISH — short words a 12-year-old instantly understands. No fancy, technical, or academic words.
 
 Return ONLY valid JSON, no markdown:
 {
-  "title": "YouTube title under 55 chars, starts with 'Top 5', curiosity gap, no lie",
-  "title_card": "opening card, ALL CAPS, 3-6 words (e.g. 'TOP 5 IMPOSSIBLE MACHINES')",
+  "title": "clear YouTube title under 55 chars, starts with 'Top 5', plain words, no lie",
+  "title_card": "opening card, ALL CAPS, 3-6 plain words (e.g. 'TOP 5 BIGGEST MACHINES')",
   "items": [
-    {"score": 99, "label": "specific real name, 1-3 words", "verdict": "sharp ORIGINAL judgment, under 42 chars, a TAKE not a description", "keyword": "2-4 word GENERIC stock VIDEO query — no brand/model names", "keyword_alt": "different generic fallback query"}
-    // exactly 5 objects; scores DISTINCT and DESCENDING is not required here — just score each honestly, we sort.
+    {"score": 99, "label": "the common name people know, 1-3 words", "verdict": "one SIMPLE reason it is amazing, under 34 chars, plain words, a TAKE not a description of the clip", "keyword": "2-4 word GENERIC stock VIDEO query — no brand/model names", "keyword_alt": "different generic fallback query"}
+    // exactly 5 objects; we sort by score, so order does not matter here.
   ],
   "tags": ["6 tags specific to the subject, most specific first"],
-  "description": "2 hype sentences that mention the video ranks these on the Overkill Index, ending with a question. No hashtags.",
-  "pinned_comment": "one short question about the ranking ending with 👇"
+  "description": "2 simple sentences that say the video ranks these from 5 to 1, ending with a question. No hashtags.",
+  "pinned_comment": "one short, simple question about the ranking ending with 👇"
 }
 
 Rules:
 - Every item is a REAL thing humans actually built. No made-up entries.
-- The VERDICT must add judgment/context a viewer could NOT get from the raw footage — an opinion, a comparison, a 'why this is insane' line. If a verdict would fit any other item with the nouns swapped, rewrite it.
+- The VERDICT is a simple, punchy reason this one is jaw-dropping — something you could NOT tell just from the clip (a comparison, a 'why this is crazy' line). Keep it plain and short. If a verdict would fit any other item with the nouns swapped, rewrite it.
 - LABEL may name the specific machine/structure. KEYWORD must stay GENERIC and brand-free (e.g. 'giant cargo plane', 'open pit mine', 'suspension bridge', 'rocket launch') so the stock footage is license-free and carries no logos.
 - Every keyword AND keyword_alt DISTINCT across items. No two items about the same object.
 - NO politics, war/weapons glorification, disasters, tragedy, or health claims. Pure engineering awe.`;

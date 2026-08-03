@@ -8,7 +8,16 @@ const { fontFamily } = loadFont();
 const GOLD = '#FFC83D';
 const CROSSFADE = 12;
 const IMAGE_RE = /\.(jpe?g|png|webp)$/i;
-const RUBRIC = 'OVERKILL INDEX'; // the channel's signature owned scale
+
+// Shared timing: title card, then n equal item windows. Every overlay computes
+// the same active index from the absolute frame so the left leaderboard, the
+// background clip and the reveal all stay in lock-step.
+const timing = (frame, fps, durationInFrames, n) => {
+  const intro = Math.round(1.8 * fps);
+  const W = Math.floor((durationInFrames - intro) / Math.max(1, n));
+  const activeIndex = frame < intro ? -1 : Math.min(n - 1, Math.floor((frame - intro) / W));
+  return { intro, W, activeIndex };
+};
 
 // Fills its parent, LOOPING the source so short stock clips never freeze
 // (OffthreadVideo has no loop prop in Remotion 4.x). clip = { path, duration }.
@@ -27,7 +36,21 @@ const LoopedClip = ({ clip, fps }) => {
   );
 };
 
-// Opening title card (first ~1.8s) — the promise + the signature rubric.
+// Full-screen background clip for one item + scrims for legibility (darker on
+// the left so the leaderboard always reads, and along the bottom).
+const ClipLayer = ({ clip, fps }) => {
+  const frame = useCurrentFrame();
+  const op = interpolate(frame, [0, CROSSFADE], [0, 1], { extrapolateRight: 'clamp' });
+  return (
+    <AbsoluteFill style={{ opacity: op }}>
+      <LoopedClip clip={clip} fps={fps} />
+      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.5) 42%, rgba(0,0,0,0.05) 78%)', pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(0,0,0,0.5) 0%, transparent 18%, transparent 78%, rgba(0,0,0,0.7) 100%)', pointerEvents: 'none' }} />
+    </AbsoluteFill>
+  );
+};
+
+// Opening title card (first ~1.8s) — states the goal in plain words.
 const TitleCard = ({ text }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -35,116 +58,118 @@ const TitleCard = ({ text }) => {
   const out = interpolate(frame, [fps * 1.3, fps * 1.7], [1, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
   const words = (text || '').split(' ');
   return (
-    <AbsoluteFill style={{ backgroundColor: 'rgba(4,3,10,0.74)', justifyContent: 'center', alignItems: 'center', opacity: out }}>
+    <AbsoluteFill style={{ backgroundColor: 'rgba(4,3,10,0.82)', justifyContent: 'center', alignItems: 'center', opacity: out }}>
       <div style={{ transform: `scale(${0.7 + pop * 0.3})`, textAlign: 'center', padding: '0 60px' }}>
         <div style={{ fontSize: 64, marginBottom: 6 }}>👑</div>
         <span style={{ fontFamily, fontWeight: 900, fontSize: 92, lineHeight: 1.02, letterSpacing: -2, color: '#fff', textTransform: 'uppercase', textShadow: `0 6px 30px rgba(0,0,0,0.95), 0 0 50px ${GOLD}55` }}>
           {words.map((w, i) => <span key={i} style={{ display: 'inline-block', marginRight: 14, color: i % 3 === 1 ? GOLD : '#fff' }}>{w}</span>)}
         </span>
-        <div style={{ fontFamily, fontWeight: 800, fontSize: 30, letterSpacing: 6, color: GOLD, marginTop: 26, opacity: 0.95 }}>
-          RANKED ON THE {RUBRIC}
+        <div style={{ fontFamily, fontWeight: 800, fontSize: 34, letterSpacing: 5, color: GOLD, marginTop: 26 }}>
+          COUNTING DOWN TO #1
         </div>
       </div>
     </AbsoluteFill>
   );
 };
 
-// The signature ranking graphic: the Overkill Index score counts up on reveal
-// and a bar fills to the score. This is the recurring brand element on every item.
-const ScoreMeter = ({ score, isWinner }) => {
-  const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
-  const t = spring({ frame: frame - 4, fps, config: { damping: 200, stiffness: 90, mass: 1 } });
-  const shown = Math.round((score || 0) * t);
-  const pct = Math.max(0, Math.min(100, score || 0)) * t;
+// One row of the persistent left-side leaderboard.
+const Row = ({ item, state, pop }) => {
+  const active = state === 'active';
+  const revealed = state !== 'locked';
+  const isWinner = item.rank === 1;
+  const scale = 1 + (active ? pop * 0.05 : 0);
   return (
-    <div style={{ width: 560, maxWidth: '82%', textAlign: 'center' }}>
-      <div style={{ fontFamily, fontWeight: 800, fontSize: 30, letterSpacing: 8, color: GOLD, textShadow: '0 2px 12px rgba(0,0,0,1)' }}>{RUBRIC}</div>
-      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 6, marginTop: 2 }}>
-        <span style={{ fontFamily, fontWeight: 900, fontSize: isWinner ? 168 : 140, lineHeight: 1, color: '#fff', letterSpacing: -4, WebkitTextStroke: `4px ${GOLD}`, paintOrder: 'stroke fill', textShadow: '0 8px 30px rgba(0,0,0,0.95)' }}>{shown}</span>
-        <span style={{ fontFamily, fontWeight: 900, fontSize: 54, color: GOLD, textShadow: '0 4px 16px rgba(0,0,0,1)' }}>/100</span>
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 14,
+      transform: `scale(${scale})`, transformOrigin: 'left center',
+      background: active ? `linear-gradient(90deg, #ffd35a 0%, ${GOLD} 100%)` : 'rgba(0,0,0,0.5)',
+      border: active ? `3px solid #fff` : '2px solid rgba(255,255,255,0.14)',
+      borderRadius: 18, padding: '14px 16px',
+      boxShadow: active ? '0 10px 30px rgba(0,0,0,0.55)' : 'none',
+    }}>
+      <div style={{ minWidth: 70, textAlign: 'center' }}>
+        {isWinner && active && <div style={{ fontSize: 32, lineHeight: 1, marginBottom: -8 }}>👑</div>}
+        <span style={{ fontFamily, fontWeight: 900, fontSize: 64, letterSpacing: -3, color: active ? '#1a1200' : GOLD, textShadow: active ? 'none' : '0 3px 10px rgba(0,0,0,0.9)' }}>{item.rank}</span>
       </div>
-      <div style={{ marginTop: 10, height: 16, borderRadius: 10, background: 'rgba(255,255,255,0.18)', overflow: 'hidden', border: '2px solid rgba(0,0,0,0.5)' }}>
-        <div style={{ height: '100%', width: `${pct}%`, borderRadius: 10, background: `linear-gradient(90deg, ${GOLD}, #ff8a1e)`, boxShadow: `0 0 18px ${GOLD}` }} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontFamily, fontWeight: 800, fontSize: active ? 44 : 40, lineHeight: 1.02, textTransform: 'uppercase', color: active ? '#1a1200' : (revealed ? '#fff' : 'rgba(255,255,255,0.45)'), textShadow: active ? 'none' : '0 2px 10px rgba(0,0,0,1)' }}>
+          {revealed ? item.label : '• • •'}
+        </div>
+        {active && item.verdict ? (
+          <div style={{ fontFamily, fontWeight: 700, fontSize: 29, lineHeight: 1.08, color: '#3a2c00', marginTop: 4 }}>{item.verdict}</div>
+        ) : null}
       </div>
+      {active ? (
+        <div style={{ width: 86, flexShrink: 0, textAlign: 'center', borderLeft: '2px solid rgba(58,44,0,0.35)', paddingLeft: 8 }}>
+          <div style={{ fontFamily, fontWeight: 900, fontSize: 44, color: '#1a1200', lineHeight: 1 }}>{item.score}</div>
+          <div style={{ fontFamily, fontWeight: 800, fontSize: 13, letterSpacing: 1, color: '#3a2c00' }}>/100</div>
+        </div>
+      ) : null}
     </div>
   );
 };
 
-// One ranked item: looped clip + rank badge + Overkill Index score + label +
-// original verdict. Captions ARE the info (no voiceover), so they're big & legible.
-const ItemScene = ({ item, clip, fps }) => {
+// The persistent leaderboard — ranks 1 (top) to 5 (bottom), always on the left.
+// Numbers show the whole time; each name is hidden ("• • •") until the countdown
+// reaches it, so the board visibly fills up toward the #1 reveal.
+const Leaderboard = ({ items }) => {
   const frame = useCurrentFrame();
-  const inOp = interpolate(frame, [0, CROSSFADE], [0, 1], { extrapolateRight: 'clamp' });
-  const rank = item?.rank;
-  const isWinner = rank === 1;
-  const pop = spring({ frame, fps, config: { damping: 12, stiffness: 220, mass: 0.6 } });
-  const badgeScale = 0.6 + pop * 0.4;
+  const { fps, durationInFrames } = useVideoConfig();
+  const n = Math.max(1, items.length);
+  const { intro, W, activeIndex } = timing(frame, fps, durationInFrames, n);
+  const rows = [...items].sort((a, b) => a.rank - b.rank); // #1 at top ... #5 at bottom
   return (
-    <AbsoluteFill style={{ opacity: inOp }}>
-      <LoopedClip clip={clip} fps={fps} />
-      {/* legibility scrims top + bottom */}
-      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, transparent 24%, transparent 50%, rgba(0,0,0,0.88) 100%)', pointerEvents: 'none' }} />
-
-      {/* rank badge — inside top safe zone (>180px) */}
-      <div style={{ position: 'absolute', top: 196, left: 0, right: 0, display: 'flex', justifyContent: 'center', transform: `scale(${badgeScale})` }}>
-        <div style={{ textAlign: 'center' }}>
-          {isWinner && <div style={{ fontSize: 70, lineHeight: 1, marginBottom: -14, filter: 'drop-shadow(0 4px 14px rgba(0,0,0,0.9))' }}>👑</div>}
-          <div style={{ fontFamily, fontWeight: 900, letterSpacing: -6, fontSize: isWinner ? 132 : 104, color: isWinner ? GOLD : '#fff', WebkitTextStroke: `5px ${isWinner ? '#3a2c00' : GOLD}`, paintOrder: 'stroke fill', textShadow: '0 8px 34px rgba(0,0,0,0.95)' }}>#{rank}</div>
-        </div>
-      </div>
-
-      {/* Overkill Index score graphic — visual centre of the frame */}
-      <div style={{ position: 'absolute', top: 720, left: 0, right: 0, display: 'flex', justifyContent: 'center' }}>
-        <ScoreMeter score={item?.score} isWinner={isWinner} />
-      </div>
-
-      {/* label + original verdict — above bottom safe zone (320px) */}
-      <div style={{ position: 'absolute', bottom: 344, left: 40, right: 40, textAlign: 'center' }}>
-        <div style={{ fontFamily, fontWeight: 900, fontSize: 74, color: '#fff', textTransform: 'uppercase', letterSpacing: -1, lineHeight: 1.02, textShadow: '0 4px 22px rgba(0,0,0,1)' }}>{item?.label || ''}</div>
-        {item?.verdict ? (
-          <div style={{ fontFamily, fontWeight: 700, fontSize: 40, color: GOLD, marginTop: 14, lineHeight: 1.1, textShadow: '0 3px 16px rgba(0,0,0,1)' }}>{item.verdict}</div>
-        ) : null}
-      </div>
-    </AbsoluteFill>
+    <div style={{ position: 'absolute', left: 32, top: 150, bottom: 150, width: 660, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 16, zIndex: 20 }}>
+      {rows.map((item) => {
+        const order = n - item.rank; // rank 5 revealed first (order 0) ... rank 1 last
+        const state = activeIndex === order ? 'active' : (activeIndex >= order ? 'done' : 'locked');
+        const pop = state === 'active' ? spring({ frame: frame - (intro + order * W), fps, config: { damping: 14, stiffness: 200, mass: 0.6 } }) : 0;
+        return <Row key={item.rank} item={item} state={state} pop={pop} />;
+      })}
+    </div>
   );
 };
 
-// Kings of Ranks — SILENT ranking: no voiceover, music + captions + the signature
-// Overkill Index over legal stock/CC clips. items ordered #5 -> #1, aligned by
-// index with clips.
+// Kings of Ranks — SILENT ranking, no voiceover: upbeat music + a persistent
+// left leaderboard (ranks 1-5) over legal stock/CC clips. items are in countdown
+// display order (#5 -> #1) and aligned by index with clips.
 export const KingsRanks = ({
   items = [], clips = [], titleCard = '', channelName = 'Kings of Ranks', logo = null, hasMusic = false,
 }) => {
   const { durationInFrames, fps } = useVideoConfig();
-  const intro = Math.round(1.8 * fps);
   const n = Math.max(1, items.length);
+  const intro = Math.round(1.8 * fps);
   const W = Math.floor((durationInFrames - intro) / n);
 
   return (
     <AbsoluteFill style={{ backgroundColor: '#000' }}>
+      {/* background clip per item */}
       {items.map((item, i) => {
         const from = intro + i * W;
         const isLast = i === n - 1;
         const dur = isLast ? durationInFrames - from : W + CROSSFADE;
         return (
           <Sequence key={i} from={from} durationInFrames={dur}>
-            <ItemScene item={item} clip={clips[i]} fps={fps} />
+            <ClipLayer clip={clips[i]} fps={fps} />
           </Sequence>
         );
       })}
 
-      <Sequence from={0} durationInFrames={intro + 15}>
-        <TitleCard text={titleCard} />
-      </Sequence>
+      {/* persistent left leaderboard */}
+      <Leaderboard items={items} />
 
       {hasMusic && <Audio src={staticFile('music/background.mp3')} volume={0.62} loop />}
 
-      {/* persistent crown watermark — inside the top safe zone */}
-      <div style={{ position: 'absolute', top: 60, left: 0, right: 0, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 10, pointerEvents: 'none', zIndex: 30 }}>
-        {logo ? <Img src={staticFile(logo)} style={{ width: 54, height: 54, objectFit: 'contain', opacity: 0.9 }} /> : null}
+      {/* crown watermark — top safe zone */}
+      <div style={{ position: 'absolute', top: 54, left: 0, right: 0, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 10, pointerEvents: 'none', zIndex: 30 }}>
+        {logo ? <Img src={staticFile(logo)} style={{ width: 50, height: 50, objectFit: 'contain', opacity: 0.9 }} /> : null}
         <span style={{ fontFamily, fontWeight: 900, fontSize: 22, letterSpacing: 5, textTransform: 'uppercase', color: GOLD, opacity: 0.85, textShadow: '0 0 18px rgba(0,0,0,0.95)' }}>{channelName}</span>
       </div>
+
+      {/* title card on top during the intro */}
+      <Sequence from={0} durationInFrames={intro + 15}>
+        <TitleCard text={titleCard} />
+      </Sequence>
     </AbsoluteFill>
   );
 };

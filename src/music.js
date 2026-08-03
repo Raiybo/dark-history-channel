@@ -25,6 +25,17 @@ const TRACKS = {
     `${B}/Killers.mp3`,            // punchy, energetic
     `${B}/Exit%20the%20Premises.mp3`, // fast, urgent
   ],
+  // Kings of Ranks — UPBEAT, modern, "trendy" beds (NOT the dark/tension tracks).
+  // Bright electronic/chiptune energy that fits a fun ranking countdown. All
+  // URL-verified 200. Shuffled per run so the music varies video to video.
+  kingsranks: [
+    `${B}/Blippy%20Trance.mp3`,     // bright, driving electronic
+    `${B}/Electrodoodle.mp3`,       // playful, upbeat electronic
+    `${B}/Digital%20Lemonade.mp3`,  // sunny, poppy electronic
+    `${B}/Bit%20Shift.mp3`,         // energetic chiptune-electronic
+    `${B}/Getting%20it%20Done.mp3`, // upbeat, motivating drive
+    `${B}/Pixelland.mp3`,           // fun, bouncy chiptune
+  ],
 };
 
 function shuffled(arr) {

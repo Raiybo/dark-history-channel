@@ -416,8 +416,8 @@ async function runKingsRanks() {
   const clips = content.items.map((_, i) => clipsRaw[i] || firstValid);
   console.log(`  ${clipsRaw.filter(Boolean).length}/5 clips fetched\n`);
 
-  console.log('Step 3/4  Preparing hype music...');
-  const musicPath = await prepareMusic('didyouknow');
+  console.log('Step 3/4  Preparing upbeat music...');
+  const musicPath = await prepareMusic('kingsranks');
   console.log();
 
   console.log('Step 4/4  Rendering + publishing...');
