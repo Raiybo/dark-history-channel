@@ -146,7 +146,18 @@ OUTPUT FORMAT:
       genre: 'rankinggame',
       topic,
       title: (obj.title || topic).slice(0, 90),
-      hook_text: String(obj.hook_script || '').toUpperCase().replace(/[^A-Z0-9 ]/g, '').replace(/\s+/g, ' ').trim().slice(0, 60),
+      // On-screen hook: uppercase + sanitize, then cap at a WORD BOUNDARY
+      // near 60 chars — never mid-word (first live run had "WERE RANKI"
+      // truncated from "WERE RANKING"). If the LLM hands us a long hook we
+      // trim to the last full word that fits, not a mid-word slice.
+      hook_text: (() => {
+        const raw = String(obj.hook_script || '').toUpperCase().replace(/[^A-Z0-9 ]/g, '').replace(/\s+/g, ' ').trim();
+        if (raw.length <= 70) return raw;
+        // Cut to the last space before char 65; fall back to hard cut if no space.
+        const cut = raw.slice(0, 65);
+        const lastSpace = cut.lastIndexOf(' ');
+        return lastSpace > 30 ? cut.slice(0, lastSpace) : cut;
+      })(),
       hook_script: obj.hook_script || '',
       outro_script: obj.outro_script || '',
       clips,           // ordered 5,4,3,2,1 (display order)
