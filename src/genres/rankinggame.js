@@ -60,11 +60,13 @@ PRODUCTION CONSTRAINTS:
 3. CLIPS (Ranked 5 down to 1):
    - Rank 5 to 1 scale: Cheapest/lowest cost to Most Expensive/highest cost.
    - search_keywords: Precise GENERIC STOCK video search terms Pexels will actually find (2-4 words, no brand names, no specific people). Example: "man tripping sidewalk", "car fender bender parking lot", "kitchen fire smoke", "office desk mess".
-   - narration: ~7-second transformative voiceover script with sarcastic commentary and score reveal. About 18-22 spoken words per clip.
+   - narration: ~7-second transformative voiceover script with sarcastic commentary and score reveal. **STRICTLY 20-26 spoken words per clip — count them.** Under 15 words per clip = video ends up with dead air.
    - text_overlay: Text graphic for the screen showing the reveal (e.g., "Damage Cost: $500,000", "Repair Bill: $2,300").
    - attribution_handle: Placeholder handle (@creator_style_name) — this is a PLACEHOLDER only, ignored at render time; the pipeline shows real stock attribution.
-4. OUTRO (45-50s): Call-to-action forcing audience debate in the comments.
+4. OUTRO (45-50s): Call-to-action forcing audience debate in the comments. **~18-22 words.**
 5. METADATA: Optimized YouTube description, 5 trending hashtags, and caption credit layout.
+
+TOTAL SPOKEN WORDS TARGET (hook + 5 clips + outro): **130-160 words**. Under 100 total = video is too short, over 200 = too long. Count before returning.
 
 CRITICAL: Do NOT include introductory prose or explanations. Return valid JSON ONLY.
 

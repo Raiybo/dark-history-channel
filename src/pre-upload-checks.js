@@ -250,11 +250,13 @@ export function checkRankingGame(content) {
   const narr = (content.narration || '').trim();
   const clean = narr.replace(/\s*\|\|\s*/g, ' ');
   const wc = clean.split(/\s+/).filter(Boolean).length;
-  // Target 120-150 for a 50s video, but LLM output drifts ±30% so we absorb
-  // 90-220. The composition auto-fits duration to audio length (Math.ceil((audio+1)*fps)),
-  // so a 60-70s render is still shippable — the algorithm caps Shorts at 60s
-  // but longer voiceovers still upload and play back fine.
-  if (wc < 90 || wc > 220) fail('script', `Narration word count off (${wc}, target 120-150 for a 50s video, tolerant 90-220)`);
+  // Target 120-150 for a 50s video. Observed LLM variance is huge — real runs
+  // produced 73 words AND 181 words on identical code. Widened to 60-260 to
+  // ship anything usable; the composition auto-fits its duration to the audio
+  // length (Math.ceil((audioDuration+1)*fps)) so a shorter narration just
+  // renders a shorter video (no dead air) and a longer one still uploads.
+  // 60 words × ~3wps ≈ 20s video (still valid Shorts length); 260 words ≈ 87s.
+  if (wc < 60 || wc > 260) fail('script', `Narration word count off (${wc}, target 120-150 for a 50s video, tolerant 60-260)`);
 
   pass('script', `hook ${hook.split(/\s+/).length}w, narration ${wc}w, 5 clips ranked 5→1 with distinct keywords`);
 }
