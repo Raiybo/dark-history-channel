@@ -4,6 +4,7 @@ import { SplitScreenVideo } from './video/SplitScreenVideo';
 import { SplitSludge } from './video/SplitSludge';
 import { KingsRanks } from './video/KingsRanks';
 import { VersusVideo } from './video/VersusVideo';
+import { RankingGame } from './video/RankingGame';
 
 const FPS = 30;
 
@@ -98,6 +99,29 @@ export const RemotionRoot = () => {
         }}
         calculateMetadata={({ props }) => ({
           durationInFrames: Math.round((props.durationSec || 32) * FPS),
+        })}
+      />
+      <Composition
+        id="RankingGame"
+        component={RankingGame}
+        durationInFrames={1500}
+        fps={FPS}
+        width={1080}
+        height={1920}
+        defaultProps={{
+          narration:     'Which one costs the most? Guess before I reveal number one.',
+          audioDuration: 50,
+          wordTimings:   [],
+          beats:         [],
+          hookText:      '5 FUNNIEST FAILS RANKED',
+          clips:         [],
+          attribution:   'Stock: Pexels',
+          channelName:   'Kings of Ranks',
+          logo:          null,
+          hasMusic:      false,
+        }}
+        calculateMetadata={({ props }) => ({
+          durationInFrames: Math.ceil((props.audioDuration + 1) * FPS),
         })}
       />
       <Composition

@@ -217,6 +217,44 @@ export function checkConsumerScript(content) {
   pass('script', `hook ${hookWords}w, narration ${wc}w with ${beats} beats, ${scenes.length} screencast scenes, sourced from ${content.sourceAuthority}`);
 }
 
+// Ranking Game script check. 5 ranked clips each with search_keywords +
+// text_overlay + narration + placeholder attribution_handle (ignored at
+// render — we use "Stock: Pexels" instead).
+export function checkRankingGame(content) {
+  if (!content) fail('script', 'Ranking Game content is null');
+
+  if (!content.title || !content.title.trim()) fail('script', 'Title empty');
+  if (content.title.length > 90) fail('script', `Title too long (${content.title.length} chars)`);
+
+  const hook = (content.hook_text || '').trim();
+  if (!hook) fail('script', 'Hook empty');
+
+  const clips = content.clips || [];
+  if (clips.length !== 5) fail('script', `Clip count must be 5, got ${clips.length}`);
+  const kws = clips.map(c => (c.search_keywords || '').toLowerCase().trim());
+  if (kws.some(k => !k)) fail('script', 'Empty search_keywords on a clip');
+  if (new Set(kws).size !== kws.length) {
+    fail('script', `Duplicate search_keywords across ranks: ${kws.join(' | ')}`);
+  }
+  // Ranks must be 5,4,3,2,1 (display / reveal order)
+  const expectedRanks = [5, 4, 3, 2, 1];
+  for (const [i, c] of clips.entries()) {
+    if (c.rank !== expectedRanks[i]) {
+      fail('script', `Rank order wrong at slot ${i}: expected ${expectedRanks[i]}, got ${c.rank}`);
+    }
+    if (!c.text_overlay || !c.text_overlay.trim()) {
+      fail('script', `Missing text_overlay on rank ${c.rank}`);
+    }
+  }
+
+  const narr = (content.narration || '').trim();
+  const clean = narr.replace(/\s*\|\|\s*/g, ' ');
+  const wc = clean.split(/\s+/).filter(Boolean).length;
+  if (wc < 90 || wc > 180) fail('script', `Narration word count off (${wc}, target 120-150 for a 50s video)`);
+
+  pass('script', `hook ${hook.split(/\s+/).length}w, narration ${wc}w, 5 clips ranked 5→1 with distinct keywords`);
+}
+
 // 5) Render — output sane size
 export function checkRender(videoPath) {
   let st;

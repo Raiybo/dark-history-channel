@@ -7,15 +7,16 @@ import { generateVersusContent } from './genres/versus.js';
 import { generateAiToolsContent } from './genres/aitools.js';
 import { fetchToolScreenshots } from './screenshots.js';
 import { generateConsumerContent } from './genres/consumer.js';
+import { generateRankingGameContent } from './genres/rankinggame.js';
 import { recordSceneMotion } from './screencast.js';
 import { generateAudio }    from './tts.js';
 import { fetchSceneVideos, fetchClipsWithDuration, fetchRankFootage } from './pexels.js';
 import { prepareMusic }     from './music.js';
-import { renderVideo, renderSplitScreenVideo, renderSplitSludgeVideo, renderSilentKingsRanks, renderVersusVideo } from './renderer.js';
+import { renderVideo, renderSplitScreenVideo, renderSplitSludgeVideo, renderSilentKingsRanks, renderVersusVideo, renderRankingGame } from './renderer.js';
 import { uploadToYouTube }  from './uploader.js';
 import { sendDraftToTikTok, tiktokConfigured } from './tiktok.js';
 import {
-  checkTopic, checkScript, checkAiToolsScript, checkConsumerScript, checkClips, checkAudio, checkRender, checkKingsRanks, checkVersus,
+  checkTopic, checkScript, checkAiToolsScript, checkConsumerScript, checkClips, checkAudio, checkRender, checkKingsRanks, checkVersus, checkRankingGame,
 } from './pre-upload-checks.js';
 import { addVideoToThemedPlaylist } from './yt-playlists.js';
 import { saveCrossPostPack } from './cross-post.js';
@@ -33,6 +34,9 @@ const GENRE_LABELS = {
   splitedit: 'Split-Screen Edit',
   aitools: 'AI Tools & Tech Hacks',
   consumer: 'Consumer Awareness & Rights',
+  kingsranks: 'Kings of Ranks',
+  versus: 'Versus',
+  rankinggame: 'Ranking Game',
 };
 
 function getTodayGenre() {
@@ -473,8 +477,82 @@ async function runVersus() {
   console.log('═══════════════════════════════════════\n');
 }
 
+// Ranking Game pipeline — the "5 clips ranked by cost" gamified format with
+// voiceover. LLM writes hook + 5 clip narrations + outro; Pexels supplies the
+// stock footage per rank; renderer overlays rank badge + text overlay + kinetic
+// captions on top. No creator handles used — attribution is "Stock: Pexels".
+async function runRankingGame() {
+  const genre = 'rankinggame';
+  console.log('\n═══════════════════════════════════════');
+  console.log(`   ${GENRE_LABELS[genre]}`);
+  console.log('═══════════════════════════════════════\n');
+
+  const used = loadUsedIdeas();
+  const recentTopics = used.slice(-30).map(u => u.topic).filter(Boolean);
+
+  console.log('Step 1/6  Picking topic + writing 5-clip ranked script...');
+  const content = await generateRankingGameContent(recentTopics);
+  if (!content) {
+    console.error('  Pipeline failed: generateRankingGameContent returned null (LLM failure after 3 attempts).');
+    process.exit(1);
+  }
+  console.log(`  Title: "${content.title}"`);
+  console.log(`  Hook: "${content.hook_text}"`);
+  console.log(`  Clips: ${content.clips.length} ranked ${content.clips.map(c => `#${c.rank}`).join(' → ')}`);
+  console.log(`  Narration: ${content.narration.split(/\s+/).length} words`);
+  checkRankingGame(content);
+  console.log();
+
+  console.log('Step 2/6  Fetching Pexels stock footage per rank...');
+  // Each ranked clip is fetched by its search_keywords. fetchClipsWithDuration
+  // dedupes by source URL across scenes so no two ranks show the same clip.
+  const scenes = content.clips.map(c => ({ keyword: c.search_keywords }));
+  const clips = await fetchClipsWithDuration(scenes);
+  const validClips = clips.filter(Boolean);
+  if (validClips.length < 3) {
+    console.error(`  Pipeline failed: only ${validClips.length}/5 clips fetched.`);
+    process.exit(1);
+  }
+  // Fill any missing clip with the first successful one so the render never
+  // has empty scene slots.
+  const firstGood = clips.find(Boolean);
+  const filled = clips.map(c => c || firstGood);
+  console.log(`  ${validClips.length}/${clips.length} unique clips (${clips.length - validClips.length} filled).`);
+  console.log();
+
+  console.log('Step 3/6  Generating voiceover...');
+  const audio = await generateAudio(content.narration, genre);
+  content.narration = content.narration.replace(/\s*\|\|\s*/g, ' ').trim();
+  checkAudio(audio);
+  console.log();
+
+  console.log('Step 4/6  Preparing background music...');
+  const musicPath = await prepareMusic(genre);
+  content.hasMusic = musicPath !== null;
+  console.log();
+
+  console.log('Step 5/6  Rendering Ranking Game video...');
+  const videoPath = await renderRankingGame(content, audio, filled);
+  console.log(`  Saved to: ${videoPath}`);
+  checkRender(videoPath);
+  console.log();
+
+  console.log('Step 6/6  Publishing...');
+  await publish(content, videoPath);
+
+  saveUsedIdea({
+    topic: content.topic,
+    title: content.title,
+    genre: 'rankinggame',
+  });
+
+  console.log('\n═══════════════════════════════════════');
+  console.log('   Done!');
+  console.log('═══════════════════════════════════════\n');
+}
+
 // Dispatcher: GENRE_OVERRIDE picks the pipeline
-// (consumer | aitools | splitedit | kingsranks | versus | countdown).
+// (consumer | aitools | splitedit | kingsranks | versus | rankinggame | countdown).
 async function run() {
   checkEnv();
   const genre = process.env.GENRE_OVERRIDE || getTodayGenre();
@@ -483,6 +561,7 @@ async function run() {
   if (genre === 'splitedit') return runSplitEdit();
   if (genre === 'kingsranks') return runKingsRanks();
   if (genre === 'versus') return runVersus();
+  if (genre === 'rankinggame') return runRankingGame();
   return runCountdown();
 }
 

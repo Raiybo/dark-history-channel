@@ -157,6 +157,56 @@ export async function renderVersusVideo(content, clips, hasMusic) {
   return outputPath;
 }
 
+// Render the Ranking Game composition — voiced 50s ranking-game format.
+// content = the rankinggame genre payload (hook_text + clips + attribution);
+// audio = generateAudio() output (beats + wordTimings + duration);
+// clips = [{path, duration}] aligned by index with content.clips.
+export async function renderRankingGame(content, audio, clips) {
+  const publicAudioDir = join(ROOT_DIR, 'public', 'audio');
+  mkdirSync(publicAudioDir, { recursive: true });
+  const audioSrcDir = join(ROOT_DIR, 'output', 'audio');
+  for (const beat of audio.beats) {
+    copyFileSync(join(audioSrcDir, beat.file), join(publicAudioDir, beat.file));
+  }
+
+  // Merge fetched clips with each ranked item's rank/text_overlay so the
+  // composition can access all it needs from a single `clips` prop.
+  const mergedClips = (content.clips || []).map((c, i) => ({
+    path:         clips[i]?.path || null,
+    duration:     clips[i]?.duration || 8,
+    rank:         c.rank,
+    text_overlay: c.text_overlay || '',
+  }));
+
+  const inputProps = {
+    narration:     content.narration,
+    audioDuration: audio.duration,
+    wordTimings:   audio.wordTimings || [],
+    beats:         audio.beats || [],
+    hookText:      content.hook_text || '',
+    clips:         mergedClips,
+    attribution:   content.attribution || 'Stock: Pexels',
+    channelName:   process.env.CHANNEL_NAME || 'Kings of Ranks',
+    logo:          ['logo.png', 'logo.webp', 'logo.jpg'].find(f => existsSync(join(ROOT_DIR, 'public', f))) || null,
+    hasMusic:      content.hasMusic || false,
+  };
+  writeFileSync(join(ROOT_DIR, 'config', 'render-props.json'), JSON.stringify(inputProps, null, 2));
+
+  console.log('  Bundling Remotion project...');
+  const bundled = await bundle({ entryPoint: join(__dirname, 'index.jsx'), webpackOverride: (c) => c });
+  const composition = await selectComposition({ serveUrl: bundled, id: 'RankingGame', inputProps });
+
+  mkdirSync(join(ROOT_DIR, 'output'), { recursive: true });
+  const outputPath = join(ROOT_DIR, 'output', 'video.mp4');
+  console.log(`  Rendering ${composition.durationInFrames} frames (Ranking Game)...`);
+  await renderMedia({
+    composition, serveUrl: bundled, outputLocation: outputPath, inputProps, ...RENDER_OPTS,
+    onProgress: ({ progress }) => process.stdout.write(`\r  Progress: ${Math.round(progress * 100)}%   `),
+  });
+  process.stdout.write('\n');
+  return outputPath;
+}
+
 export async function renderVideo(script, audio) {
   const publicAudioDir = join(ROOT_DIR, 'public', 'audio');
   mkdirSync(publicAudioDir, { recursive: true });

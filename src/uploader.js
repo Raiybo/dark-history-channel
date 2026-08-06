@@ -26,6 +26,8 @@ const EVERGREEN_HASHTAGS_BY_GENRE = {
   kingsranks: ['#Shorts', '#YouTubeShorts', '#FunnyAnimals', '#Cats', '#Dogs', '#Pets', '#Funny', '#Animals', '#Cute', '#TryNotToLaugh'],
   // "Have you ever thought…" A vs B comparisons.
   versus: ['#Shorts', '#YouTubeShorts', '#DidYouKnow', '#Comparison', '#VS', '#Facts', '#Interesting', '#WhoWouldWin', '#Amazing', '#Top5'],
+  // Ranking Game — "5 X ranked by cost" gamified reveal.
+  rankinggame: ['#Shorts', '#YouTubeShorts', '#Ranked', '#Top5', '#Ranking', '#FunniestMoments', '#GuessTheRank', '#Viral', '#Fails', '#Countdown'],
 };
 const EVERGREEN_TAGS_BY_GENRE = {
   consumer:   ['shorts', 'youtube shorts', 'consumer awareness', 'consumer rights', 'scam alert', 'ftc', 'save money', 'hidden fees', 'know your rights', 'money hacks', 'life hacks', 'consumer protection', 'americans need to know', 'financial literacy'],
@@ -33,6 +35,7 @@ const EVERGREEN_TAGS_BY_GENRE = {
   didyouknow: ['shorts', 'youtube shorts', 'viral', 'viral shorts', 'trending', 'facts', 'did you know', 'fun facts', 'amazing facts', 'interesting facts', 'educational', 'today i learned', 'knowledge', 'mind blowing facts'],
   kingsranks: ['shorts', 'youtube shorts', 'funny animals', 'funny cats', 'funny dogs', 'funny pets', 'cute animals', 'animal fails', 'try not to laugh', 'funny animal videos', 'pets', 'cats', 'dogs', 'top 5', 'funny'],
   versus: ['shorts', 'youtube shorts', 'comparison', 'versus', 'vs', 'who would win', 'did you know', 'interesting facts', 'amazing facts', 'which is better', 'battle', 'facts', 'educational', 'mind blowing'],
+  rankinggame: ['shorts', 'youtube shorts', 'ranked', 'top 5', 'ranking', 'countdown', 'guess the rank', 'viral', 'fails', 'funniest moments', 'ranked from cheap to expensive', 'ranking game', 'gamified'],
 };
 const EVERGREEN_HASHTAGS = EVERGREEN_HASHTAGS_BY_GENRE.didyouknow;
 const EVERGREEN_TAGS = EVERGREEN_TAGS_BY_GENRE.didyouknow;
