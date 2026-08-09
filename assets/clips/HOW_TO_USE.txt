@@ -1,0 +1,3 @@
+Drop clips you OWN or have LICENSED here (your Google Flow/Veo output, or licensed clips from ViralHog/Jukin/creator permission).
+Name them descriptively — the filename becomes the joke seed, e.g. cat-attacks-curtain.mp4
+Add 5, then dispatch the "clipranks" workflow. NEVER put scraped/reposted clips here.

@@ -34,6 +34,10 @@ on:
           - kingsranks
           - versus
           - rankinggame
+          # clipranks: manual only. Commit 5 clips you OWN/LICENSED (Flow/Veo
+          # output or licensed viral clips) to assets/clips/ with descriptive
+          # names, then dispatch this. Never for scraped/reposted content.
+          - clipranks
 
 # Serialize ALL runs (scheduled + manual). Parallel runs race on idea-generation
 # — they each read the same used-ideas.json before any has pushed, so Groq can

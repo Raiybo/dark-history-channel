@@ -8,6 +8,8 @@ import { generateAiToolsContent } from './genres/aitools.js';
 import { fetchToolScreenshots } from './screenshots.js';
 import { generateConsumerContent } from './genres/consumer.js';
 import { generateRankingGameContent } from './genres/rankinggame.js';
+import { generateClipRanks } from './genres/clipranks.js';
+import { processViralClip, probeDuration } from './clip-processor.js';
 import { recordSceneMotion } from './screencast.js';
 import { generateAudio }    from './tts.js';
 import { fetchSceneVideos, fetchClipsWithDuration, fetchRankFootage } from './pexels.js';
@@ -20,6 +22,12 @@ import {
 } from './pre-upload-checks.js';
 import { addVideoToThemedPlaylist } from './yt-playlists.js';
 import { saveCrossPostPack } from './cross-post.js';
+import { readdirSync, existsSync, mkdirSync } from 'fs';
+import { join, dirname, extname, basename } from 'path';
+import { fileURLToPath } from 'url';
+
+const CLIPRANKS_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', 'assets', 'clips');
+const CLIPRANKS_OUT = join(dirname(fileURLToPath(import.meta.url)), '..', 'public', 'videos');
 
 const REQUIRED_ENV = [
   'GEMINI_API_KEY',
@@ -553,6 +561,62 @@ async function runRankingGame() {
 
 // Dispatcher: GENRE_OVERRIDE picks the pipeline
 // (consumer | aitools | splitedit | kingsranks | versus | rankinggame | countdown).
+// ClipRanks — the LEGAL version of the "real funny clips" idea. Turns clips the
+// creator ALREADY OWNS (their Google Flow / Veo output, or licensed clips) into a
+// ranked funny countdown. Drop clips into assets/clips/ with descriptive names
+// (e.g. "cat-attacks-curtain.mp4"); we crop each to 9:16, rank them, write funny
+// captions, and render with the same near-invisible leaderboard + music + outro.
+// This is where the real funny footage lives — NO scraping/reposting of others'
+// clips, ever.
+async function runClipRanks() {
+  console.log('\n═══════════════════════════════════════');
+  console.log('   Kings of Ranks — Clip Ranks (your clips)');
+  console.log('═══════════════════════════════════════\n');
+
+  const exts = new Set(['.mp4', '.mov', '.webm', '.m4v']);
+  const files = existsSync(CLIPRANKS_DIR)
+    ? readdirSync(CLIPRANKS_DIR).filter(f => exts.has(extname(f).toLowerCase())).sort()
+    : [];
+  if (files.length < 5) {
+    throw new Error(`ClipRanks needs 5 clips in assets/clips/ (found ${files.length}). Drop 5 clips you OWN or LICENSED (Flow/Veo output or licensed viral clips), named descriptively, then re-run.`);
+  }
+  const chosen = files.slice(0, 5);
+  const descriptions = chosen.map(f => basename(f, extname(f)).replace(/[-_]+/g, ' ').trim());
+  console.log(`Step 1/4  Ranking ${chosen.length} of your clips: ${descriptions.join(' | ')}`);
+
+  console.log('Step 2/4  Cropping your clips to 9:16 (their clip-processor)...');
+  mkdirSync(CLIPRANKS_OUT, { recursive: true });
+  const processed = chosen.map((f, i) => {
+    const out = join(CLIPRANKS_OUT, `clip_${i}.mp4`);
+    processViralClip(join(CLIPRANKS_DIR, f), out, 0, 7);
+    return { path: `videos/clip_${i}.mp4`, duration: probeDuration(out) };
+  });
+
+  const content = await generateClipRanks(descriptions);
+  content.genre = 'kingsranks';   // reuse funny tags/category/music credit
+  // Align clips to the ranked display order (#5 first … #1 last) and set ranks.
+  const N = content.items.length;
+  const clips = content.items.map(it => processed[it.srcIndex]);
+  content.items = content.items.map((it, i) => ({ rank: N - i, label: it.label, caption: it.caption }));
+  if (clips.some(c => !c) || content.items.length !== 5) throw new Error('ClipRanks: could not align all 5 clips.');
+  console.log(`  "${content.title}" — ${content.items.map(i => `#${i.rank} ${i.label}`).join(', ')}\n`);
+
+  console.log('Step 3/4  Preparing music...');
+  const musicPath = await prepareMusic('kingsranks');
+  content.hasMusic = musicPath !== null;
+  console.log();
+
+  console.log('Step 4/4  Rendering + publishing...');
+  const videoPath = await renderSilentKingsRanks(content, clips, content.hasMusic);
+  console.log(`  Saved to: ${videoPath}`);
+  checkRender(videoPath);
+  await publish(content, videoPath);
+
+  console.log('\n═══════════════════════════════════════');
+  console.log('   Done!');
+  console.log('═══════════════════════════════════════\n');
+}
+
 async function run() {
   checkEnv();
   const genre = process.env.GENRE_OVERRIDE || getTodayGenre();
@@ -562,6 +626,7 @@ async function run() {
   if (genre === 'kingsranks') return runKingsRanks();
   if (genre === 'versus') return runVersus();
   if (genre === 'rankinggame') return runRankingGame();
+  if (genre === 'clipranks') return runClipRanks();
   return runCountdown();
 }
 
