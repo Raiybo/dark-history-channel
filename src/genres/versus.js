@@ -16,8 +16,8 @@ WRITE IN SIMPLE, EVERYDAY ENGLISH — short words a 12-year-old understands. Mak
 
 Return ONLY valid JSON, no markdown:
 {
-  "title": "YouTube title, the question, under 60 chars, starts with a hook word",
-  "hook": "HAVE YOU EVER WONDERED",
+  "title": "fun curiosity title under 55 chars, e.g. 'Who Wins: Paper Plane or Baseball?' — NEVER start with 'Shocking' or ALL-CAPS clickbait",
+  "hook": "GUESS WHO WINS",
   "question": "the question in 3-6 words, punchy, e.g. 'WHO WINS: LION OR TIGER?'",
   "a": {"name": "first thing, 1-3 words", "fact": "one simple surprising fact/strength, under 38 chars", "keyword": "2-4 word GENERIC stock VIDEO search, brand-free"},
   "b": {"name": "second thing, 1-3 words", "fact": "one simple surprising fact/strength, under 38 chars", "keyword": "2-4 word GENERIC stock VIDEO search, brand-free"},

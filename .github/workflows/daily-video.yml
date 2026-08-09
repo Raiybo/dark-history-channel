@@ -7,37 +7,33 @@ on:
   # Verified end-to-end on 2026-07-30 with the fixed RAG source feeds; first
   # live upload from the new Consumer Awareness pipeline:
   # https://www.youtube.com/watch?v=bekRb6n0ERE
-  # Kings of Ranks — 2 shorts/day, two DIFFERENT styles at two strong US windows:
-  #   15:30 UTC (11:30 EDT) → FUNNY animals ranking (kingsranks)
-  #   23:30 UTC (19:30 EDT) → "Have you ever thought…" A vs B comparison (versus)
-  # ACTIVE 2026-08-03: 6 shorts/day rotating THREE formats every 4 hours (UTC).
-  # kingsranks (funny animal Top-5) + versus (A vs B comparison) + rankinggame
-  # (5-ranked-by-cost gamified reveal, LEGAL Pexels attribution "Stock: Pexels").
-  # Slot map — every 4h from 00:00 UTC:
-  #   00:00 UTC (20:00 EDT prev day) → rankinggame  (US late-night)
-  #   04:00 UTC (00:00 EDT)          → kingsranks   (US overnight)
-  #   08:00 UTC (04:00 EDT)          → versus       (EU/UK morning)
-  #   12:00 UTC (08:00 EDT)          → rankinggame  (US morning commute)
-  #   16:00 UTC (12:00 EDT)          → kingsranks   (US lunch)
-  #   20:00 UTC (16:00 EDT)          → versus       (US afternoon)
+  # ACTIVE 2026-08-05: 4 shorts/day, DATA-DRIVEN mix. Analysis of the first 11
+  # uploads showed the two proven engines are (1) funny animal Top-5 [kingsranks]
+  # — consistent 77-414 views — and (2) the head-to-head showdown [versus] — the
+  # single biggest hit (664: "Paper Plane or Baseball") once topics are fun/visual
+  # (dry science matchups flopped at ~2-26). rankinggame had no traction (0 views)
+  # so it's dropped from the schedule (code kept for manual dispatch).
+  # Slot map (UTC → US ET), alternating the two winners:
+  #   13:00 UTC (09:00 ET) → kingsranks (funny animals)
+  #   16:00 UTC (12:00 ET) → versus     (showdown)
+  #   20:00 UTC (16:00 ET) → kingsranks (funny animals)
+  #   00:00 UTC (20:00 ET) → versus     (showdown)
   schedule:
-    - cron: '0 0 * * *'
-    - cron: '0 4 * * *'
-    - cron: '0 8 * * *'
-    - cron: '0 12 * * *'
+    - cron: '0 13 * * *'
     - cron: '0 16 * * *'
     - cron: '0 20 * * *'
+    - cron: '0 0 * * *'
   workflow_dispatch:
     inputs:
       genre:
         description: 'Which video to make'
         required: false
-        default: 'rankinggame'
+        default: 'kingsranks'
         type: choice
         options:
-          - rankinggame
           - kingsranks
           - versus
+          - rankinggame
 
 # Serialize ALL runs (scheduled + manual). Parallel runs race on idea-generation
 # — they each read the same used-ideas.json before any has pushed, so Groq can
@@ -102,13 +98,11 @@ jobs:
           # Cron slot → one of (rankinggame | kingsranks | versus) per the map above.
           GENRE_OVERRIDE: >-
             ${{ github.event_name == 'workflow_dispatch' && inputs.genre
-               || (github.event.schedule == '0 0 * * *' && 'rankinggame')
-               || (github.event.schedule == '0 4 * * *' && 'kingsranks')
-               || (github.event.schedule == '0 8 * * *' && 'versus')
-               || (github.event.schedule == '0 12 * * *' && 'rankinggame')
-               || (github.event.schedule == '0 16 * * *' && 'kingsranks')
-               || (github.event.schedule == '0 20 * * *' && 'versus')
-               || 'rankinggame' }}
+               || (github.event.schedule == '0 13 * * *' && 'kingsranks')
+               || (github.event.schedule == '0 16 * * *' && 'versus')
+               || (github.event.schedule == '0 20 * * *' && 'kingsranks')
+               || (github.event.schedule == '0 0 * * *' && 'versus')
+               || 'kingsranks' }}
         run: node src/main.js
 
       - name: Commit updated used-ideas.json

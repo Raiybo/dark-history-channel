@@ -413,15 +413,18 @@ async function generateVersusTopic(used, usedKeys) {
   if (!process.env.GEMINI_API_KEY && !process.env.GROQ_API_KEY) return null;
   const recent = used.slice(-35).map(u => `- ${u.topic}`).join('\n');
   for (let attempt = 0; attempt < 4; attempt++) {
-    const prompt = `Invent ONE fascinating comparison QUESTION for a silent "Have you ever thought that…" Shorts channel that compares TWO things and reveals which wins.
+    const prompt = `Invent ONE fun "who would win" comparison QUESTION for a silent showdown Shorts channel that pits TWO things head-to-head and reveals the winner.
+
+WHAT WORKS (data-backed): the best-performing videos are PLAYFUL, VISUAL, sharable matchups people instantly want to argue about — a real fight/race/showdown between two vivid things. e.g. "Who flies further: a paper plane or a baseball?", "Who'd win a fight: a goose or a house cat?", "Who's faster: a greyhound or a bicycle?", "Who wins: a toddler or a baby goat?", "Who's stronger for its size: an ant or an elephant?".
+
+WHAT FLOPS (never do this): dry, science-class measurements. NO "who makes more oxygen", "who lives longer", "whose tongue is bigger", "who has more pressure", "who is hotter". Those get near-zero views. Keep it a VISCERAL, funny-or-jaw-dropping SHOWDOWN, not a trivia stat.
 
 Rules:
-- Output a SINGLE question, UNDER 12 words, pitting TWO concrete things that BOTH have great generic stock video (animals, vehicles, nature, sports moves, everyday objects, space, food).
-- Examples: "Which is faster: a cheetah or a race car?", "Which is stronger: a gorilla or a grizzly bear?", "Which is older: sharks or trees?", "Which hits harder: a boxer or a kangaroo?", "Which is louder: a lion or a chainsaw?".
+- Output a SINGLE question, UNDER 12 words, pitting TWO concrete things that BOTH have great generic stock video (animals, pets, vehicles, sports, everyday objects).
+- Frame it as a fight/race/showdown ("who would win", "who's faster", "who flies further", "who wins").
 - It MUST have a REAL, surprising, TRUE answer — not a coin flip.
-- Both things must be showable with GENERIC stock footage (no specific real people or brands).
-- Genuinely interesting and wholesome. NO politics, war, tragedy, gore, or health/medical.
-- Must be COMPLETELY DIFFERENT from every already-used one below (shares 2+ keywords = pick something else):
+- Showable with GENERIC stock footage (no specific real people or brands). Wholesome. NO politics, war, tragedy, gore, health/medical.
+- COMPLETELY DIFFERENT from every already-used one below (shares 2+ keywords = pick something else):
 ${recent || '(none yet)'}
 
 Return ONLY the single question line, nothing else.`;
