@@ -140,9 +140,9 @@ const Outro = () => {
   const pop = spring({ frame, fps, config: { damping: 12, stiffness: 200, mass: 0.6 } });
   return (
     <div style={{ position: 'absolute', bottom: 150, left: 0, right: 0, display: 'flex', justifyContent: 'center', pointerEvents: 'none' }}>
-      <div style={{ transform: `scale(${0.7 + pop * 0.3})`, display: 'flex', alignItems: 'center', gap: 12, background: 'rgba(0,0,0,0.55)', border: `3px solid ${GOLD}`, borderRadius: 50, padding: '13px 30px' }}>
-        <span style={{ fontSize: 38, lineHeight: 1 }}>👑</span>
-        <span style={{ fontFamily, fontWeight: 900, fontSize: 40, letterSpacing: 2, color: GOLD, textShadow: '0 2px 10px rgba(0,0,0,1)' }}>FOLLOW FOR MORE</span>
+      <div style={{ transform: `scale(${0.7 + pop * 0.3})`, display: 'flex', alignItems: 'center', gap: 11, background: 'rgba(0,0,0,0.6)', border: `3px solid ${GOLD}`, borderRadius: 50, padding: '13px 26px' }}>
+        <span style={{ fontSize: 34, lineHeight: 1 }}>👑</span>
+        <span style={{ fontFamily, fontWeight: 900, fontSize: 31, letterSpacing: 1, color: GOLD, textShadow: '0 2px 10px rgba(0,0,0,1)' }}>SUBSCRIBE FOR DAILY RANKS</span>
       </div>
     </div>
   );

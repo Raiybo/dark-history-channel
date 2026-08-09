@@ -110,6 +110,21 @@ const RevealScene = ({ clip, winnerName, answer, fps }) => {
   );
 };
 
+// End-card CTA that pops in over the winner reveal — drives the subscribe.
+const Outro = () => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const pop = spring({ frame, fps, config: { damping: 12, stiffness: 200, mass: 0.6 } });
+  return (
+    <div style={{ position: 'absolute', bottom: 150, left: 0, right: 0, display: 'flex', justifyContent: 'center', pointerEvents: 'none' }}>
+      <div style={{ transform: `scale(${0.7 + pop * 0.3})`, display: 'flex', alignItems: 'center', gap: 11, background: 'rgba(0,0,0,0.6)', border: `3px solid ${GOLD}`, borderRadius: 50, padding: '13px 26px' }}>
+        <span style={{ fontSize: 34, lineHeight: 1 }}>👑</span>
+        <span style={{ fontFamily, fontWeight: 900, fontSize: 31, letterSpacing: 1, color: GOLD, textShadow: '0 2px 10px rgba(0,0,0,1)' }}>SUBSCRIBE FOR DAILY RANKS</span>
+      </div>
+    </div>
+  );
+};
+
 // "Have you ever thought that…" — a silent head-to-head comparison that poses an
 // interesting question, shows two contenders (A vs B) over stock video, then
 // reveals the winner and the interesting answer. Music + captions, no voiceover.
@@ -146,6 +161,10 @@ export const VersusVideo = ({
 
       <Sequence from={0} durationInFrames={hookF + 10}>
         <HookCard hook={hook} question={question} />
+      </Sequence>
+
+      <Sequence from={durationInFrames - Math.round(1.9 * fps)}>
+        <Outro />
       </Sequence>
     </AbsoluteFill>
   );

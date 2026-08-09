@@ -25,6 +25,12 @@ COMEDY STYLE (this is what makes the channel funny — follow it exactly):
   • puppy sneezing → "Even HE wasn't ready."
 - SIMPLE, everyday words. WHOLESOME. Punchy — the shorter and more unexpected, the funnier. Never just describe the clip.
 
+RETENTION STRUCTURE (Hook → Escalation → Payoff — this protects watch time):
+- #5 is the HOOK: it MUST be instantly funny. Never a weak or slow opener, or viewers swipe away in the first second.
+- Each item is funnier than the one before it — escalate steadily from #5 up to #1.
+- #1 is the PAYOFF: the single funniest, most shareable moment, saved for last.
+- Favor RELATABLE, universally-known animal behaviors people instantly recognize ("that is literally my pet" / "that is so me" energy) — that is what gets shared.
+
 Return ONLY valid JSON, no markdown:
 {
   "title": "funny YouTube title under 50 chars, starts with 'Top 5', makes people smile",
