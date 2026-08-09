@@ -22,11 +22,14 @@ import {
 } from './pre-upload-checks.js';
 import { addVideoToThemedPlaylist } from './yt-playlists.js';
 import { saveCrossPostPack } from './cross-post.js';
-import { readdirSync, existsSync, mkdirSync } from 'fs';
+import { readdirSync, existsSync, mkdirSync, unlinkSync } from 'fs';
 import { join, dirname, extname, basename } from 'path';
 import { fileURLToPath } from 'url';
+import { homedir } from 'os';
 
-const CLIPRANKS_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', 'assets', 'clips');
+// Clips the creator drops into a Desktop folder they OWN. Overridable via
+// CLIPS_DIR. The channel now ONLY posts from these clips — no clips, no upload.
+const CLIPRANKS_DIR = process.env.CLIPS_DIR || join(homedir(), 'Desktop', 'channel yt');
 const CLIPRANKS_OUT = join(dirname(fileURLToPath(import.meta.url)), '..', 'public', 'videos');
 
 const REQUIRED_ENV = [
@@ -573,48 +576,71 @@ async function runClipRanks() {
   console.log('   Kings of Ranks — Clip Ranks (your clips)');
   console.log('═══════════════════════════════════════\n');
 
-  const exts = new Set(['.mp4', '.mov', '.webm', '.m4v']);
-  const files = existsSync(CLIPRANKS_DIR)
-    ? readdirSync(CLIPRANKS_DIR).filter(f => exts.has(extname(f).toLowerCase())).sort()
+  const CLIPS_PER_REEL = 5;
+  const MAX_REELS = 4;
+  const exts = new Set(['.mp4', '.mov', '.webm', '.m4v', '.avi']);
+  const all = existsSync(CLIPRANKS_DIR)
+    ? readdirSync(CLIPRANKS_DIR).filter(f => !f.startsWith('.') && exts.has(extname(f).toLowerCase())).sort()
     : [];
-  if (files.length < 5) {
-    throw new Error(`ClipRanks needs 5 clips in assets/clips/ (found ${files.length}). Drop 5 clips you OWN or LICENSED (Flow/Veo output or licensed viral clips), named descriptively, then re-run.`);
+
+  // The core new rule: NO clips today → NO upload. Clean skip, not an error.
+  if (all.length < CLIPS_PER_REEL) {
+    console.log(`⏸  No upload: need ≥${CLIPS_PER_REEL} clips in "${CLIPRANKS_DIR}" (found ${all.length}).`);
+    console.log('   Drop clips you OWN there and re-run. The channel only posts from your clips.\n');
+    return;
   }
-  const chosen = files.slice(0, 5);
-  const descriptions = chosen.map(f => basename(f, extname(f)).replace(/[-_]+/g, ' ').trim());
-  console.log(`Step 1/4  Ranking ${chosen.length} of your clips: ${descriptions.join(' | ')}`);
 
-  console.log('Step 2/4  Cropping your clips to 9:16 (their clip-processor)...');
+  const reels = Math.min(MAX_REELS, Math.floor(all.length / CLIPS_PER_REEL));
+  console.log(`Found ${all.length} clips → making ${reels} reel(s) of ${CLIPS_PER_REEL}.\n`);
   mkdirSync(CLIPRANKS_OUT, { recursive: true });
-  const processed = chosen.map((f, i) => {
-    const out = join(CLIPRANKS_OUT, `clip_${i}.mp4`);
-    processViralClip(join(CLIPRANKS_DIR, f), out, 0, 7);
-    return { path: `videos/clip_${i}.mp4`, duration: probeDuration(out) };
-  });
+  const posted = [];
 
-  const content = await generateClipRanks(descriptions);
-  content.genre = 'kingsranks';   // reuse funny tags/category/music credit
-  // Align clips to the ranked display order (#5 first … #1 last) and set ranks.
-  const N = content.items.length;
-  const clips = content.items.map(it => processed[it.srcIndex]);
-  content.items = content.items.map((it, i) => ({ rank: N - i, label: it.label, caption: it.caption }));
-  if (clips.some(c => !c) || content.items.length !== 5) throw new Error('ClipRanks: could not align all 5 clips.');
-  console.log(`  "${content.title}" — ${content.items.map(i => `#${i.rank} ${i.label}`).join(', ')}\n`);
+  for (let r = 0; r < reels; r++) {
+    const batch = all.slice(r * CLIPS_PER_REEL, r * CLIPS_PER_REEL + CLIPS_PER_REEL);
+    console.log(`\n──────── Reel ${r + 1}/${reels} ────────`);
+    const descriptions = batch.map(f => basename(f, extname(f)).replace(/[-_]+/g, ' ').trim());
+    console.log(`  Clips: ${descriptions.join(' | ')}`);
 
-  console.log('Step 3/4  Preparing music...');
-  const musicPath = await prepareMusic('kingsranks');
-  content.hasMusic = musicPath !== null;
-  console.log();
+    // Crop each owned clip to 9:16 (their clip-processor).
+    const processed = batch.map((f, i) => {
+      const out = join(CLIPRANKS_OUT, `clip_${i}.mp4`);
+      processViralClip(join(CLIPRANKS_DIR, f), out, 0, 7);
+      return { path: `videos/clip_${i}.mp4`, duration: probeDuration(out) };
+    });
 
-  console.log('Step 4/4  Rendering + publishing...');
-  const videoPath = await renderSilentKingsRanks(content, clips, content.hasMusic);
-  console.log(`  Saved to: ${videoPath}`);
-  checkRender(videoPath);
-  await publish(content, videoPath);
+    // Rank + add the commentary that makes each clip funnier.
+    const content = await generateClipRanks(descriptions);
+    content.genre = 'kingsranks';
+    const N = content.items.length;
+    const clips = content.items.map(it => processed[it.srcIndex]);
+    content.items = content.items.map((it, i) => ({ rank: N - i, label: it.label, caption: it.caption }));
+    if (clips.some(c => !c) || content.items.length !== CLIPS_PER_REEL) {
+      console.log('  ✗ Could not align this batch; leaving its clips in place, skipping.');
+      continue;
+    }
+    console.log(`  "${content.title}" — ${content.items.map(i => `#${i.rank} ${i.label}`).join(', ')}`);
 
-  console.log('\n═══════════════════════════════════════');
-  console.log('   Done!');
-  console.log('═══════════════════════════════════════\n');
+    const musicPath = await prepareMusic('kingsranks');
+    content.hasMusic = musicPath !== null;
+    const videoPath = await renderSilentKingsRanks(content, clips, content.hasMusic);
+    checkRender(videoPath);
+    await publish(content, videoPath);
+
+    // Delete the used clips so the folder stays clean — ONLY after a real upload.
+    if (process.env.UPLOAD === '1') {
+      for (const f of batch) {
+        try { unlinkSync(join(CLIPRANKS_DIR, f)); }
+        catch (e) { console.log(`  (couldn't remove ${f}: ${e.message})`); }
+      }
+      console.log(`  ✓ Reel ${r + 1} posted; its ${CLIPS_PER_REEL} used clips removed from the folder.`);
+    } else {
+      console.log(`  ✓ Reel ${r + 1} rendered (UPLOAD!=1, so clips kept).`);
+    }
+    posted.push(content.title);
+  }
+
+  const leftover = all.length - reels * CLIPS_PER_REEL;
+  console.log(`\n═══ Done: ${posted.length} reel(s). ${leftover > 0 ? `${leftover} leftover clip(s) kept for next time.` : 'Folder clean.'} ═══\n`);
 }
 
 async function run() {
