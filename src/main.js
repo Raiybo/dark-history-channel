@@ -29,7 +29,7 @@ import { homedir } from 'os';
 
 // Clips the creator drops into a Desktop folder they OWN. Overridable via
 // CLIPS_DIR. The channel now ONLY posts from these clips — no clips, no upload.
-const CLIPRANKS_DIR = process.env.CLIPS_DIR || join(homedir(), 'Desktop', 'channel yt');
+const CLIPRANKS_DIR = process.env.CLIPS_DIR || join(homedir(), 'Desktop', 'yt clips');
 const CLIPRANKS_OUT = join(dirname(fileURLToPath(import.meta.url)), '..', 'public', 'videos');
 
 const REQUIRED_ENV = [
