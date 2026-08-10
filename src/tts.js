@@ -7,11 +7,12 @@ import { DYK_VOICE } from './genres/didyouknow.js';
 import { AI_TOOLS_VOICE } from './genres/aitools.js';
 import { CONSUMER_VOICE } from './genres/consumer.js';
 import { RANKING_VOICE } from './genres/rankinggame.js';
+import { CLIPRANKS_VOICE } from './genres/clipranks.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const AUDIO_DIR = join(__dirname, '../output/audio');
 
-const VOICES = { didyouknow: DYK_VOICE, aitools: AI_TOOLS_VOICE, consumer: CONSUMER_VOICE, rankinggame: RANKING_VOICE };
+const VOICES = { didyouknow: DYK_VOICE, aitools: AI_TOOLS_VOICE, consumer: CONSUMER_VOICE, rankinggame: RANKING_VOICE, clipranks: CLIPRANKS_VOICE };
 
 function parseTimestamp(ts) {
   const clean = ts.trim().replace(',', '.');
@@ -122,7 +123,7 @@ function runEdgeTts(voice, text, mp3Path, vttPath) {
 // narrator audibly breathes when the idea changes. Each beat is also a fresh
 // utterance, which keeps the delivery from flattening into one monotone read.
 // Word timings are merged onto one global timeline (beat start + local time).
-export async function generateAudio(narration, genre = 'didyouknow') {
+export async function generateAudio(narration, genre = 'didyouknow', { windows = null } = {}) {
   mkdirSync(AUDIO_DIR, { recursive: true });
   const voice = VOICES[genre] || VOICES.didyouknow;
 
@@ -157,7 +158,15 @@ export async function generateAudio(narration, genre = 'didyouknow') {
 
     beats.push({ file, startTime: cursor, duration: dur });
     segOffset += segs.length;
-    cursor += dur + (i < texts.length - 1 ? GAP_SECONDS : 0);
+    // Advance to the next beat. If a per-beat `window` is given (clip-ranks: how
+    // long clip i should stay on screen), space the beats that far apart so the
+    // narrator speaks at the START of the clip and the rest of the window is the
+    // clip playing out its funny moment with its own audio. Else use the breath gap.
+    if (i < texts.length - 1) {
+      const win = windows && windows[i] != null ? windows[i] : null;
+      const gap = win != null ? Math.max(0.25, win - dur) : GAP_SECONDS;
+      cursor += dur + gap;
+    }
   }
 
   console.log(`  Total duration: ${cursor.toFixed(1)}s (with ${texts.length - 1} gap(s))`);

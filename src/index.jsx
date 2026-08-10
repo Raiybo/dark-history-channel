@@ -91,11 +91,16 @@ export const RemotionRoot = () => {
         defaultProps={{
           items:        [],
           clips:        [],
+          credits:      [],
           titleCard:    'TOP 5 FASTEST ANIMALS',
           channelName:  'Kings of Ranks',
           logo:         null,
           hasMusic:     false,
           durationSec:  32,
+          narration:    '',
+          audioDuration: 0,
+          wordTimings:  [],
+          beats:        [],
         }}
         calculateMetadata={({ props }) => ({
           durationInFrames: Math.round((props.durationSec || 32) * FPS),

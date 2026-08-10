@@ -123,6 +123,52 @@ export async function renderSilentKingsRanks(content, clips, hasMusic) {
   return outputPath;
 }
 
+// Render the Kings of Ranks NARRATED clip-ranks video: each clip keeps its own
+// audio, one quiet music bed underneath, a narrator reacting to every clip, and
+// creator credits on screen. content = { items, title_card, ... }; clips =
+// [{path,duration}] aligned with items; credits = [handle] aligned with items;
+// audio = generateAudio() output (beats + wordTimings + duration).
+export async function renderClipRanksNarrated(content, clips, credits, audio, hasMusic) {
+  const publicAudioDir = join(ROOT_DIR, 'public', 'audio');
+  mkdirSync(publicAudioDir, { recursive: true });
+  const audioSrcDir = join(ROOT_DIR, 'output', 'audio');
+  for (const beat of audio.beats) {
+    copyFileSync(join(audioSrcDir, beat.file), join(publicAudioDir, beat.file));
+  }
+
+  const inputProps = {
+    items:         content.items || [],
+    clips:         clips || [],
+    credits:       credits || [],
+    titleCard:     content.title_card || content.title || '',
+    channelName:   process.env.CHANNEL_NAME || 'Kings of Ranks',
+    // No logo file for this channel yet — the crown motif + wordmark brand it.
+    // (Avoids stamping an old/other-brand crest on the clip-ranks reels.)
+    logo:          null,
+    hasMusic:      !!hasMusic,
+    narration:     content.narration || '',
+    audioDuration: audio.duration,
+    wordTimings:   audio.wordTimings || [],
+    beats:         audio.beats || [],
+    durationSec:   audio.duration + 0.6,
+  };
+  writeFileSync(join(ROOT_DIR, 'config', 'render-props.json'), JSON.stringify(inputProps, null, 2));
+
+  console.log('  Bundling Remotion project...');
+  const bundled = await bundle({ entryPoint: join(__dirname, 'index.jsx'), webpackOverride: (c) => c });
+  const composition = await selectComposition({ serveUrl: bundled, id: 'KingsRanks', inputProps });
+
+  mkdirSync(join(ROOT_DIR, 'output'), { recursive: true });
+  const outputPath = join(ROOT_DIR, 'output', 'video.mp4');
+  console.log(`  Rendering ${composition.durationInFrames} frames (Kings of Ranks — narrated)...`);
+  await renderMedia({
+    composition, serveUrl: bundled, outputLocation: outputPath, inputProps, ...RENDER_OPTS,
+    onProgress: ({ progress }) => process.stdout.write(`\r  Progress: ${Math.round(progress * 100)}%   `),
+  });
+  process.stdout.write('\n');
+  return outputPath;
+}
+
 // Render the "Have you ever thought that…" comparison (silent — music + captions).
 // content = { question, hook, a, b, winner, answer, ... }; clips = [{path,duration}]
 // for [A, B], aligned by index.

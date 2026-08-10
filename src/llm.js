@@ -115,3 +115,48 @@ export async function chat(prompt, opts = {}) {
 // chat() already retries transient errors and falls back across providers, so
 // the old chatWithRetry name is just an alias kept for existing call sites.
 export const chatWithRetry = chat;
+
+// Vision: describe what's happening in a single still frame. Used to write clip
+// commentary from the actual footage instead of an opaque filename. Gemini 2.5
+// Flash is multimodal; Groq has no vision, so this is Gemini-only and returns
+// null on any failure (the caller falls back to a generic line).
+export async function describeImage(base64, mimeType, prompt, { maxTokens = 200 } = {}) {
+  const key = process.env.GEMINI_API_KEY;
+  if (!key) return null;
+  const body = {
+    contents: [{ parts: [
+      { text: prompt },
+      { inline_data: { mime_type: mimeType || 'image/jpeg', data: base64 } },
+    ] }],
+    // thinkingBudget: 0 — this is a one-line description, so spend the whole
+    // output budget on the answer instead of hidden reasoning (which was
+    // truncating the sentence).
+    generationConfig: { temperature: 0.4, maxOutputTokens: maxTokens, thinkingConfig: { thinkingBudget: 0 } },
+  };
+  // Retry on rate-limit / 5xx (the free tier's per-minute cap is easy to hit
+  // when describing 5 clips back-to-back) so the commentary stays scene-accurate
+  // instead of falling back to the filename.
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const res = await fetch(`${GEMINI_URL}?key=${key}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json().catch(() => ({}));
+      if ((res.status === 429 || res.status >= 500) && attempt < 2) {
+        const wait = 5000 * (attempt + 1);
+        console.log(`  Vision rate-limited (${res.status}); waiting ${wait / 1000}s and retrying...`);
+        await new Promise(r => setTimeout(r, wait));
+        continue;
+      }
+      if (!res.ok) { console.log(`  Vision unavailable (${res.status}); using generic commentary.`); return null; }
+      return (data.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join('').trim() || null;
+    } catch (err) {
+      if (attempt < 2) { await new Promise(r => setTimeout(r, 3000)); continue; }
+      console.log(`  Vision call failed (${(err.message || '').slice(0, 80)}); using generic commentary.`);
+      return null;
+    }
+  }
+  return null;
+}

@@ -9,12 +9,13 @@ import { fetchToolScreenshots } from './screenshots.js';
 import { generateConsumerContent } from './genres/consumer.js';
 import { generateRankingGameContent } from './genres/rankinggame.js';
 import { generateClipRanks } from './genres/clipranks.js';
-import { processViralClip, probeDuration } from './clip-processor.js';
+import { processViralClip, probeDuration, extractFrame } from './clip-processor.js';
+import { describeImage }     from './llm.js';
 import { recordSceneMotion } from './screencast.js';
 import { generateAudio }    from './tts.js';
 import { fetchSceneVideos, fetchClipsWithDuration, fetchRankFootage } from './pexels.js';
 import { prepareMusic }     from './music.js';
-import { renderVideo, renderSplitScreenVideo, renderSplitSludgeVideo, renderSilentKingsRanks, renderVersusVideo, renderRankingGame } from './renderer.js';
+import { renderVideo, renderSplitScreenVideo, renderSplitSludgeVideo, renderSilentKingsRanks, renderClipRanksNarrated, renderVersusVideo, renderRankingGame } from './renderer.js';
 import { uploadToYouTube }  from './uploader.js';
 import { sendDraftToTikTok, tiktokConfigured } from './tiktok.js';
 import {
@@ -22,7 +23,7 @@ import {
 } from './pre-upload-checks.js';
 import { addVideoToThemedPlaylist } from './yt-playlists.js';
 import { saveCrossPostPack } from './cross-post.js';
-import { readdirSync, existsSync, mkdirSync, unlinkSync } from 'fs';
+import { readdirSync, existsSync, mkdirSync, unlinkSync, renameSync, readFileSync } from 'fs';
 import { join, dirname, extname, basename } from 'path';
 import { fileURLToPath } from 'url';
 import { homedir } from 'os';
@@ -571,6 +572,31 @@ async function runRankingGame() {
 // captions, and render with the same near-invisible leaderboard + music + outro.
 // This is where the real funny footage lives — NO scraping/reposting of others'
 // clips, ever.
+// Extract the source creator handle from a downloaded clip's filename. These
+// arrive named "<handle>_<11charShortcode>.mp4" (Instagram/Reels export naming),
+// e.g. "stella.overboard_DYUD-HoB6Sr.mp4" -> "stella.overboard". Used ONLY to
+// credit the licensed/permitted source on screen + in the description.
+function creditHandle(filename) {
+  const base = basename(filename, extname(filename));
+  const m = base.match(/^(.+)_[A-Za-z0-9_-]{11}$/);
+  const handle = (m ? m[1] : base.split('_')[0]) || '';
+  return handle.replace(/[^A-Za-z0-9._]/g, '');
+}
+
+// Ask Gemini vision to describe what actually happens in a clip (from one still
+// frame) so the narrator's commentary matches the footage instead of guessing
+// from an opaque filename. Returns null on any failure (caller falls back).
+async function describeClip(framePath) {
+  try {
+    const b64 = readFileSync(framePath).toString('base64');
+    const prompt = 'This is one frame from a short funny animal/pet video. In ONE short sentence (max 15 words), say what animal it is and what it is doing that is funny or cute. Be concrete. No preamble, no quotes.';
+    const desc = await describeImage(b64, 'image/jpeg', prompt);
+    return desc ? desc.replace(/\s+/g, ' ').replace(/^["']|["']$/g, '').trim().slice(0, 140) : null;
+  } catch {
+    return null;
+  }
+}
+
 async function runClipRanks() {
   console.log('\n═══════════════════════════════════════');
   console.log('   Kings of Ranks — Clip Ranks (your clips)');
@@ -578,6 +604,7 @@ async function runClipRanks() {
 
   const CLIPS_PER_REEL = 5;
   const MAX_REELS = 4;
+  const CLIP_SECONDS = 12;   // every clip stays on screen ~12s (user: "around 12 seconds exactly")
   const exts = new Set(['.mp4', '.mov', '.webm', '.m4v', '.avi']);
   const all = existsSync(CLIPRANKS_DIR)
     ? readdirSync(CLIPRANKS_DIR).filter(f => !f.startsWith('.') && exts.has(extname(f).toLowerCase())).sort()
@@ -598,41 +625,102 @@ async function runClipRanks() {
   for (let r = 0; r < reels; r++) {
     const batch = all.slice(r * CLIPS_PER_REEL, r * CLIPS_PER_REEL + CLIPS_PER_REEL);
     console.log(`\n──────── Reel ${r + 1}/${reels} ────────`);
-    const descriptions = batch.map(f => basename(f, extname(f)).replace(/[-_]+/g, ' ').trim());
-    console.log(`  Clips: ${descriptions.join(' | ')}`);
 
-    // Crop each owned clip to 9:16 (their clip-processor).
-    const processed = batch.map((f, i) => {
+    // Crop each owned/licensed clip to 9:16 KEEPING its own audio, grab a frame,
+    // and have vision describe it so the narrator's commentary matches the video.
+    const processed = [];
+    const creditsBySrc = [];
+    const descriptions = [];
+    for (let i = 0; i < batch.length; i++) {
+      const f = batch[i];
+      const inPath = join(CLIPRANKS_DIR, f);
       const out = join(CLIPRANKS_OUT, `clip_${i}.mp4`);
-      processViralClip(join(CLIPRANKS_DIR, f), out, 0, 7);
-      return { path: `videos/clip_${i}.mp4`, duration: probeDuration(out) };
-    });
+      // Every clip stays on screen ~12s (see CLIP_SECONDS below). Trim the
+      // source to at most 12s; clips shorter than that loop to fill the window.
+      const trimLen = Math.min(CLIP_SECONDS, Math.max(3, probeDuration(inPath)));
+      processViralClip(inPath, out, 0, trimLen, true);
+      processed.push({ path: `videos/clip_${i}.mp4`, duration: probeDuration(out) });
+      creditsBySrc.push(creditHandle(f));
 
-    // Rank + add the commentary that makes each clip funnier.
+      // Space the vision calls out a little so we stay under Gemini's free
+      // per-minute cap (back-to-back calls were getting rate-limited).
+      if (i > 0) await new Promise(res => setTimeout(res, 3000));
+      let desc = null;
+      try {
+        const framePath = join(CLIPRANKS_OUT, `frame_${i}.jpg`);
+        extractFrame(inPath, framePath);
+        desc = await describeClip(framePath);
+      } catch { /* fall back to filename below */ }
+      descriptions.push(desc || basename(f, extname(f)).replace(/[-_]+/g, ' ').trim());
+      console.log(`  Clip ${i + 1} (@${creditsBySrc[i]}): ${descriptions[i]}`);
+    }
+
+    // Rank + write the narrator commentary (hook + a line per clip + outro).
     const content = await generateClipRanks(descriptions);
+    // QUALITY GATE: if the LLM was unavailable (e.g. Gemini quota) it returns a
+    // deterministic fallback whose labels are raw filenames — never upload that.
+    // Keep the clips in place so we can rebuild once the LLM is back.
+    if (content.usedFallback) {
+      console.log('  ✗ LLM unavailable — commentary fell back to filenames. NOT uploading a broken reel.');
+      console.log('    Clips kept. Add a GROQ_API_KEY (free) or wait for the Gemini quota to reset, then re-run.');
+      continue;
+    }
     content.genre = 'kingsranks';
     const N = content.items.length;
     const clips = content.items.map(it => processed[it.srcIndex]);
-    content.items = content.items.map((it, i) => ({ rank: N - i, label: it.label, caption: it.caption }));
-    if (clips.some(c => !c) || content.items.length !== CLIPS_PER_REEL) {
+    const credits = content.items.map(it => creditsBySrc[it.srcIndex]);
+    if (clips.some(c => !c) || N !== CLIPS_PER_REEL) {
       console.log('  ✗ Could not align this batch; leaving its clips in place, skipping.');
       continue;
     }
+
+    // Build the spoken narration: hook || line#5 … line#1 || outro.
+    const narrationStr = [content.hook, ...content.items.map(it => it.line), content.outro]
+      .map(s => (s || '').trim()).filter(Boolean).join(' || ');
+
+    // Reassign display ranks (#5 first … #1 last) + keep label/caption for overlays.
+    content.items = content.items.map((it, i) => ({ rank: N - i, label: it.label, caption: it.caption }));
     console.log(`  "${content.title}" — ${content.items.map(i => `#${i.rank} ${i.label}`).join(', ')}`);
+
+    // Credit the licensed sources in the description as well as on screen.
+    const uniqCredits = [...new Set(credits.filter(Boolean))];
+    if (uniqCredits.length) {
+      content.description = `${content.description || ''}\n\nClips via ${uniqCredits.map(h => '@' + h).join(', ')} — used with permission.`.trim();
+    }
+
+    // Every clip stays on screen for the same fixed window (~12s) so the pacing
+    // is consistent. The narrator speaks at the start; the rest is the clip
+    // playing out with its own audio. windows[0] = hook (default gap);
+    // windows[1..N] = each clip's on-screen seconds, in display order.
+    const windows = [null, ...clips.map(() => CLIP_SECONDS)];
+
+    // Narrator audio (edge-tts). If TTS fails, degrade to a silent render.
+    let audio = null;
+    try {
+      audio = await generateAudio(narrationStr, 'clipranks', { windows });
+      content.narration = narrationStr.replace(/\s*\|\|\s*/g, ' ').trim();
+      try { checkAudio(audio); } catch (e) { console.log(`  (audio check: ${e.message})`); }
+    } catch (e) {
+      console.log(`  Narration TTS failed (${(e.message || '').slice(0, 80)}); rendering without narrator.`);
+    }
 
     const musicPath = await prepareMusic('kingsranks');
     content.hasMusic = musicPath !== null;
-    const videoPath = await renderSilentKingsRanks(content, clips, content.hasMusic);
+
+    const videoPath = audio
+      ? await renderClipRanksNarrated(content, clips, credits, audio, content.hasMusic)
+      : await renderSilentKingsRanks(content, clips, content.hasMusic);
     checkRender(videoPath);
     await publish(content, videoPath);
 
-    // Delete the used clips so the folder stays clean — ONLY after a real upload.
+    // Delete the used clips after a successful upload so the folder stays clean
+    // for the next batch — the user's default template ("delete after u finish").
     if (process.env.UPLOAD === '1') {
       for (const f of batch) {
         try { unlinkSync(join(CLIPRANKS_DIR, f)); }
         catch (e) { console.log(`  (couldn't remove ${f}: ${e.message})`); }
       }
-      console.log(`  ✓ Reel ${r + 1} posted; its ${CLIPS_PER_REEL} used clips removed from the folder.`);
+      console.log(`  ✓ Reel ${r + 1} posted; its ${CLIPS_PER_REEL} used clips deleted from the folder.`);
     } else {
       console.log(`  ✓ Reel ${r + 1} rendered (UPLOAD!=1, so clips kept).`);
     }

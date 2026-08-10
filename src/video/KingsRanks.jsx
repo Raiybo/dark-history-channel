@@ -9,14 +9,35 @@ const GOLD = '#FFC83D';
 const CROSSFADE = 12;
 const IMAGE_RE = /\.(jpe?g|png|webp)$/i;
 
-// Shared timing: title card, then n equal item windows. Every overlay computes
-// the same active index from the absolute frame so the left leaderboard, the
-// background clip and the reveal all stay in lock-step.
-const timing = (frame, fps, durationInFrames, n) => {
-  const intro = Math.round(1.8 * fps);
-  const W = Math.floor((durationInFrames - intro) / Math.max(1, n));
-  const activeIndex = frame < intro ? -1 : Math.min(n - 1, Math.floor((frame - intro) / W));
-  return { intro, W, activeIndex };
+// Per-item on-screen window layout. In NARRATED mode the windows follow the
+// narrator's beats (each clip stays up exactly while its line is spoken); in
+// SILENT mode they're equal slices. Both produce {introFrames, starts[], ends[],
+// outroStart} so every overlay reads timing the same way.
+const computeLayout = (beats, n, fps, durationInFrames) => {
+  if (beats && beats.length >= n + 1) {
+    const lineBeats = beats.slice(1, 1 + n);              // beat 0 = hook, then one per item
+    const hasOutro = beats.length >= n + 2;
+    const introFrames = Math.round((lineBeats[0]?.startTime || 1.8) * fps);
+    const starts = lineBeats.map(b => Math.round((b.startTime || 0) * fps));
+    const outroStart = hasOutro
+      ? Math.round((beats[n + 1].startTime || durationInFrames / fps) * fps)
+      : durationInFrames - Math.round(1.9 * fps);
+    const ends = starts.map((s, i) => (i < n - 1 ? starts[i + 1] : outroStart));
+    return { introFrames, starts, ends, outroStart, narrated: true };
+  }
+  const introFrames = Math.round(1.8 * fps);
+  const W = Math.floor((durationInFrames - introFrames) / Math.max(1, n));
+  const starts = Array.from({ length: n }, (_, i) => introFrames + i * W);
+  const ends = starts.map((s, i) => (i < n - 1 ? starts[i + 1] : durationInFrames));
+  return { introFrames, starts, ends, outroStart: durationInFrames - Math.round(1.9 * fps), narrated: false };
+};
+
+const activeIndexFor = (frame, layout) => {
+  if (frame < layout.introFrames) return -1;
+  for (let i = 0; i < layout.starts.length; i++) {
+    if (frame < layout.ends[i]) return i;
+  }
+  return layout.starts.length - 1;   // during the outro, keep #1 highlighted
 };
 
 // A still photo with a slow Ken-Burns zoom so real subject photos feel like
@@ -32,42 +53,58 @@ const KenBurnsImage = ({ path }) => {
   );
 };
 
-// Fills its parent, LOOPING video so short stock clips never freeze
-// (OffthreadVideo has no loop prop in Remotion 4.x). clip = { path, duration }.
-const LoopedClip = ({ clip, fps }) => {
+// Fills its parent, LOOPING video so short clips never freeze (OffthreadVideo has
+// no loop prop in Remotion 4.x). clip = { path, duration }. When clipVolume > 0
+// the clip's OWN audio plays (the funny sounds) instead of being muted.
+const LoopedClip = ({ clip, fps, clipVolume = 0 }) => {
   if (!clip || !clip.path) return <div style={{ position: 'absolute', inset: 0, backgroundColor: '#0a0a12' }} />;
   if (IMAGE_RE.test(clip.path)) return <KenBurnsImage path={clip.path} />;
   const secs = Math.min(Math.max(clip.duration || 4, 1.5), 30);
   const loopFrames = Math.max(1, Math.floor(secs * fps) - 2);
   return (
     <Loop durationInFrames={loopFrames}>
-      <OffthreadVideo src={staticFile(clip.path)} muted playbackRate={1}
+      <OffthreadVideo src={staticFile(clip.path)} muted={clipVolume <= 0} volume={clipVolume} playbackRate={1}
         style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
     </Loop>
   );
 };
 
+// Small creator credit (bottom-right) — required attribution for licensed /
+// permitted clips so the source account is always visible on screen.
+const Credit = ({ handle }) => {
+  if (!handle) return null;
+  return (
+    <div style={{ position: 'absolute', bottom: 26, right: 22, pointerEvents: 'none', zIndex: 40 }}>
+      <span style={{ fontFamily, fontWeight: 700, fontSize: 22, letterSpacing: 0.5, color: 'rgba(255,255,255,0.82)', textShadow: '0 2px 8px rgba(0,0,0,0.98)' }}>
+        🎬 @{handle}
+      </span>
+    </div>
+  );
+};
+
 // Full-screen background clip for one item. Light scrims only — just enough on
-// the left for the slim leaderboard to read, and a soft bottom edge. The clip
-// stays the star of the frame.
-const ClipLayer = ({ clip, fps }) => {
+// the left for the slim leaderboard to read, and a soft bottom edge.
+const ClipLayer = ({ clip, fps, clipVolume, credit }) => {
   const frame = useCurrentFrame();
   const op = interpolate(frame, [0, CROSSFADE], [0, 1], { extrapolateRight: 'clamp' });
   return (
     <AbsoluteFill style={{ opacity: op }}>
-      <LoopedClip clip={clip} fps={fps} />
+      <LoopedClip clip={clip} fps={fps} clipVolume={clipVolume} />
       <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, rgba(0,0,0,0.42) 0%, rgba(0,0,0,0.12) 32%, rgba(0,0,0,0) 52%)', pointerEvents: 'none' }} />
-      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(0,0,0,0.4) 0%, transparent 14%, transparent 86%, rgba(0,0,0,0.5) 100%)', pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(0,0,0,0.4) 0%, transparent 14%, transparent 78%, rgba(0,0,0,0.62) 100%)', pointerEvents: 'none' }} />
+      <Credit handle={credit} />
     </AbsoluteFill>
   );
 };
 
-// Opening title card (first ~1.8s) — states the goal in plain words.
-const TitleCard = ({ text }) => {
+// Opening title card — states the goal in plain words. Fades out at the end of
+// the intro window (so it covers the whole spoken hook, no black gap before #5).
+const TitleCard = ({ text, introFrames }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const pop = spring({ frame, fps, config: { damping: 13, stiffness: 200, mass: 0.6 } });
-  const out = interpolate(frame, [fps * 1.3, fps * 1.7], [1, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
+  const fadeStart = Math.max(6, introFrames - 12);
+  const out = interpolate(frame, [fadeStart, introFrames], [1, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
   const words = (text || '').split(' ');
   return (
     <AbsoluteFill style={{ backgroundColor: 'rgba(4,3,10,0.82)', justifyContent: 'center', alignItems: 'center', opacity: out }}>
@@ -84,10 +121,50 @@ const TitleCard = ({ text }) => {
   );
 };
 
-// One row of the near-invisible left leaderboard. NO boxes/backgrounds — just
-// text with heavy shadow so the clip shows through everywhere. Only the active
-// row (gold, larger) and its caption stand out; locked rows are barely there.
-const Row = ({ item, state, pop }) => {
+// Kinetic spoken-word captions (bottom center) — the current narrated sentence,
+// with the word being spoken highlighted gold. Helps the huge share of viewers
+// who watch muted. Sits low + centered, clear of the left leaderboard.
+const Captions = ({ wordTimings = [] }) => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  if (!wordTimings.length) return null;
+  const t = frame / fps;
+
+  // Group words by sentence index and show the sentence currently being spoken.
+  const segs = new Map();
+  for (const w of wordTimings) {
+    if (!segs.has(w.seg)) segs.set(w.seg, []);
+    segs.get(w.seg).push(w);
+  }
+  const segIds = [...segs.keys()].sort((a, b) => a - b);
+  let activeSeg = -1;
+  for (const s of segIds) { if (t >= (segs.get(s)[0].start || 0)) activeSeg = s; }
+  if (activeSeg < 0) return null;
+  const group = segs.get(activeSeg);
+  const segEnd = group[group.length - 1].end || 0;
+  if (t > segEnd + 0.35) return null;   // clear during the breath before the next line
+
+  return (
+    <div style={{ position: 'absolute', bottom: 300, left: 70, right: 70, display: 'flex', justifyContent: 'center', zIndex: 25, pointerEvents: 'none' }}>
+      <div style={{ maxWidth: 920, textAlign: 'center' }}>
+        {group.map((w, i) => {
+          const active = t >= w.start && t < w.end;
+          return (
+            <span key={i} style={{ fontFamily, fontWeight: 900, fontSize: 46, lineHeight: 1.18, letterSpacing: -0.5, textTransform: 'uppercase', color: active ? GOLD : '#fff', textShadow: '0 3px 14px rgba(0,0,0,0.98), 0 0 6px rgba(0,0,0,0.92)', marginRight: 13, display: 'inline-block' }}>
+              {w.word}
+            </span>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// One row of the near-invisible left leaderboard. NO boxes — just text with a
+// heavy shadow so the clip shows through. Only the active row (gold, larger)
+// stands out; locked rows are barely there. In narrated mode the small caption
+// line is hidden (the narrator + spoken captions carry the joke).
+const Row = ({ item, state, pop, narrated }) => {
   const active = state === 'active';
   const revealed = state !== 'locked';
   const isWinner = item.rank === 1;
@@ -103,7 +180,7 @@ const Row = ({ item, state, pop }) => {
         <div style={{ fontFamily, fontWeight: 800, fontSize: active ? 36 : 25, lineHeight: 1.04, textTransform: 'uppercase', color: active ? GOLD : '#fff', textShadow: shadow, whiteSpace: active ? 'normal' : 'nowrap', overflow: 'hidden', textOverflow: active ? 'clip' : 'ellipsis' }}>
           {revealed ? item.label : '• • •'}
         </div>
-        {active && (item.caption || item.verdict) ? (
+        {!narrated && active && (item.caption || item.verdict) ? (
           <div style={{ fontFamily, fontWeight: 700, fontSize: 24, lineHeight: 1.1, color: '#fff', textShadow: shadow, marginTop: 3 }}>{item.caption || item.verdict}</div>
         ) : null}
       </div>
@@ -112,28 +189,28 @@ const Row = ({ item, state, pop }) => {
 };
 
 // Slim persistent leaderboard — ranks 1 (top) to 5 (bottom), kept on the left.
-// Compact and semi-transparent so the clip stays visible; numbers show the whole
-// time, each name hides ("• • •") until the countdown reaches it.
-const Leaderboard = ({ items }) => {
+// Numbers show the whole time; each name hides ("• • •") until the countdown
+// reaches it. Timing comes from the shared layout.
+const Leaderboard = ({ items, layout }) => {
   const frame = useCurrentFrame();
-  const { fps, durationInFrames } = useVideoConfig();
+  const { fps } = useVideoConfig();
   const n = Math.max(1, items.length);
-  const { intro, W, activeIndex } = timing(frame, fps, durationInFrames, n);
+  const activeIndex = activeIndexFor(frame, layout);
   const rows = [...items].sort((a, b) => a.rank - b.rank); // #1 top ... #5 bottom
   return (
     <div style={{ position: 'absolute', left: 30, top: 240, bottom: 240, width: 540, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 18, zIndex: 20 }}>
       {rows.map((item) => {
         const order = n - item.rank; // rank 5 revealed first (order 0) ... rank 1 last
         const state = activeIndex === order ? 'active' : (activeIndex >= order ? 'done' : 'locked');
-        const pop = state === 'active' ? spring({ frame: frame - (intro + order * W), fps, config: { damping: 14, stiffness: 200, mass: 0.6 } }) : 0;
-        return <Row key={item.rank} item={item} state={state} pop={pop} />;
+        const pop = state === 'active' ? spring({ frame: frame - layout.starts[order], fps, config: { damping: 14, stiffness: 200, mass: 0.6 } }) : 0;
+        return <Row key={item.rank} item={item} state={state} pop={pop} narrated={layout.narrated} />;
       })}
     </div>
   );
 };
 
-// End-card CTA that pops in over the #1 reveal — drives the follow that grows
-// a fresh channel. Sits bottom-centre so it never covers the left leaderboard.
+// End-card CTA that pops in over the #1 reveal — drives the follow that grows a
+// fresh channel. Bottom-centre so it never covers the left leaderboard.
 const Outro = () => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -148,36 +225,51 @@ const Outro = () => {
   );
 };
 
-// Kings of Ranks — SILENT ranking, no voiceover: upbeat music + a slim, persistent
-// left leaderboard (ranks 1-5) over real photos of the actual subjects (Wikimedia /
-// public domain) with generic stock as fallback. items are in countdown display
-// order (#5 -> #1) and aligned by index with clips.
+// Kings of Ranks ranking. SILENT mode = music + captions only (stock formats).
+// NARRATED mode (clip ranks) = each clip's own audio + one quiet music bed + a
+// narrator reacting to every clip + kinetic spoken captions + creator credits.
+// items are in countdown display order (#5 -> #1), aligned by index with clips.
 export const KingsRanks = ({
-  items = [], clips = [], titleCard = '', channelName = 'Kings of Ranks', logo = null, hasMusic = false,
+  items = [], clips = [], credits = [], titleCard = '', channelName = 'Kings of Ranks',
+  logo = null, hasMusic = false,
+  narration = '', audioDuration = 0, wordTimings = [], beats = [],
 }) => {
   const { durationInFrames, fps } = useVideoConfig();
   const n = Math.max(1, items.length);
-  const intro = Math.round(1.8 * fps);
-  const W = Math.floor((durationInFrames - intro) / n);
+  const layout = computeLayout(beats, n, fps, durationInFrames);
+  const narrated = layout.narrated;
+  const clipVolume = narrated ? 0.55 : 0;                 // clip's own audio, ducked a touch so the narrator cuts through
+  const narratorVolume = 1.15;                            // narrator sits clearly on top of the mix
+  const musicVolume = narrated ? 0.06 : 0.62;             // one faint bed under narrated; full under silent
 
   return (
     <AbsoluteFill style={{ backgroundColor: '#000' }}>
       {/* background clip per item */}
       {items.map((item, i) => {
-        const from = intro + i * W;
+        const from = layout.starts[i];
         const isLast = i === n - 1;
-        const dur = isLast ? durationInFrames - from : W + CROSSFADE;
+        const dur = isLast ? (durationInFrames - from) : (layout.ends[i] - from + CROSSFADE);
         return (
-          <Sequence key={i} from={from} durationInFrames={dur}>
-            <ClipLayer clip={clips[i]} fps={fps} />
+          <Sequence key={i} from={from} durationInFrames={Math.max(1, dur)}>
+            <ClipLayer clip={clips[i]} fps={fps} clipVolume={clipVolume} credit={credits[i]} />
           </Sequence>
         );
       })}
 
       {/* slim persistent left leaderboard */}
-      <Leaderboard items={items} />
+      <Leaderboard items={items} layout={layout} />
 
-      {hasMusic && <Audio src={staticFile('music/background.mp3')} volume={0.62} loop />}
+      {/* narrator beats — one Audio per beat, timed by beat.startTime */}
+      {narrated && beats.map((b, i) => (
+        <Sequence key={`beat-${i}`} from={Math.round((b.startTime || 0) * fps)} durationInFrames={Math.round((b.duration || 0) * fps) + 6}>
+          <Audio src={staticFile(`audio/${b.file}`)} volume={narratorVolume} />
+        </Sequence>
+      ))}
+
+      {/* spoken-word captions */}
+      {narrated && <Captions wordTimings={wordTimings} />}
+
+      {hasMusic && <Audio src={staticFile('music/background.mp3')} volume={musicVolume} loop />}
 
       {/* crown watermark — top safe zone */}
       <div style={{ position: 'absolute', top: 54, left: 0, right: 0, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 10, pointerEvents: 'none', zIndex: 30 }}>
@@ -186,11 +278,11 @@ export const KingsRanks = ({
       </div>
 
       {/* title card on top during the intro */}
-      <Sequence from={0} durationInFrames={intro + 15}>
-        <TitleCard text={titleCard} />
+      <Sequence from={0} durationInFrames={layout.introFrames + 6}>
+        <TitleCard text={titleCard} introFrames={layout.introFrames} />
       </Sequence>
 
-      <Sequence from={durationInFrames - Math.round(1.9 * fps)}>
+      <Sequence from={layout.outroStart}>
         <Outro />
       </Sequence>
     </AbsoluteFill>
