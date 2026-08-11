@@ -160,3 +160,40 @@ export async function describeImage(base64, mimeType, prompt, { maxTokens = 200 
   }
   return null;
 }
+
+// Vision over MULTIPLE frames of one clip at once — lets the model both describe
+// what's happening AND point to where the action/payoff is (so we can trim the
+// dead seconds and keep the funny moment). base64Array = frames in time order.
+// Same retry/fallback behavior as describeImage; returns raw text (JSON) or null.
+export async function describeImages(base64Array, mimeType, prompt, { maxTokens = 320 } = {}) {
+  const key = process.env.GEMINI_API_KEY;
+  if (!key || !base64Array?.length) return null;
+  const body = {
+    contents: [{ parts: [
+      { text: prompt },
+      ...base64Array.map(b => ({ inline_data: { mime_type: mimeType || 'image/jpeg', data: b } })),
+    ] }],
+    generationConfig: { temperature: 0.4, maxOutputTokens: maxTokens, thinkingConfig: { thinkingBudget: 0 } },
+  };
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const res = await fetch(`${GEMINI_URL}?key=${key}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+      });
+      const data = await res.json().catch(() => ({}));
+      if ((res.status === 429 || res.status >= 500) && attempt < 2) {
+        const wait = 5000 * (attempt + 1);
+        console.log(`  Vision rate-limited (${res.status}); waiting ${wait / 1000}s and retrying...`);
+        await new Promise(r => setTimeout(r, wait));
+        continue;
+      }
+      if (!res.ok) { console.log(`  Vision unavailable (${res.status}); using filename fallback.`); return null; }
+      return (data.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join('').trim() || null;
+    } catch (err) {
+      if (attempt < 2) { await new Promise(r => setTimeout(r, 3000)); continue; }
+      console.log(`  Vision call failed (${(err.message || '').slice(0, 80)}); using filename fallback.`);
+      return null;
+    }
+  }
+  return null;
+}

@@ -14,16 +14,16 @@ const IMAGE_RE = /\.(jpe?g|png|webp)$/i;
 // SILENT mode they're equal slices. Both produce {introFrames, starts[], ends[],
 // outroStart} so every overlay reads timing the same way.
 const computeLayout = (beats, n, fps, durationInFrames) => {
-  if (beats && beats.length >= n + 1) {
-    const lineBeats = beats.slice(1, 1 + n);              // beat 0 = hook, then one per item
-    const hasOutro = beats.length >= n + 2;
-    const introFrames = Math.round((lineBeats[0]?.startTime || 1.8) * fps);
-    const starts = lineBeats.map(b => Math.round((b.startTime || 0) * fps));
+  if (beats && beats.length >= n) {
+    // NARRATED: beats = [line_0 … line_{n-1}, (outro)]. No hook, no title card —
+    // the first clip starts at frame 0 and the narration begins immediately.
+    const hasOutro = beats.length >= n + 1;
+    const starts = beats.slice(0, n).map(b => Math.round((b.startTime || 0) * fps));
     const outroStart = hasOutro
-      ? Math.round((beats[n + 1].startTime || durationInFrames / fps) * fps)
+      ? Math.round((beats[n].startTime || durationInFrames / fps) * fps)
       : durationInFrames - Math.round(1.9 * fps);
     const ends = starts.map((s, i) => (i < n - 1 ? starts[i + 1] : outroStart));
-    return { introFrames, starts, ends, outroStart, narrated: true };
+    return { introFrames: 0, starts, ends, outroStart, narrated: true };
   }
   const introFrames = Math.round(1.8 * fps);
   const W = Math.floor((durationInFrames - introFrames) / Math.max(1, n));
@@ -84,9 +84,11 @@ const Credit = ({ handle }) => {
 
 // Full-screen background clip for one item. Light scrims only — just enough on
 // the left for the slim leaderboard to read, and a soft bottom edge.
-const ClipLayer = ({ clip, fps, clipVolume, credit }) => {
+const ClipLayer = ({ clip, fps, clipVolume, credit, isFirst }) => {
   const frame = useCurrentFrame();
-  const op = interpolate(frame, [0, CROSSFADE], [0, 1], { extrapolateRight: 'clamp' });
+  // The very first clip is at full opacity from frame 0 (no fade-from-black),
+  // so the video opens straight on footage — never a black screen.
+  const op = isFirst ? 1 : interpolate(frame, [0, CROSSFADE], [0, 1], { extrapolateRight: 'clamp' });
   return (
     <AbsoluteFill style={{ opacity: op }}>
       <LoopedClip clip={clip} fps={fps} clipVolume={clipVolume} />
@@ -251,7 +253,7 @@ export const KingsRanks = ({
         const dur = isLast ? (durationInFrames - from) : (layout.ends[i] - from + CROSSFADE);
         return (
           <Sequence key={i} from={from} durationInFrames={Math.max(1, dur)}>
-            <ClipLayer clip={clips[i]} fps={fps} clipVolume={clipVolume} credit={credits[i]} />
+            <ClipLayer clip={clips[i]} fps={fps} clipVolume={clipVolume} credit={credits[i]} isFirst={i === 0 && narrated} />
           </Sequence>
         );
       })}
@@ -277,10 +279,12 @@ export const KingsRanks = ({
         <span style={{ fontFamily, fontWeight: 900, fontSize: 22, letterSpacing: 5, textTransform: 'uppercase', color: GOLD, opacity: 0.85, textShadow: '0 0 18px rgba(0,0,0,0.95)' }}>{channelName}</span>
       </div>
 
-      {/* title card on top during the intro */}
-      <Sequence from={0} durationInFrames={layout.introFrames + 6}>
-        <TitleCard text={titleCard} introFrames={layout.introFrames} />
-      </Sequence>
+      {/* title card only in SILENT mode; narrated opens straight on the clip */}
+      {!narrated && (
+        <Sequence from={0} durationInFrames={layout.introFrames + 6}>
+          <TitleCard text={titleCard} introFrames={layout.introFrames} />
+        </Sequence>
+      )}
 
       <Sequence from={layout.outroStart}>
         <Outro />

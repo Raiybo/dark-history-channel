@@ -10,7 +10,7 @@ import { generateConsumerContent } from './genres/consumer.js';
 import { generateRankingGameContent } from './genres/rankinggame.js';
 import { generateClipRanks } from './genres/clipranks.js';
 import { processViralClip, probeDuration, extractFrame } from './clip-processor.js';
-import { describeImage }     from './llm.js';
+import { describeImage, describeImages } from './llm.js';
 import { recordSceneMotion } from './screencast.js';
 import { generateAudio }    from './tts.js';
 import { fetchSceneVideos, fetchClipsWithDuration, fetchRankFootage } from './pexels.js';
@@ -635,24 +635,46 @@ async function runClipRanks() {
       const f = batch[i];
       const inPath = join(CLIPRANKS_DIR, f);
       const out = join(CLIPRANKS_OUT, `clip_${i}.mp4`);
-      // Every clip stays on screen ~12s (see CLIP_SECONDS below). Trim the
-      // source to at most 12s; clips shorter than that loop to fill the window.
-      const trimLen = Math.min(CLIP_SECONDS, Math.max(3, probeDuration(inPath)));
-      processViralClip(inPath, out, 0, trimLen, true);
-      processed.push({ path: `videos/clip_${i}.mp4`, duration: probeDuration(out) });
+      const origDur = probeDuration(inPath);
       creditsBySrc.push(creditHandle(f));
 
-      // Space the vision calls out a little so we stay under Gemini's free
-      // per-minute cap (back-to-back calls were getting rate-limited).
-      if (i > 0) await new Promise(res => setTimeout(res, 3000));
-      let desc = null;
+      // Space vision calls a little (free per-minute cap).
+      if (i > 0) await new Promise(res => setTimeout(res, 2500));
+
+      // Sample several frames across the clip so vision can (a) describe the
+      // ACTUAL plot/funny moment (any topic) and (b) say WHERE it is — so we cut
+      // the dead seconds and land the ~12s window right on that moment.
+      let desc = null, startSec = 0;
       try {
-        const framePath = join(CLIPRANKS_OUT, `frame_${i}.jpg`);
-        extractFrame(inPath, framePath);
-        desc = await describeClip(framePath);
-      } catch { /* fall back to filename below */ }
+        const nF = origDur > 30 ? 6 : (origDur > 15 ? 5 : 4);
+        const b64s = [], times = [];
+        for (let k = 0; k < nF; k++) {
+          const t = +(origDur * (k + 0.5) / nF).toFixed(1);
+          const fp = join(CLIPRANKS_OUT, `frame_${i}_${k}.jpg`);
+          extractFrame(inPath, fp, t);
+          b64s.push(readFileSync(fp).toString('base64'));
+          times.push(t);
+        }
+        const vprompt = `These are ${nF} still frames from ONE short video, in time order at ${times.map(t => t + 's').join(', ')}. The video can be about ANYTHING. Reply ONLY as JSON: {"desc":"one concrete sentence — what is happening and what is funny or interesting","start": <number, the second to START a ${CLIP_SECONDS}-second clip so it captures the main action / funny moment / payoff>}. No preamble.`;
+        const raw = await describeImages(b64s, 'image/jpeg', vprompt);
+        if (raw) {
+          let o = null;
+          try { o = JSON.parse(raw); } catch { const m = raw.match(/\{[\s\S]*\}/); if (m) try { o = JSON.parse(m[0]); } catch {} }
+          if (o) {
+            desc = (o.desc || '').toString().replace(/\s+/g, ' ').trim().slice(0, 160) || null;
+            const s = Number(o.start);
+            if (Number.isFinite(s)) startSec = s;
+          }
+        }
+      } catch { /* fall back to filename + start 0 */ }
+
+      // Trim a CLIP_SECONDS window onto the action; clamp so a full window remains.
+      const trimLen = Math.min(CLIP_SECONDS, Math.max(3, origDur));
+      startSec = Math.max(0, Math.min(startSec, Math.max(0, origDur - trimLen)));
+      processViralClip(inPath, out, startSec, trimLen, true);
+      processed.push({ path: `videos/clip_${i}.mp4`, duration: probeDuration(out) });
       descriptions.push(desc || basename(f, extname(f)).replace(/[-_]+/g, ' ').trim());
-      console.log(`  Clip ${i + 1} (@${creditsBySrc[i]}): ${descriptions[i]}`);
+      console.log(`  Clip ${i + 1} (@${creditsBySrc[i]}) trim@${startSec}s: ${descriptions[i]}`);
     }
 
     // Rank + write the narrator commentary (hook + a line per clip + outro).
@@ -674,8 +696,10 @@ async function runClipRanks() {
       continue;
     }
 
-    // Build the spoken narration: hook || line#5 … line#1 || outro.
-    const narrationStr = [content.hook, ...content.items.map(it => it.line), content.outro]
+    // Begin DIRECTLY on the first clip with its narration — NO hook, NO title
+    // card, no black screen (the leaderboard already signals it's a ranking).
+    // line#5 … line#1 || outro.
+    const narrationStr = [...content.items.map(it => it.line), content.outro]
       .map(s => (s || '').trim()).filter(Boolean).join(' || ');
 
     // Reassign display ranks (#5 first … #1 last) + keep label/caption for overlays.
@@ -692,7 +716,7 @@ async function runClipRanks() {
     // is consistent. The narrator speaks at the start; the rest is the clip
     // playing out with its own audio. windows[0] = hook (default gap);
     // windows[1..N] = each clip's on-screen seconds, in display order.
-    const windows = [null, ...clips.map(() => CLIP_SECONDS)];
+    const windows = clips.map(() => CLIP_SECONDS);
 
     // Narrator audio (edge-tts). If TTS fails, degrade to a silent render.
     let audio = null;

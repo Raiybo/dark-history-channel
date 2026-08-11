@@ -24,10 +24,10 @@ export async function generateClipRanks(descriptions) {
   const n = descriptions.length;
   const list = descriptions.map((d, i) => `${i + 1}. ${d}`).join('\n');
 
-  const prompt = `A creator has ${n} short FUNNY clips for a "Top ${n}" ranked countdown Shorts video WITH A NARRATOR who reacts to each clip out loud. Here they are (number + short description):
+  const prompt = `A creator has ${n} short clips (ANY topic — animals, people, sports, food, fails, oddly satisfying, whatever) for a "Top ${n}" ranked countdown Shorts video WITH A NARRATOR who reacts to each clip out loud. Each description says what actually happens in that clip:
 ${list}
 
-Rank them from FUNNIEST (#1) down. For EACH clip write the narrator's spoken commentary — the JOKE, in a punchy comedic-commentator voice: react to what's happening, the subject's inner monologue, or a relatable human parallel. Deadpan and short. Wholesome only. Examples of the vibe: "Number five thinks gravity is optional. It is not." / "He planned this for weeks. Respect." / "This cat has zero regrets and it shows."
+Rank them #1 (most entertaining / funniest / most jaw-dropping) down. For EACH clip write the narrator's spoken commentary that captures the ACTUAL plot or funny moment of THAT clip — a punchy comedic-commentator voice: react to what's happening, the subject's inner monologue, or a relatable human parallel. Deadpan and short. Adapt to whatever the clip is (don't assume it's about pets). Wholesome only. Examples of the vibe: "Number five thinks gravity is optional. It is not." / "He planned this for weeks. Respect." / "She had no idea the camera was on."
 
 Return ONLY valid JSON, no markdown:
 {
