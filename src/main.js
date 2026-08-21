@@ -716,7 +716,9 @@ async function runClipRanks() {
     // is consistent. The narrator speaks at the start; the rest is the clip
     // playing out with its own audio. windows[0] = hook (default gap);
     // windows[1..N] = each clip's on-screen seconds, in display order.
-    const windows = clips.map(() => CLIP_SECONDS);
+    // Cap each clip's window at its OWN length so short clips never loop/replay
+    // (a 7s clip in a 12s window played twice). Longer clips still cap at ~12s.
+    const windows = clips.map(c => Math.min(CLIP_SECONDS, c.duration));
 
     // Narrator audio (edge-tts). If TTS fails, degrade to a silent render.
     let audio = null;
