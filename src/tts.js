@@ -169,6 +169,13 @@ export async function generateAudio(narration, genre = 'didyouknow', { windows =
     }
   }
 
-  console.log(`  Total duration: ${cursor.toFixed(1)}s (with ${texts.length - 1} gap(s))`);
-  return { beats, duration: cursor, wordTimings };
+  // Total timeline length = the END of the last beat to finish, NOT the cursor.
+  // The cursor sits at the START of the final beat (the loop never advances past
+  // it), so returning `cursor` would let the renderer cut the last beat off — for
+  // clip-ranks that silenced the "make sure to subscribe" outro (both the spoken
+  // line and the on-screen SUBSCRIBE badge). Take the max end across all beats so
+  // the closer always plays out in full.
+  const duration = beats.reduce((m, b) => Math.max(m, (b.startTime || 0) + (b.duration || 0)), cursor);
+  console.log(`  Total duration: ${duration.toFixed(1)}s (with ${texts.length - 1} gap(s))`);
+  return { beats, duration, wordTimings };
 }

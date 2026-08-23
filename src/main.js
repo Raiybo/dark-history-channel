@@ -689,6 +689,27 @@ async function runClipRanks() {
     }
     content.genre = 'kingsranks';
     const N = content.items.length;
+
+    // Optional: pin one clip to play FIRST (display index 0 = shown first),
+    // matching FIRST_CLIP against each clip's vision description (e.g. "tiger").
+    const pin = (process.env.FIRST_CLIP || '').trim().toLowerCase();
+    if (pin) {
+      const pi = content.items.findIndex(it => (descriptions[it.srcIndex] || '').toLowerCase().includes(pin));
+      if (pi > 0) { content.items.unshift(content.items.splice(pi, 1)[0]); console.log(`  Pinned "${pin}" clip to play first.`); }
+      else if (pi === 0) console.log(`  "${pin}" clip already plays first.`);
+      else console.log(`  (no clip matched FIRST_CLIP="${pin}"; keeping ranked order)`);
+    }
+
+    // Always end the narration with the subscribe CTA.
+    {
+      let out = (content.outro || '').trim();
+      if (!/make sure to subscribe/i.test(out)) {
+        out = out.replace(/[.!?]+\s*$/, '');
+        out = out ? `${out}. Make sure to subscribe.` : 'Make sure to subscribe.';
+      }
+      content.outro = out;
+    }
+
     const clips = content.items.map(it => processed[it.srcIndex]);
     const credits = content.items.map(it => creditsBySrc[it.srcIndex]);
     if (clips.some(c => !c) || N !== CLIPS_PER_REEL) {

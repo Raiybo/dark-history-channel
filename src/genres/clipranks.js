@@ -38,7 +38,7 @@ Return ONLY valid JSON, no markdown:
     {"clip": <the clip NUMBER above>, "label": "2-4 word funny name", "caption": "tiny on-screen tag under 30 chars", "line": "the narrator's spoken commentary for THIS clip, 6-16 words, the joke"}
     // exactly ${n} items, ordered from the LEAST funny (shown FIRST) up to the FUNNIEST (#1, shown LAST)
   ],
-  "outro": "the narrator's spoken closer, ONE sentence, tell them to subscribe for daily ranks (6-14 words). No emojis.",
+  "outro": "the narrator's spoken closer, ONE short sentence that ENDS with the exact words 'make sure to subscribe' (6-14 words). No emojis.",
   "tags": ["6 funny tags"],
   "description": "2 fun sentences, counting down to the funniest, ending with a question. No hashtags.",
   "pinned_comment": "one short funny question ending with 👇"

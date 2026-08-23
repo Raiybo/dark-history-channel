@@ -56,17 +56,19 @@ const KenBurnsImage = ({ path }) => {
 // Fills its parent, LOOPING video so short clips never freeze (OffthreadVideo has
 // no loop prop in Remotion 4.x). clip = { path, duration }. When clipVolume > 0
 // the clip's OWN audio plays (the funny sounds) instead of being muted.
-const LoopedClip = ({ clip, fps, clipVolume = 0 }) => {
+// `loop=false` plays the clip once and then HOLDS its last frame — used for the
+// #1 clip so it freezes (never visibly replays) under the SUBSCRIBE outro.
+const LoopedClip = ({ clip, fps, clipVolume = 0, loop = true }) => {
   if (!clip || !clip.path) return <div style={{ position: 'absolute', inset: 0, backgroundColor: '#0a0a12' }} />;
   if (IMAGE_RE.test(clip.path)) return <KenBurnsImage path={clip.path} />;
+  const video = (
+    <OffthreadVideo src={staticFile(clip.path)} muted={clipVolume <= 0} volume={clipVolume} playbackRate={1}
+      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+  );
+  if (!loop) return video;   // play once, then Remotion holds the final frame
   const secs = Math.min(Math.max(clip.duration || 4, 1.5), 30);
   const loopFrames = Math.max(1, Math.floor(secs * fps) - 2);
-  return (
-    <Loop durationInFrames={loopFrames}>
-      <OffthreadVideo src={staticFile(clip.path)} muted={clipVolume <= 0} volume={clipVolume} playbackRate={1}
-        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-    </Loop>
-  );
+  return <Loop durationInFrames={loopFrames}>{video}</Loop>;
 };
 
 // Small creator credit (bottom-right) — required attribution for licensed /
@@ -84,14 +86,14 @@ const Credit = ({ handle }) => {
 
 // Full-screen background clip for one item. Light scrims only — just enough on
 // the left for the slim leaderboard to read, and a soft bottom edge.
-const ClipLayer = ({ clip, fps, clipVolume, credit, isFirst }) => {
+const ClipLayer = ({ clip, fps, clipVolume, credit, isFirst, loop = true }) => {
   const frame = useCurrentFrame();
   // The very first clip is at full opacity from frame 0 (no fade-from-black),
   // so the video opens straight on footage — never a black screen.
   const op = isFirst ? 1 : interpolate(frame, [0, CROSSFADE], [0, 1], { extrapolateRight: 'clamp' });
   return (
     <AbsoluteFill style={{ opacity: op }}>
-      <LoopedClip clip={clip} fps={fps} clipVolume={clipVolume} />
+      <LoopedClip clip={clip} fps={fps} clipVolume={clipVolume} loop={loop} />
       <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, rgba(0,0,0,0.42) 0%, rgba(0,0,0,0.12) 32%, rgba(0,0,0,0) 52%)', pointerEvents: 'none' }} />
       <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(0,0,0,0.4) 0%, transparent 14%, transparent 78%, rgba(0,0,0,0.62) 100%)', pointerEvents: 'none' }} />
       <Credit handle={credit} />
@@ -253,7 +255,10 @@ export const KingsRanks = ({
         const dur = isLast ? (durationInFrames - from) : (layout.ends[i] - from + CROSSFADE);
         return (
           <Sequence key={i} from={from} durationInFrames={Math.max(1, dur)}>
-            <ClipLayer clip={clips[i]} fps={fps} clipVolume={clipVolume} credit={credits[i]} isFirst={i === 0 && narrated} />
+            {/* The #1 clip's window runs a few seconds past its length (the outro
+                CTA holds over it) — freeze its last frame instead of looping so
+                it never visibly replays. Earlier clips still loop as a safety net. */}
+            <ClipLayer clip={clips[i]} fps={fps} clipVolume={clipVolume} credit={credits[i]} isFirst={i === 0 && narrated} loop={!(isLast && narrated)} />
           </Sequence>
         );
       })}

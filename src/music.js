@@ -25,18 +25,17 @@ const TRACKS = {
     `${B}/Killers.mp3`,            // punchy, energetic
     `${B}/Exit%20the%20Premises.mp3`, // fast, urgent
   ],
-  // Kings of Ranks — MODERN, energetic beds for the "Top 5 funniest animals"
-  // countdown (NOT the old goofy polka/cartoon tracks). Upbeat electronic / house /
-  // beat-driven so it feels current. Royalty-free (Kevin MacLeod, CC-BY) — the best
-  // we can legally BAKE into an auto-uploaded MP4; actual chart/TikTok songs would
-  // get Content-ID claimed. All URL-verified 200. Shuffled per run.
+  // Kings of Ranks — MELLOW, JAZZY beds (a "Golden Brown"-style vibe: warm,
+  // laid-back, slightly wistful jazz) per the channel owner's request. Royalty-
+  // free (Kevin MacLeod, CC-BY) — the best we can legally BAKE into an auto-
+  // uploaded MP4; the actual Stranglers track would get Content-ID claimed.
+  // All URL-verified 200. Shuffled per run.
   kingsranks: [
-    `${B}/Werq.mp3`,                // driving house energy
-    `${B}/The%20Complex.mp3`,       // sleek electronic
-    `${B}/Voxel%20Revolution.mp3`,  // punchy, modern electronic
-    `${B}/Take%20the%20Lead.mp3`,   // confident, upbeat
-    `${B}/Ready%20Aim%20Fire.mp3`,  // fast, energetic
-    `${B}/Rollin%20at%205.mp3`,     // laid-back hip-hop groove
+    `${B}/Bossa%20Antigua.mp3`,     // smooth jazzy bossa nova, mellow
+    `${B}/Vibe%20Ace.mp3`,          // laid-back jazzy, vibraphone warmth
+    `${B}/Sidewalk%20Shade.mp3`,    // relaxed café jazz
+    `${B}/Amazing%20Plan.mp3`,      // light, wistful jazz
+    `${B}/Almost%20New.mp3`,        // mellow jazz piano
   ],
   // "Have you ever thought…" comparison — energetic, curious, upbeat electronic
   // (not goofy, not scary). All URL-verified 200. Shuffled per run.
