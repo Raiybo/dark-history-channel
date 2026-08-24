@@ -131,62 +131,120 @@ export function buildYouTubeClient() {
   return google.youtube({ version: 'v3', auth: oauth2Client });
 }
 
+// If a network error (EPIPE etc.) kills an upload mid-stream, YouTube can be left
+// holding a TRUNCATED file — a video stuck "processing" with zero duration that
+// never plays (this is exactly how the tiger short C0FeJumowpU got corrupted).
+// Before we retry, find that partial by its (unique-per-run) title among the
+// channel's most recent uploads and delete it — but ONLY if it looks corrupt
+// (no/zero duration), so we never touch a genuinely good video. Best-effort.
+async function cleanupTruncatedUpload(youtube, title) {
+  try {
+    const ch = await youtube.channels.list({ part: ['contentDetails'], mine: true });
+    const uploads = ch.data.items?.[0]?.contentDetails?.relatedPlaylists?.uploads;
+    if (!uploads) return;
+    const pl = await youtube.playlistItems.list({ part: ['snippet', 'contentDetails'], playlistId: uploads, maxResults: 5 });
+    for (const it of pl.data.items || []) {
+      if ((it.snippet?.title || '').trim() !== (title || '').trim()) continue;
+      const id = it.contentDetails?.videoId || it.snippet?.resourceId?.videoId;
+      if (!id) continue;
+      const { data } = await youtube.videos.list({ part: ['contentDetails', 'status'], id: [id] });
+      const v = data.items?.[0];
+      const dur = v?.contentDetails?.duration;
+      const corrupt = !dur || dur === 'P0D';   // truncated uploads report zero/no duration
+      if (corrupt) {
+        await youtube.videos.delete({ id });
+        console.log(`  Cleaned up truncated partial upload ${id} (title match, zero duration).`);
+      }
+      return;
+    }
+  } catch (err) {
+    console.log(`  (partial-upload cleanup skipped: ${(err.message || err).toString().slice(0, 100)})`);
+  }
+}
+
 export async function uploadToYouTube(script, videoPath) {
   const youtube = buildYouTubeClient();
   const fileSize = statSync(videoPath).size;
 
-  console.log(`  Uploading ${(fileSize / 1024 / 1024).toFixed(1)}MB to YouTube...`);
-
-  const response = await youtube.videos.insert({
-    part: ['snippet', 'status'],
-    requestBody: {
-      snippet: {
-        title: script.title,
-        description: `${buildHashtags(script.tags, script.genre)}\n\n${(script.description || '').trim()}${script.hasMusic ? '\n\n' + MUSIC_CREDIT : ''}`.trim(),
-        tags: buildTags(script.tags, script.genre),
-        // Category by genre: AI-tools → Science & Technology (28); consumer
-        // awareness → News & Politics (25) which the algorithm actually pushes
-        // hard for informational consumer content in 2026; else Education (27).
-        categoryId: script.genre === 'aitools' ? '28' : (script.genre === 'consumer' ? '25' : (script.genre === 'kingsranks' ? '15' : '27')),
-        defaultLanguage: 'en',
-        defaultAudioLanguage: 'en'
-      },
-      status: {
-        privacyStatus: 'public',
-        selfDeclaredMadeForKids: false,
-        madeForKids: false,
-        // Hide the extended public stats panel on the watch page. YouTube's
-        // dedicated "don't show how many viewers like this video" toggle is
-        // Studio-only and not in the API; this is the closest API equivalent.
-        publicStatsViewable: false
-      }
+  const requestBody = {
+    snippet: {
+      title: script.title,
+      description: `${buildHashtags(script.tags, script.genre)}\n\n${(script.description || '').trim()}${script.hasMusic ? '\n\n' + MUSIC_CREDIT : ''}`.trim(),
+      tags: buildTags(script.tags, script.genre),
+      // Category by genre: AI-tools → Science & Technology (28); consumer
+      // awareness → News & Politics (25) which the algorithm actually pushes
+      // hard for informational consumer content in 2026; else Education (27).
+      categoryId: script.genre === 'aitools' ? '28' : (script.genre === 'consumer' ? '25' : (script.genre === 'kingsranks' ? '15' : '27')),
+      defaultLanguage: 'en',
+      defaultAudioLanguage: 'en'
     },
-    media: {
-      mimeType: 'video/mp4',
-      body: createReadStream(videoPath)
+    status: {
+      privacyStatus: 'public',
+      selfDeclaredMadeForKids: false,
+      madeForKids: false,
+      // Hide the extended public stats panel on the watch page. YouTube's
+      // dedicated "don't show how many viewers like this video" toggle is
+      // Studio-only and not in the API; this is the closest API equivalent.
+      publicStatsViewable: false
     }
-  }, {
-    onUploadProgress: (evt) => {
-      const pct = Math.round((evt.bytesRead / fileSize) * 100);
-      process.stdout.write(`\r  Upload progress: ${pct}%   `);
+  };
+
+  // A single network hiccup used to CRASH the whole pipeline (EPIPE at 91%) AND
+  // leave a corrupt video public. Now: retry on network errors, recreate the
+  // read stream each attempt (an errored stream can't be reused), and clean up
+  // the truncated partial before every retry so we never accumulate duplicates.
+  const NETWORK_RE = /(EPIPE|ECONNRESET|ETIMEDOUT|EAI_AGAIN|socket hang up|network socket|aborted|premature close|fetch failed)/i;
+  const maxAttempts = 3;
+  let lastErr;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    if (attempt > 0) {
+      console.log(`  Retrying upload (attempt ${attempt + 1}/${maxAttempts}) — clearing any partial first...`);
+      await cleanupTruncatedUpload(youtube, script.title);
+      await new Promise(r => setTimeout(r, 2500 * attempt));
     }
-  });
+    try {
+      console.log(`  Uploading ${(fileSize / 1024 / 1024).toFixed(1)}MB to YouTube...`);
+      const response = await youtube.videos.insert({
+        part: ['snippet', 'status'],
+        requestBody,
+        media: { mimeType: 'video/mp4', body: createReadStream(videoPath) },
+      }, {
+        onUploadProgress: (evt) => {
+          const pct = Math.round((evt.bytesRead / fileSize) * 100);
+          process.stdout.write(`\r  Upload progress: ${pct}%   `);
+        },
+        // Let gaxios also retry transient HTTP failures under the hood.
+        retryConfig: { retry: 3, retryDelay: 2000, statusCodesToRetry: [[100, 199], [429, 429], [500, 599]] },
+      });
+      process.stdout.write('\n');
 
-  process.stdout.write('\n');
+      const videoId = response.data.id;
+      const url = `https://www.youtube.com/watch?v=${videoId}`;
 
-  const videoId = response.data.id;
-  const url = `https://www.youtube.com/watch?v=${videoId}`;
+      await postEngagementComment(youtube, videoId, script);
 
-  await postEngagementComment(youtube, videoId, script);
+      // Hide the like count via Studio (the API can't do this). Best-effort: a
+      // failure here MUST NOT block the upload from being marked successful.
+      try {
+        const { hideLikes } = await import('../scripts/hide-likes.js');
+        await hideLikes(videoId);
+      } catch (err) {
+        console.log(`  hide-likes module unavailable: ${err.message}`);
+      }
 
-  // Hide the like count via Studio (the API can't do this). Best-effort: a
-  // failure here MUST NOT block the upload from being marked successful.
-  try {
-    const { hideLikes } = await import('../scripts/hide-likes.js');
-    await hideLikes(videoId);
-  } catch (err) {
-    console.log(`  hide-likes module unavailable: ${err.message}`);
+      return { id: videoId, url };
+    } catch (err) {
+      lastErr = err;
+      process.stdout.write('\n');
+      const msg = (err && err.message) || String(err);
+      const retriable = NETWORK_RE.test(msg);
+      console.log(`  Upload attempt ${attempt + 1} failed: ${msg.slice(0, 140)}`);
+      if (!retriable || attempt === maxAttempts - 1) break;
+    }
   }
 
-  return { id: videoId, url };
+  // Every attempt failed — make sure no truncated partial is left public, then
+  // surface the error so the caller doesn't treat this as a success.
+  await cleanupTruncatedUpload(youtube, script.title);
+  throw lastErr || new Error('YouTube upload failed');
 }

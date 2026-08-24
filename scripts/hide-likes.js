@@ -31,20 +31,31 @@ function loadCookies() {
   try {
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return null;
-    // Cookie-Editor exports include sameSite values that puppeteer rejects
-    // ("unspecified", "no_restriction"); normalize them.
+    // Cookie-Editor exports carry fields/values puppeteer's setCookie rejects:
+    // sameSite can be "unspecified" / "no_restriction" / null (not a string),
+    // and expiry is `expirationDate` (Chrome extension) not `expires` (puppeteer).
+    // Build clean cookie objects with ONLY the fields puppeteer accepts and the
+    // right types, so a single odd cookie can't fail the whole setCookie call.
     return parsed.map(c => {
-      const cookie = { ...c };
-      if (cookie.sameSite === 'unspecified' || cookie.sameSite === undefined) delete cookie.sameSite;
-      if (cookie.sameSite === 'no_restriction') cookie.sameSite = 'None';
-      if (cookie.sameSite === 'lax') cookie.sameSite = 'Lax';
-      if (cookie.sameSite === 'strict') cookie.sameSite = 'Strict';
-      // hostOnly is informational and rejected by puppeteer's setCookie
-      delete cookie.hostOnly;
-      delete cookie.storeId;
-      delete cookie.session;
-      return cookie;
-    });
+      const out = {
+        name: c.name,
+        value: c.value,
+        domain: c.domain,
+        path: c.path || '/',
+        secure: !!c.secure,
+        httpOnly: !!c.httpOnly,
+      };
+      const ss = String(c.sameSite == null ? '' : c.sameSite).toLowerCase();
+      if (ss === 'no_restriction' || ss === 'none') out.sameSite = 'None';
+      else if (ss === 'lax') out.sameSite = 'Lax';
+      else if (ss === 'strict') out.sameSite = 'Strict';
+      // else: omit sameSite entirely (covers "unspecified", null, undefined)
+      if (out.sameSite === 'None') out.secure = true;   // Chrome requires SameSite=None to be Secure
+      const exp = typeof c.expirationDate === 'number' ? c.expirationDate
+                : typeof c.expires === 'number' ? c.expires : null;
+      if (exp) out.expires = Math.floor(exp);
+      return out;
+    }).filter(c => c.name && c.value && c.domain);
   } catch {
     return null;
   }
@@ -102,31 +113,28 @@ export async function hideLikes(videoId) {
     });
     if (expanded) await sleep(1200);
 
-    // Locate the "Don't show how many viewers like this video" checkbox and
-    // click it if it's not already checked. We match on the visible label,
-    // walking up to the row container, then finding the checkbox inside.
+    // YouTube reworded this setting: it is now the POSITIVE checkbox
+    // "Show how many viewers like this video" (CHECKED = likes are shown). So to
+    // HIDE the like count we UNCHECK it. We match the exact label, walk up to the
+    // row container, find the checkbox, and click only if it's currently checked.
     const result = await page.evaluate(() => {
-      const LABEL_MATCH = (s) =>
-        s.includes("don't show how many viewers like this video") ||
-        s.includes('dont show how many viewers like this video') ||
-        s.includes('don’t show how many viewers like this video');
+      const isLabel = (s) =>
+        s === 'show how many viewers like this video' ||
+        (s.includes('show how many viewers like this video') && !/don['’]?t/.test(s));
 
-      // Find the element whose text exactly matches the label.
+      // Find the (short) element whose text is the label.
       const all = Array.from(document.querySelectorAll('*'));
       let labelEl = null;
       for (const el of all) {
         const t = (el.textContent || '').trim().toLowerCase();
-        if (t && t.length < 120 && LABEL_MATCH(t)) {
-          labelEl = el;
-          break;
-        }
+        if (t && t.length < 60 && isLabel(t)) { labelEl = el; break; }
       }
       if (!labelEl) return { ok: false, reason: 'label-not-found' };
 
-      // Walk up to find the row container (max 6 hops) that holds the checkbox.
+      // Walk up to find the row container that holds the checkbox.
       let row = labelEl;
       let checkbox = null;
-      for (let i = 0; i < 6 && row; i++) {
+      for (let i = 0; i < 8 && row; i++) {
         checkbox = row.querySelector('ytcp-checkbox-lit, tp-yt-paper-checkbox, [role="checkbox"]');
         if (checkbox) break;
         row = row.parentElement;
@@ -137,7 +145,9 @@ export async function hideLikes(videoId) {
         checkbox.getAttribute('aria-checked') === 'true' ||
         checkbox.hasAttribute('checked') ||
         checkbox.classList.contains('checked');
-      if (checked) return { ok: true, reason: 'already-hidden' };
+      // checked = likes currently SHOWN → click to uncheck (hide).
+      // unchecked = the count is already hidden.
+      if (!checked) return { ok: true, reason: 'already-hidden' };
 
       checkbox.click();
       return { ok: true, reason: 'clicked' };

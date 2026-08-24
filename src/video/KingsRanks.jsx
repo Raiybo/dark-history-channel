@@ -13,23 +13,29 @@ const IMAGE_RE = /\.(jpe?g|png|webp)$/i;
 // narrator's beats (each clip stays up exactly while its line is spoken); in
 // SILENT mode they're equal slices. Both produce {introFrames, starts[], ends[],
 // outroStart} so every overlay reads timing the same way.
-const computeLayout = (beats, n, fps, durationInFrames) => {
+const computeLayout = (beats, n, fps, durationInFrames, hasBonus = false) => {
   if (beats && beats.length >= n) {
-    // NARRATED: beats = [line_0 … line_{n-1}, (outro)]. No hook, no title card —
-    // the first clip starts at frame 0 and the narration begins immediately.
-    const hasOutro = beats.length >= n + 1;
+    // NARRATED: beats = [line_0 … line_{n-1}, (bonus?), (outro)]. No hook, no title
+    // card — the first clip starts at frame 0 and narration begins immediately.
+    // With a bonus photo there's an extra beat between the last clip and the outro.
     const starts = beats.slice(0, n).map(b => Math.round((b.startTime || 0) * fps));
-    const outroStart = hasOutro
-      ? Math.round((beats[n].startTime || durationInFrames / fps) * fps)
+    const bonusStart = hasBonus && beats[n]
+      ? Math.round((beats[n].startTime || 0) * fps)
+      : null;
+    const outroIdx = hasBonus ? n + 1 : n;
+    const outroStart = beats[outroIdx]
+      ? Math.round((beats[outroIdx].startTime || durationInFrames / fps) * fps)
       : durationInFrames - Math.round(1.9 * fps);
-    const ends = starts.map((s, i) => (i < n - 1 ? starts[i + 1] : outroStart));
-    return { introFrames: 0, starts, ends, outroStart, narrated: true };
+    // The last clip ends where the bonus (or, if none, the outro) begins.
+    const lastEnd = bonusStart != null ? bonusStart : outroStart;
+    const ends = starts.map((s, i) => (i < n - 1 ? starts[i + 1] : lastEnd));
+    return { introFrames: 0, starts, ends, outroStart, bonusStart, narrated: true };
   }
   const introFrames = Math.round(1.8 * fps);
   const W = Math.floor((durationInFrames - introFrames) / Math.max(1, n));
   const starts = Array.from({ length: n }, (_, i) => introFrames + i * W);
   const ends = starts.map((s, i) => (i < n - 1 ? starts[i + 1] : durationInFrames));
-  return { introFrames, starts, ends, outroStart: durationInFrames - Math.round(1.9 * fps), narrated: false };
+  return { introFrames, starts, ends, outroStart: durationInFrames - Math.round(1.9 * fps), bonusStart: null, narrated: false };
 };
 
 const activeIndexFor = (frame, layout) => {
@@ -198,6 +204,8 @@ const Row = ({ item, state, pop, narrated }) => {
 const Leaderboard = ({ items, layout }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
+  // The bonus photo owns the screen at the very end — the leaderboard steps aside.
+  if (layout.bonusStart != null && frame >= layout.bonusStart) return null;
   const n = Math.max(1, items.length);
   const activeIndex = activeIndexFor(frame, layout);
   const rows = [...items].sort((a, b) => a.rank - b.rank); // #1 top ... #5 bottom
@@ -229,6 +237,34 @@ const Outro = () => {
   );
 };
 
+// BONUS photo shown ONCE at the very end (after the #1 clip): a full-screen still
+// with a slow Ken-Burns push, a gold "BONUS" pill up top, the creator credit, and
+// the narrator's funny one-liner (carried by the spoken captions). Not ranked.
+const BonusLayer = ({ bonus }) => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  if (!bonus || !bonus.path) return null;
+  const src = staticFile(bonus.path);
+  // Very gentle push, capped so any burned-in meme text never scrolls out of view.
+  const scale = 1 + Math.min(frame / (8 * fps), 1) * 0.03;
+  return (
+    <AbsoluteFill style={{ backgroundColor: '#0a0a12' }}>
+      {/* Blurred cover fill: any aspect ratio (incl. wide memes) looks intentional. */}
+      <Img src={src} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(30px) brightness(0.5)', transform: 'scale(1.12)' }} />
+      {/* The whole photo, uncropped, on top — so meme text stays fully readable. */}
+      <Img src={src} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', transform: `scale(${scale})` }} />
+      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(0,0,0,0.45) 0%, transparent 20%, transparent 66%, rgba(0,0,0,0.74) 100%)', pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', top: 150, left: 0, right: 0, display: 'flex', justifyContent: 'center', pointerEvents: 'none', zIndex: 22 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(0,0,0,0.6)', border: `3px solid ${GOLD}`, borderRadius: 50, padding: '10px 26px' }}>
+          <span style={{ fontSize: 28, lineHeight: 1 }}>🎁</span>
+          <span style={{ fontFamily, fontWeight: 900, fontSize: 30, letterSpacing: 3, color: GOLD, textShadow: '0 2px 10px rgba(0,0,0,1)' }}>BONUS</span>
+        </div>
+      </div>
+      <Credit handle={bonus.credit} />
+    </AbsoluteFill>
+  );
+};
+
 // Kings of Ranks ranking. SILENT mode = music + captions only (stock formats).
 // NARRATED mode (clip ranks) = each clip's own audio + one quiet music bed + a
 // narrator reacting to every clip + kinetic spoken captions + creator credits.
@@ -236,11 +272,12 @@ const Outro = () => {
 export const KingsRanks = ({
   items = [], clips = [], credits = [], titleCard = '', channelName = 'Kings of Ranks',
   logo = null, hasMusic = false,
-  narration = '', audioDuration = 0, wordTimings = [], beats = [],
+  narration = '', audioDuration = 0, wordTimings = [], beats = [], bonus = null,
 }) => {
   const { durationInFrames, fps } = useVideoConfig();
   const n = Math.max(1, items.length);
-  const layout = computeLayout(beats, n, fps, durationInFrames);
+  const hasBonus = !!(bonus && bonus.path);
+  const layout = computeLayout(beats, n, fps, durationInFrames, hasBonus);
   const narrated = layout.narrated;
   const clipVolume = narrated ? 0.55 : 0;                 // clip's own audio, ducked a touch so the narrator cuts through
   const narratorVolume = 1.15;                            // narrator sits clearly on top of the mix
@@ -248,22 +285,29 @@ export const KingsRanks = ({
 
   return (
     <AbsoluteFill style={{ backgroundColor: '#000' }}>
-      {/* background clip per item */}
+      {/* background clip per item. The last clip ends where the bonus (or, with no
+          bonus, the outro) begins; when it runs past its own length it FREEZES its
+          last frame instead of looping so it never visibly replays. */}
       {items.map((item, i) => {
         const from = layout.starts[i];
         const isLast = i === n - 1;
-        const dur = isLast ? (durationInFrames - from) : (layout.ends[i] - from + CROSSFADE);
+        const lastVisualEnd = hasBonus && layout.bonusStart != null ? layout.bonusStart : durationInFrames;
+        const dur = isLast ? (lastVisualEnd - from) : (layout.ends[i] - from + CROSSFADE);
         return (
           <Sequence key={i} from={from} durationInFrames={Math.max(1, dur)}>
-            {/* The #1 clip's window runs a few seconds past its length (the outro
-                CTA holds over it) — freeze its last frame instead of looping so
-                it never visibly replays. Earlier clips still loop as a safety net. */}
             <ClipLayer clip={clips[i]} fps={fps} clipVolume={clipVolume} credit={credits[i]} isFirst={i === 0 && narrated} loop={!(isLast && narrated)} />
           </Sequence>
         );
       })}
 
-      {/* slim persistent left leaderboard */}
+      {/* BONUS photo — full-screen still shown once, right after the #1 clip */}
+      {narrated && hasBonus && layout.bonusStart != null && (
+        <Sequence from={layout.bonusStart} durationInFrames={Math.max(1, durationInFrames - layout.bonusStart)}>
+          <BonusLayer bonus={bonus} />
+        </Sequence>
+      )}
+
+      {/* slim persistent left leaderboard (hidden during the bonus segment) */}
       <Leaderboard items={items} layout={layout} />
 
       {/* narrator beats — one Audio per beat, timed by beat.startTime */}

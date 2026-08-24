@@ -101,6 +101,7 @@ export const RemotionRoot = () => {
           audioDuration: 0,
           wordTimings:  [],
           beats:        [],
+          bonus:        null,
         }}
         calculateMetadata={({ props }) => ({
           durationInFrames: Math.round((props.durationSec || 32) * FPS),

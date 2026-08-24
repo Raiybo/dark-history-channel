@@ -23,7 +23,7 @@ import {
 } from './pre-upload-checks.js';
 import { addVideoToThemedPlaylist } from './yt-playlists.js';
 import { saveCrossPostPack } from './cross-post.js';
-import { readdirSync, existsSync, mkdirSync, unlinkSync, renameSync, readFileSync } from 'fs';
+import { readdirSync, existsSync, mkdirSync, unlinkSync, renameSync, readFileSync, copyFileSync } from 'fs';
 import { join, dirname, extname, basename } from 'path';
 import { fileURLToPath } from 'url';
 import { homedir } from 'os';
@@ -605,10 +605,16 @@ async function runClipRanks() {
   const CLIPS_PER_REEL = 5;
   const MAX_REELS = 4;
   const CLIP_SECONDS = 12;   // every clip stays on screen ~12s (user: "around 12 seconds exactly")
+  const BONUS_SECONDS = 6;   // a bonus PHOTO stays on screen ~6s at the very end
   const exts = new Set(['.mp4', '.mov', '.webm', '.m4v', '.avi']);
-  const all = existsSync(CLIPRANKS_DIR)
-    ? readdirSync(CLIPRANKS_DIR).filter(f => !f.startsWith('.') && exts.has(extname(f).toLowerCase())).sort()
+  const imgExts = new Set(['.jpg', '.jpeg', '.png', '.webp']);
+  const dirFiles = existsSync(CLIPRANKS_DIR)
+    ? readdirSync(CLIPRANKS_DIR).filter(f => !f.startsWith('.'))
     : [];
+  // Videos are ranked into the Top 5; a single still PHOTO (if present) becomes a
+  // BONUS shown once at the very end with a funny narrated line (user request).
+  const all = dirFiles.filter(f => exts.has(extname(f).toLowerCase())).sort();
+  const bonusImages = dirFiles.filter(f => imgExts.has(extname(f).toLowerCase())).sort();
 
   // The core new rule: NO clips today → NO upload. Clean skip, not an error.
   if (all.length < CLIPS_PER_REEL) {
@@ -717,11 +723,45 @@ async function runClipRanks() {
       continue;
     }
 
+    // Optional BONUS photo (user: "for the photo just show it once at the end and
+    // explain it in a funny way"). Only the first reel gets it; vision writes a
+    // funny one-liner reacting to the still, shown full-screen after the #1 clip.
+    let bonus = null;
+    const bonusFile = r === 0 ? bonusImages[0] : null;
+    if (bonusFile) {
+      try {
+        const inPath = join(CLIPRANKS_DIR, bonusFile);
+        copyFileSync(inPath, join(CLIPRANKS_OUT, 'bonus.jpg'));
+        const ext = extname(bonusFile).toLowerCase();
+        const mime = ext === '.png' ? 'image/png' : ext === '.webp' ? 'image/webp' : 'image/jpeg';
+        const b64 = readFileSync(inPath).toString('base64');
+        const bprompt = `This is a BONUS photo shown at the very END of a funny animal "Top 5" video, after the countdown. In ONE short, punchy, WHOLESOME funny sentence (8 to 16 words), the narrator reacts to what is in this photo. No preamble, no quotes, no emojis, no hashtags.`;
+        // Pace this after the 5 clip vision calls so the per-minute budget recovers
+        // and the bonus description isn't starved by a 429.
+        await new Promise(res => setTimeout(res, 6000));
+        let line = await describeImage(b64, mime, bprompt, { maxTokens: 60 });
+        line = (line || '').replace(/\|\|/g, ' ').replace(/\s+/g, ' ').replace(/^["']+|["']+$/g, '').trim().slice(0, 120);
+        // The user ALWAYS wants the photo at the end — if vision is unavailable,
+        // still show it with a generic funny closer instead of dropping the bonus.
+        if (!line) {
+          line = 'And finally, this one. Some legends need no introduction.';
+          console.log('  (bonus photo: vision unavailable; using a generic funny line)');
+        }
+        bonus = { path: 'videos/bonus.jpg', line, credit: creditHandle(bonusFile), label: 'BONUS' };
+        console.log(`  Bonus photo (@${bonus.credit}): ${bonus.line}`);
+      } catch (e) {
+        console.log(`  (bonus photo failed: ${(e.message || '').slice(0, 80)}; skipping the bonus segment)`);
+      }
+    }
+
     // Begin DIRECTLY on the first clip with its narration — NO hook, NO title
     // card, no black screen (the leaderboard already signals it's a ranking).
-    // line#5 … line#1 || outro.
-    const narrationStr = [...content.items.map(it => it.line), content.outro]
-      .map(s => (s || '').trim()).filter(Boolean).join(' || ');
+    // line#5 … line#1 || (bonus line) || outro.
+    const narrationStr = [
+      ...content.items.map(it => it.line),
+      ...(bonus ? [bonus.line] : []),
+      content.outro,
+    ].map(s => (s || '').trim()).filter(Boolean).join(' || ');
 
     // Reassign display ranks (#5 first … #1 last) + keep label/caption for overlays.
     content.items = content.items.map((it, i) => ({ rank: N - i, label: it.label, caption: it.caption }));
@@ -740,6 +780,8 @@ async function runClipRanks() {
     // Cap each clip's window at its OWN length so short clips never loop/replay
     // (a 7s clip in a 12s window played twice). Longer clips still cap at ~12s.
     const windows = clips.map(c => Math.min(CLIP_SECONDS, c.duration));
+    // The bonus photo gets its own on-screen window right after the #1 clip.
+    if (bonus) windows.push(BONUS_SECONDS);
 
     // Narrator audio (edge-tts). If TTS fails, degrade to a silent render.
     let audio = null;
@@ -755,7 +797,7 @@ async function runClipRanks() {
     content.hasMusic = musicPath !== null;
 
     const videoPath = audio
-      ? await renderClipRanksNarrated(content, clips, credits, audio, content.hasMusic)
+      ? await renderClipRanksNarrated(content, clips, credits, audio, content.hasMusic, bonus)
       : await renderSilentKingsRanks(content, clips, content.hasMusic);
     checkRender(videoPath);
     await publish(content, videoPath);
@@ -763,7 +805,7 @@ async function runClipRanks() {
     // Delete the used clips after a successful upload so the folder stays clean
     // for the next batch — the user's default template ("delete after u finish").
     if (process.env.UPLOAD === '1') {
-      for (const f of batch) {
+      for (const f of [...batch, ...(bonusFile ? [bonusFile] : [])]) {
         try { unlinkSync(join(CLIPRANKS_DIR, f)); }
         catch (e) { console.log(`  (couldn't remove ${f}: ${e.message})`); }
       }

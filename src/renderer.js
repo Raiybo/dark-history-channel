@@ -128,7 +128,7 @@ export async function renderSilentKingsRanks(content, clips, hasMusic) {
 // creator credits on screen. content = { items, title_card, ... }; clips =
 // [{path,duration}] aligned with items; credits = [handle] aligned with items;
 // audio = generateAudio() output (beats + wordTimings + duration).
-export async function renderClipRanksNarrated(content, clips, credits, audio, hasMusic) {
+export async function renderClipRanksNarrated(content, clips, credits, audio, hasMusic, bonus = null) {
   const publicAudioDir = join(ROOT_DIR, 'public', 'audio');
   mkdirSync(publicAudioDir, { recursive: true });
   const audioSrcDir = join(ROOT_DIR, 'output', 'audio');
@@ -150,6 +150,8 @@ export async function renderClipRanksNarrated(content, clips, credits, audio, ha
     audioDuration: audio.duration,
     wordTimings:   audio.wordTimings || [],
     beats:         audio.beats || [],
+    // Optional bonus photo shown once at the very end: { path, line, credit }.
+    bonus:         bonus || null,
     durationSec:   audio.duration + 0.6,
   };
   writeFileSync(join(ROOT_DIR, 'config', 'render-props.json'), JSON.stringify(inputProps, null, 2));
