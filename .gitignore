@@ -15,3 +15,6 @@ public/characters/
 ._*
 .DS_Store
 .claude/
+
+# local upload queue (large rendered videos staged for scheduled upload)
+upload-queue/
