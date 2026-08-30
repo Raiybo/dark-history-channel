@@ -754,10 +754,15 @@ async function runClipRanks() {
       }
     }
 
-    // Begin DIRECTLY on the first clip with its narration — NO hook, NO title
-    // card, no black screen (the leaderboard already signals it's a ranking).
-    // line#5 … line#1 || (bonus line) || outro.
+    // COLD-OPEN HOOK (retention): front-load the #1 clip under a "WAIT FOR #1"
+    // promise so the scroll stops on peak content and viewers stay for the payoff
+    // (it also makes the Short loop start-to-end on #1). Then the countdown lines,
+    // then the optional bonus line, then the outro.
+    const HOOK_SECONDS = 2.5;
+    const hookLine = (content.hook || `Number one is unreal. Starting at ${N}.`).trim();
+    const hookText = (content.hook_text || 'WAIT FOR #1').trim();
     const narrationStr = [
+      hookLine,
       ...content.items.map(it => it.line),
       ...(bonus ? [bonus.line] : []),
       content.outro,
@@ -779,7 +784,7 @@ async function runClipRanks() {
     // windows[1..N] = each clip's on-screen seconds, in display order.
     // Cap each clip's window at its OWN length so short clips never loop/replay
     // (a 7s clip in a 12s window played twice). Longer clips still cap at ~12s.
-    const windows = clips.map(c => Math.min(CLIP_SECONDS, c.duration));
+    const windows = [HOOK_SECONDS, ...clips.map(c => Math.min(CLIP_SECONDS, c.duration))];
     // The bonus photo gets its own on-screen window right after the #1 clip.
     if (bonus) windows.push(BONUS_SECONDS);
 
@@ -796,8 +801,17 @@ async function runClipRanks() {
     const musicPath = await prepareMusic('kingsranks');
     content.hasMusic = musicPath !== null;
 
+    // Separate copy of the #1 clip for the cold-open hook (distinct file so the
+    // same clip is never used by two OffthreadVideo elements — that collided the
+    // frame cache and rendered the wrong clip at #1).
+    let hookClip = null;
+    try {
+      copyFileSync(join(CLIPRANKS_OUT, basename(clips[N - 1].path)), join(CLIPRANKS_OUT, 'hook.mp4'));
+      hookClip = { path: 'videos/hook.mp4', duration: clips[N - 1].duration };
+    } catch (e) { console.log(`  (hook clip copy failed: ${e.message}; hook will reuse the #1 clip)`); }
+
     const videoPath = audio
-      ? await renderClipRanksNarrated(content, clips, credits, audio, content.hasMusic, bonus)
+      ? await renderClipRanksNarrated(content, clips, credits, audio, content.hasMusic, bonus, hookText, hookClip)
       : await renderSilentKingsRanks(content, clips, content.hasMusic);
     checkRender(videoPath);
     await publish(content, videoPath);

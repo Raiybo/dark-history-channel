@@ -128,7 +128,7 @@ export async function renderSilentKingsRanks(content, clips, hasMusic) {
 // creator credits on screen. content = { items, title_card, ... }; clips =
 // [{path,duration}] aligned with items; credits = [handle] aligned with items;
 // audio = generateAudio() output (beats + wordTimings + duration).
-export async function renderClipRanksNarrated(content, clips, credits, audio, hasMusic, bonus = null) {
+export async function renderClipRanksNarrated(content, clips, credits, audio, hasMusic, bonus = null, hookText = '', hookClip = null) {
   const publicAudioDir = join(ROOT_DIR, 'public', 'audio');
   mkdirSync(publicAudioDir, { recursive: true });
   const audioSrcDir = join(ROOT_DIR, 'output', 'audio');
@@ -152,6 +152,11 @@ export async function renderClipRanksNarrated(content, clips, credits, audio, ha
     beats:         audio.beats || [],
     // Optional bonus photo shown once at the very end: { path, line, credit }.
     bonus:         bonus || null,
+    // Optional cold-open hook text (retention): big "WAIT FOR #1"-style promise.
+    hookText:      hookText || '',
+    // Separate physical copy of the #1 clip for the hook (avoids a same-file
+    // OffthreadVideo frame-cache collision that rendered the wrong clip at #1).
+    hookClip:      hookClip || null,
     durationSec:   audio.duration + 0.6,
   };
   writeFileSync(join(ROOT_DIR, 'config', 'render-props.json'), JSON.stringify(inputProps, null, 2));
@@ -163,6 +168,36 @@ export async function renderClipRanksNarrated(content, clips, credits, audio, ha
   mkdirSync(join(ROOT_DIR, 'output'), { recursive: true });
   const outputPath = join(ROOT_DIR, 'output', 'video.mp4');
   console.log(`  Rendering ${composition.durationInFrames} frames (Kings of Ranks — narrated)...`);
+  await renderMedia({
+    composition, serveUrl: bundled, outputLocation: outputPath, inputProps, ...RENDER_OPTS,
+    onProgress: ({ progress }) => process.stdout.write(`\r  Progress: ${Math.round(progress * 100)}%   `),
+  });
+  process.stdout.write('\n');
+  return outputPath;
+}
+
+// Render the NO-NARRATION laugh-track montage: clips back-to-back (own audio
+// muted), the only sound is timed laugh bursts, minimal on-screen furniture.
+// clips = [{path,duration}] in play order; credits aligned; laughs = [{file,
+// startTime, duration, volume?}] placed on the funny moments. The laugh audio
+// files must already be copied into public/audio.
+export async function renderFunnyMontage({ clips, credits, channelName, clipVolume, durationSec }) {
+  const inputProps = {
+    clips:       clips || [],
+    credits:     credits || [],
+    channelName: channelName || process.env.CHANNEL_NAME || 'Kings of Ranks',
+    clipVolume:  clipVolume != null ? clipVolume : 1,
+    durationSec,
+  };
+  writeFileSync(join(ROOT_DIR, 'config', 'render-props.json'), JSON.stringify(inputProps, null, 2));
+
+  console.log('  Bundling Remotion project...');
+  const bundled = await bundle({ entryPoint: join(__dirname, 'index.jsx'), webpackOverride: (c) => c });
+  const composition = await selectComposition({ serveUrl: bundled, id: 'FunnyMontage', inputProps });
+
+  mkdirSync(join(ROOT_DIR, 'output'), { recursive: true });
+  const outputPath = join(ROOT_DIR, 'output', 'video.mp4');
+  console.log(`  Rendering ${composition.durationInFrames} frames (Funny Montage — laugh track)...`);
   await renderMedia({
     composition, serveUrl: bundled, outputLocation: outputPath, inputProps, ...RENDER_OPTS,
     onProgress: ({ progress }) => process.stdout.write(`\r  Progress: ${Math.round(progress * 100)}%   `),

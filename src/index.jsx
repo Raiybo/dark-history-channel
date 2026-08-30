@@ -3,6 +3,7 @@ import { SlideshowVideo } from './video/SlideshowVideo';
 import { SplitScreenVideo } from './video/SplitScreenVideo';
 import { SplitSludge } from './video/SplitSludge';
 import { KingsRanks } from './video/KingsRanks';
+import { FunnyMontage } from './video/FunnyMontage';
 import { VersusVideo } from './video/VersusVideo';
 import { RankingGame } from './video/RankingGame';
 
@@ -102,9 +103,29 @@ export const RemotionRoot = () => {
           wordTimings:  [],
           beats:        [],
           bonus:        null,
+          hookText:     '',
+          hookClip:     null,
         }}
         calculateMetadata={({ props }) => ({
           durationInFrames: Math.round((props.durationSec || 32) * FPS),
+        })}
+      />
+      <Composition
+        id="FunnyMontage"
+        component={FunnyMontage}
+        durationInFrames={900}
+        fps={FPS}
+        width={1080}
+        height={1920}
+        defaultProps={{
+          clips:       [],
+          credits:     [],
+          channelName: 'Kings of Ranks',
+          clipVolume:  1,
+          durationSec: 30,
+        }}
+        calculateMetadata={({ props }) => ({
+          durationInFrames: Math.round((props.durationSec || 30) * FPS),
         })}
       />
       <Composition

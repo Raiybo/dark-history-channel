@@ -13,29 +13,33 @@ const IMAGE_RE = /\.(jpe?g|png|webp)$/i;
 // narrator's beats (each clip stays up exactly while its line is spoken); in
 // SILENT mode they're equal slices. Both produce {introFrames, starts[], ends[],
 // outroStart} so every overlay reads timing the same way.
-const computeLayout = (beats, n, fps, durationInFrames, hasBonus = false) => {
+const computeLayout = (beats, n, fps, durationInFrames, hasBonus = false, hasHook = false) => {
   if (beats && beats.length >= n) {
-    // NARRATED: beats = [line_0 … line_{n-1}, (bonus?), (outro)]. No hook, no title
-    // card — the first clip starts at frame 0 and narration begins immediately.
-    // With a bonus photo there's an extra beat between the last clip and the outro.
-    const starts = beats.slice(0, n).map(b => Math.round((b.startTime || 0) * fps));
-    const bonusStart = hasBonus && beats[n]
-      ? Math.round((beats[n].startTime || 0) * fps)
+    // NARRATED: beats = [(hook?), line_0 … line_{n-1}, (bonus?), (outro)].
+    // A cold-open HOOK (retention: front-loads the #1 clip + a "wait for it"
+    // promise so viewers don't swipe before the payoff) occupies beats[0]; the
+    // countdown clips then start right after it. A bonus photo adds one more beat
+    // between the last clip and the outro.
+    const off = hasHook ? 1 : 0;
+    const hookEnd = hasHook && beats[1] ? Math.round((beats[1].startTime || 0) * fps) : 0;
+    const starts = beats.slice(off, off + n).map(b => Math.round((b.startTime || 0) * fps));
+    const bonusStart = hasBonus && beats[off + n]
+      ? Math.round((beats[off + n].startTime || 0) * fps)
       : null;
-    const outroIdx = hasBonus ? n + 1 : n;
+    const outroIdx = off + n + (hasBonus ? 1 : 0);
     const outroStart = beats[outroIdx]
       ? Math.round((beats[outroIdx].startTime || durationInFrames / fps) * fps)
       : durationInFrames - Math.round(1.9 * fps);
     // The last clip ends where the bonus (or, if none, the outro) begins.
     const lastEnd = bonusStart != null ? bonusStart : outroStart;
     const ends = starts.map((s, i) => (i < n - 1 ? starts[i + 1] : lastEnd));
-    return { introFrames: 0, starts, ends, outroStart, bonusStart, narrated: true };
+    return { introFrames: 0, hookEnd, starts, ends, outroStart, bonusStart, narrated: true };
   }
   const introFrames = Math.round(1.8 * fps);
   const W = Math.floor((durationInFrames - introFrames) / Math.max(1, n));
   const starts = Array.from({ length: n }, (_, i) => introFrames + i * W);
   const ends = starts.map((s, i) => (i < n - 1 ? starts[i + 1] : durationInFrames));
-  return { introFrames, starts, ends, outroStart: durationInFrames - Math.round(1.9 * fps), bonusStart: null, narrated: false };
+  return { introFrames, hookEnd: 0, starts, ends, outroStart: durationInFrames - Math.round(1.9 * fps), bonusStart: null, narrated: false };
 };
 
 const activeIndexFor = (frame, layout) => {
@@ -204,7 +208,9 @@ const Row = ({ item, state, pop, narrated }) => {
 const Leaderboard = ({ items, layout }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  // The bonus photo owns the screen at the very end — the leaderboard steps aside.
+  // Hidden during the cold-open hook (the #1 teaser owns the screen) and again
+  // during the bonus photo at the very end.
+  if (layout.hookEnd && frame < layout.hookEnd) return null;
   if (layout.bonusStart != null && frame >= layout.bonusStart) return null;
   const n = Math.max(1, items.length);
   const activeIndex = activeIndexFor(frame, layout);
@@ -234,6 +240,32 @@ const Outro = () => {
         <span style={{ fontFamily, fontWeight: 900, fontSize: 31, letterSpacing: 1, color: GOLD, textShadow: '0 2px 10px rgba(0,0,0,1)' }}>SUBSCRIBE FOR DAILY RANKS</span>
       </div>
     </div>
+  );
+};
+
+// COLD-OPEN HOOK (retention): the first ~2s plays a teaser of the #1 clip under a
+// big "WAIT FOR #1"-style promise, so the scroll stops on peak content and viewers
+// have a reason to stay for the countdown. It also makes the Short LOOP cleanly —
+// it opens and closes on the #1 clip. Clip audio muted here (narrator hook + music
+// carry it); the payoff plays with sound at #1.
+const HookLayer = ({ clip, fps, hookText }) => {
+  const frame = useCurrentFrame();
+  const pop = spring({ frame, fps, config: { damping: 12, stiffness: 200, mass: 0.6 } });
+  const flash = 0.5 + 0.5 * Math.abs(Math.sin(frame / 6)); // subtle pulse to pull the eye
+  return (
+    <AbsoluteFill style={{ backgroundColor: '#000' }}>
+      <LoopedClip clip={clip} fps={fps} clipVolume={0} loop />
+      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.15) 38%, rgba(0,0,0,0.15) 62%, rgba(0,0,0,0.7) 100%)', pointerEvents: 'none' }} />
+      <AbsoluteFill style={{ justifyContent: 'center', alignItems: 'center', padding: '0 46px', pointerEvents: 'none' }}>
+        <div style={{ transform: `scale(${0.78 + pop * 0.22})`, textAlign: 'center' }}>
+          <div style={{ fontFamily, fontWeight: 900, fontSize: 118, lineHeight: 0.98, letterSpacing: -3, color: '#fff', textTransform: 'uppercase', textShadow: `0 8px 34px rgba(0,0,0,0.98), 0 0 46px ${GOLD}${Math.round(flash * 120).toString(16).padStart(2, '0')}` }}>
+            {(hookText || 'WAIT FOR #1').split(' ').map((w, i) => (
+              <span key={i} style={{ display: 'inline-block', marginRight: 18, color: /^#?1$/.test(w.replace(/[^#0-9]/g, '')) || w === '#1' ? GOLD : '#fff' }}>{w}</span>
+            ))}
+          </div>
+        </div>
+      </AbsoluteFill>
+    </AbsoluteFill>
   );
 };
 
@@ -272,12 +304,13 @@ const BonusLayer = ({ bonus }) => {
 export const KingsRanks = ({
   items = [], clips = [], credits = [], titleCard = '', channelName = 'Kings of Ranks',
   logo = null, hasMusic = false,
-  narration = '', audioDuration = 0, wordTimings = [], beats = [], bonus = null,
+  narration = '', audioDuration = 0, wordTimings = [], beats = [], bonus = null, hookText = '', hookClip = null,
 }) => {
   const { durationInFrames, fps } = useVideoConfig();
   const n = Math.max(1, items.length);
   const hasBonus = !!(bonus && bonus.path);
-  const layout = computeLayout(beats, n, fps, durationInFrames, hasBonus);
+  const hasHook = !!(hookText && String(hookText).trim());
+  const layout = computeLayout(beats, n, fps, durationInFrames, hasBonus, hasHook);
   const narrated = layout.narrated;
   const clipVolume = narrated ? 0.55 : 0;                 // clip's own audio, ducked a touch so the narrator cuts through
   const narratorVolume = 1.15;                            // narrator sits clearly on top of the mix
@@ -299,6 +332,17 @@ export const KingsRanks = ({
           </Sequence>
         );
       })}
+
+      {/* COLD-OPEN HOOK — first ~2s teases the #1 clip under a big promise so the
+          scroll stops on peak content and the Short loops start-to-end on #1 */}
+      {narrated && hasHook && layout.hookEnd > 0 && (
+        <Sequence from={0} durationInFrames={layout.hookEnd}>
+          {/* hookClip is a SEPARATE physical copy of the #1 clip so the same file
+              is never used by two OffthreadVideo elements (that collided the
+              frame cache and rendered a stale/wrong clip at #1). */}
+          <HookLayer clip={hookClip || clips[n - 1]} fps={fps} hookText={hookText} />
+        </Sequence>
+      )}
 
       {/* BONUS photo — full-screen still shown once, right after the #1 clip */}
       {narrated && hasBonus && layout.bonusStart != null && (

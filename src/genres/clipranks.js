@@ -33,7 +33,8 @@ Return ONLY valid JSON, no markdown:
 {
   "title": "funny YouTube title under 50 chars, starts with 'Top ${n}'",
   "title_card": "opening card, ALL CAPS, 3-6 plain words",
-  "hook": "the narrator's spoken opener, ONE punchy sentence that teases the countdown (8-16 words). No emojis.",
+  "hook": "the narrator's spoken COLD-OPEN, SHORT (6-11 words): tease how good the #1 clip is, then pivot to the countdown. Example: 'Number one is pure chaos. Starting at five.' No emojis.",
+  "hook_text": "a 2-4 word ALL-CAPS on-screen scroll-stopper promise, e.g. 'WAIT FOR #1'",
   "items": [
     {"clip": <the clip NUMBER above>, "label": "2-4 word funny name", "caption": "tiny on-screen tag under 30 chars", "line": "the narrator's spoken commentary for THIS clip, 6-16 words, the joke"}
     // exactly ${n} items, ordered from the LEAST funny (shown FIRST) up to the FUNNIEST (#1, shown LAST)
@@ -72,7 +73,8 @@ Rules: use EACH clip number exactly once. Every "line" DIFFERENT. No " || " anyw
     return {
       title: (obj.title || `Top ${n} Funniest`).slice(0, 90),
       title_card: (obj.title_card || `TOP ${n} FUNNIEST`).toUpperCase().replace(/[^A-Z0-9 ]/g, '').replace(/\s+/g, ' ').trim().slice(0, 40),
-      hook: clean(obj.hook, 140) || `Here are the top ${n} funniest clips you'll see today.`,
+      hook: clean(obj.hook, 90) || `Number one is unreal. Starting at ${n}.`,
+      hook_text: (obj.hook_text || 'WAIT FOR #1').toUpperCase().replace(/[^A-Z0-9# ]/g, '').replace(/\s+/g, ' ').trim().slice(0, 18) || 'WAIT FOR #1',
       outro: clean(obj.outro, 120) || 'Subscribe for a new ranking every single day.',
       items,
       tags: (obj.tags || []).slice(0, 8),
@@ -88,7 +90,8 @@ Rules: use EACH clip number exactly once. Every "line" DIFFERENT. No " || " anyw
     usedFallback: true,
     title: `Top ${n} Funniest Moments`,
     title_card: `TOP ${n} FUNNIEST`,
-    hook: `Here are the top ${n} funniest clips, counting down to number one.`,
+    hook: `Number one is unreal. Starting at ${n}.`,
+    hook_text: 'WAIT FOR #1',
     outro: 'Subscribe for a new ranking every single day.',
     items: descriptions.map((d, i) => ({ srcIndex: i, label: d.slice(0, 40), caption: '', line: `Number ${n - i}. ${d}.`.slice(0, 120) })),
     tags: ['funny', 'top 5', 'ranked'],
