@@ -197,7 +197,7 @@ export async function renderFunnyMontage({ clips, credits, channelName, clipVolu
 
   mkdirSync(join(ROOT_DIR, 'output'), { recursive: true });
   const outputPath = join(ROOT_DIR, 'output', 'video.mp4');
-  console.log(`  Rendering ${composition.durationInFrames} frames (Funny Montage — laugh track)...`);
+  console.log(`  Rendering ${composition.durationInFrames} frames (Funny Montage — real clip audio)...`);
   await renderMedia({
     composition, serveUrl: bundled, outputLocation: outputPath, inputProps, ...RENDER_OPTS,
     onProgress: ({ progress }) => process.stdout.write(`\r  Progress: ${Math.round(progress * 100)}%   `),
