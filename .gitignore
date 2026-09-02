@@ -18,3 +18,6 @@ public/characters/
 
 # local upload queue (large rendered videos staged for scheduled upload)
 upload-queue/
+
+# screenshots dropped in the repo root (may contain private info — never commit)
+/Screenshot*.png
