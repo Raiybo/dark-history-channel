@@ -1,0 +1,43 @@
+name: Weekly clip reminder
+
+# Sunday morning nudge telling the creator how many clips to drop for the week.
+#
+# This used to be an AppleScript that built an iCloud reminder, which meant the
+# Mac had to be awake on a Sunday for the reminder to exist at all. Running it
+# here removes that dependency. It reaches the phone two ways, both free:
+#   * a GitHub issue — GitHub emails the owner and pushes to the mobile app, so
+#     it works with no extra accounts or secrets;
+#   * an ntfy.sh push, if the NTFY_TOPIC secret is set.
+#
+# The number it asks for is the real shortfall: clips actually sitting in Drive,
+# minus everything already published.
+
+on:
+  schedule:
+    - cron: '0 7 * * 0'      # Sundays 07:00 UTC — 10:00 in Beirut
+  workflow_dispatch:
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Dependency-free: src/drive.js talks raw REST, so no install step needed.
+      - name: Send the weekly clip reminder
+        env:
+          DRIVE_FOLDER_ID: ${{ secrets.DRIVE_FOLDER_ID }}
+          GOOGLE_DRIVE_CREDENTIALS: ${{ secrets.GOOGLE_DRIVE_CREDENTIALS }}
+          GOOGLE_TTS_CREDENTIALS: ${{ secrets.GOOGLE_TTS_CREDENTIALS }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DAILY_COUNT: '3'
+        run: node scripts/cloud-reminder.mjs

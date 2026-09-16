@@ -8,7 +8,10 @@
     "generate": "node src/main.js",
     "get-token": "node scripts/get-youtube-token.js",
     "get-tiktok-token": "node scripts/get-tiktok-token.js",
-    "analytics": "node scripts/analytics.mjs"
+    "analytics": "node scripts/analytics.mjs",
+    "drive-check": "node scripts/drive-check.mjs",
+    "cloud-daily": "node scripts/cloud-daily.mjs",
+    "cloud-reminder": "node scripts/cloud-reminder.mjs"
   },
   "dependencies": {
     "@google-cloud/text-to-speech": "^5.3.0",

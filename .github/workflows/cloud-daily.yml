@@ -1,0 +1,144 @@
+name: Cloud daily upload
+
+# Posts the channel's shorts from the cloud, with nothing of the creator's
+# switched on. Clips arrive in a Google Drive folder from their phone; this
+# workflow pulls five of them, renders one Short and publishes it.
+#
+# It ticks every 3 hours rather than three times a day on purpose. GitHub delays
+# and sometimes drops scheduled runs when the platform is busy, so a cron that
+# MUST fire is a cron that quietly misses days. Instead each tick asks the gate
+# whether the day's quota is already met; a missed slot is simply picked up by
+# the next tick. Ticks with nothing to do exit before any install step, so they
+# cost seconds.
+#
+# Free by construction: the repo is public (unlimited Actions minutes), Drive's
+# free tier holds the clips, and the YouTube Data API costs nothing. Three
+# uploads a day is ~4,800 of the 10,000 daily quota units, well inside the cap.
+
+on:
+  schedule:
+    - cron: '0 */2 * * *'
+  workflow_dispatch:
+    inputs:
+      check_only:
+        description: 'Only verify the Drive setup — no render, no upload'
+        type: boolean
+        default: false
+      force:
+        description: 'Post one now even if today already hit its quota'
+        type: boolean
+        default: false
+
+# One run at a time. Two concurrent runs would read the same ledger and could
+# hand the same five clips to two renders.
+concurrency:
+  group: cloud-daily
+  cancel-in-progress: false
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      contents: write
+
+    env:
+      DRIVE_FOLDER_ID: ${{ secrets.DRIVE_FOLDER_ID }}
+      GOOGLE_DRIVE_CREDENTIALS: ${{ secrets.GOOGLE_DRIVE_CREDENTIALS }}
+      GOOGLE_TTS_CREDENTIALS: ${{ secrets.GOOGLE_TTS_CREDENTIALS }}
+      DAILY_COUNT: '3'
+      # Earliest UTC hour for each of the day's posts — roughly 9am / 1pm / 5pm
+      # US Eastern, the peak Shorts windows. Change these to re-time the channel.
+      UPLOAD_SLOTS_UTC: '13,17,21'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      # Dependency-free on purpose — runs before anything is installed.
+      - name: Verify Drive setup
+        if: inputs.check_only
+        run: node scripts/drive-check.mjs
+
+      - name: Should this tick do any work?
+        id: gate
+        if: ${{ !inputs.check_only }}
+        env:
+          FORCE: ${{ inputs.force && '1' || '0' }}
+        run: node scripts/cloud-gate.mjs
+
+      - name: Install system dependencies
+        if: steps.gate.outputs.proceed == 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg chromium fonts-liberation
+          echo "PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium" >> $GITHUB_ENV
+
+      - name: Install Python TTS
+        if: steps.gate.outputs.proceed == 'true'
+        run: pip3 install edge-tts
+
+      - name: Install npm dependencies
+        if: steps.gate.outputs.proceed == 'true'
+        run: npm ci
+
+      - name: Render + publish one Short from Drive clips
+        if: steps.gate.outputs.proceed == 'true'
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+          CHANNEL_NAME: ${{ secrets.CHANNEL_NAME }}
+          YT_STUDIO_COOKIES: ${{ secrets.YT_STUDIO_COOKIES }}
+          CI: 'true'
+        run: node scripts/cloud-daily.mjs
+
+      # The ledger is what stops a clip being published twice, so it has to land
+      # on main even when a later step fails.
+      - name: Commit the used-clips ledger
+        if: always() && steps.gate.outputs.proceed == 'true'
+        run: |
+          git config user.name "Distoir Bot"
+          git config user.email "bot@distoir.auto"
+          if git diff --quiet -- config/used-clips.json config/used-ideas.json; then
+            echo "Nothing new to record."
+            exit 0
+          fi
+          cp config/used-clips.json /tmp/local-clips.json
+          cp config/used-ideas.json /tmp/local-ideas.json 2>/dev/null || echo '[]' > /tmp/local-ideas.json
+          git fetch origin main
+          git reset --hard origin/main
+          # Union both sides: a run on another branch tip may have recorded
+          # clips while this one was rendering, and losing either side would
+          # risk re-posting a clip.
+          jq -s '(.[0] // []) + (.[1] // []) | unique_by(.id)' \
+            config/used-clips.json /tmp/local-clips.json > /tmp/merged-clips.json 2>/dev/null \
+            || cp /tmp/local-clips.json /tmp/merged-clips.json
+          mv /tmp/merged-clips.json config/used-clips.json
+          jq -s '
+            (.[0] // []) + (.[1] // [])
+            | unique_by((.title // "") + "|" + (.topic // "") + "|" + (.date // ""))
+            | sort_by(.date // "")
+          ' config/used-ideas.json /tmp/local-ideas.json > /tmp/merged-ideas.json 2>/dev/null \
+            && mv /tmp/merged-ideas.json config/used-ideas.json || true
+          git add config/used-clips.json config/used-ideas.json
+          if git diff --staged --quiet; then
+            echo "Already on remote."
+            exit 0
+          fi
+          git commit -m "chore: record published clips [skip ci]"
+          for i in 1 2 3; do
+            if git push; then exit 0; fi
+            echo "Push race, retrying ($i/3)..."
+            git pull --rebase -X theirs origin main || git rebase --abort
+            sleep 2
+          done
+          echo "Push failed after retries."
+          exit 1
