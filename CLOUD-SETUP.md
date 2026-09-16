@@ -9,6 +9,25 @@ free tier holds the clips, and the YouTube Data API costs nothing at this volume
 
 ---
 
+## Setup, the short way
+
+```bash
+node scripts/setup-drive.js
+```
+
+Prints a URL; click Allow once. It enables the Drive API, creates the drop
+folder, shares it with the service account, and writes `DRIVE_FOLDER_ID` into
+`.env`. Then set the secret:
+
+```bash
+gh secret set DRIVE_FOLDER_ID --body "<the id it printed>"
+```
+
+If Google refuses those scopes (it can, on an unverified app), do the three
+steps below by hand instead — they achieve exactly the same thing.
+
+---
+
 ## One-time setup (3 steps, all from a browser or phone)
 
 **1. Turn on the Drive API**
