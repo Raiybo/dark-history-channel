@@ -10,6 +10,8 @@
     "get-tiktok-token": "node scripts/get-tiktok-token.js",
     "analytics": "node scripts/analytics.mjs",
     "drive-check": "node scripts/drive-check.mjs",
+    "dropbox-auth": "node scripts/dropbox-auth.js",
+    "dropbox-sync": "node scripts/dropbox-sync.mjs",
     "cloud-daily": "node scripts/cloud-daily.mjs",
     "cloud-reminder": "node scripts/cloud-reminder.mjs"
   },

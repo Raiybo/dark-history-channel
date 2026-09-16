@@ -22,5 +22,8 @@ upload-queue/
 # scratch dir the cloud runner downloads Drive clips into
 .cloud-clips/
 
+# generated per-machine launcher for the Desktop Drop Box task (absolute paths)
+.dropbox-sync.vbs
+
 # screenshots dropped in the repo root (may contain private info — never commit)
 /Screenshot*.png

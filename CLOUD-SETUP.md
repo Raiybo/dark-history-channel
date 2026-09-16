@@ -78,6 +78,9 @@ That prints exactly what's missing, or confirms the folder is readable.
 Drop clips into the Drive folder from your phone — share sheet → Drive. That's
 the whole job.
 
+On a PC you can instead drag them into the desktop **Drop Box** folder (see
+below), which uploads them for you.
+
 - **3 Shorts a day**, 5 clips each → **105 clips covers a full week**.
 - A still photo in the folder becomes the bonus frame at the end of a reel.
 - Every Sunday you get a reminder telling you the real shortfall (see below).
@@ -121,6 +124,34 @@ counts what's actually in Drive minus what's been published, and reaches you:
   ```bash
   gh secret set NTFY_TOPIC --body "some-unguessable-name"
   ```
+
+## The desktop Drop Box (optional, per machine)
+
+A real folder at `~/Desktop/Drop Box` that uploads whatever you drag into it,
+so you can add clips from a PC without opening Drive.
+
+```bash
+node scripts/dropbox-auth.js     # one Allow click -> DRIVE_USER_REFRESH_TOKEN
+node scripts/dropbox-sync.mjs    # uploads once; run it on a schedule
+```
+
+Uploaded files move to `Drop Box/_uploaded`, which *is* the bookkeeping — if a
+file is still in `Drop Box` it hasn't gone up yet. No state file to drift.
+
+It authenticates as **you**, not as the service account, because service
+accounts have no Drive storage quota and uploads from one fail with "Service
+Accounts do not have storage quota". Scope is `drive.file`, so it can only touch
+the folder this app created.
+
+Scheduled on Windows with (no admin needed — `Register-ScheduledTask` wants
+elevation, `schtasks` doesn't):
+
+```powershell
+schtasks /create /tn "KingsOfRanks DropBox Sync" /tr "wscript.exe \"<repo>\.dropbox-sync.vbs\"" /sc minute /mo 5 /f
+```
+
+The `.vbs` shim just launches node with a hidden window; pointing the task at
+`node.exe` directly flashes a console every 5 minutes.
 
 ## Knobs
 
