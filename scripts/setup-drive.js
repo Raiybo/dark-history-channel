@@ -81,6 +81,23 @@ async function api(url, token, init = {}) {
   return data;
 }
 
+// Enabling an API and then immediately using it races Google's own propagation:
+// the enable call returns success and the very next request still 403s with
+// "has not been used in project ... or it is disabled". It clears on its own in
+// well under a minute, so wait it out rather than making the human click again.
+async function apiWithPropagationRetry(url, token, init = {}, tries = 8) {
+  for (let i = 0; ; i++) {
+    try {
+      return await api(url, token, init);
+    } catch (err) {
+      const propagating = /has not been used in project|is disabled|wait a few minutes|propagate/i.test(err.message);
+      if (!propagating || i >= tries - 1) throw err;
+      process.stdout.write(i === 0 ? 'waiting for the API to propagate' : '.');
+      await new Promise(r => setTimeout(r, 8000));
+    }
+  }
+}
+
 async function provision(token) {
   // 1. Enable the Drive API. Already-enabled is a success, not an error.
   process.stdout.write('  1/3 enabling the Drive API... ');
@@ -105,7 +122,7 @@ async function provision(token) {
     } catch { folderId = null; }
   }
   if (!folderId) {
-    const folder = await api('https://www.googleapis.com/drive/v3/files?fields=id,name', token, {
+    const folder = await apiWithPropagationRetry('https://www.googleapis.com/drive/v3/files?fields=id,name', token, {
       method: 'POST',
       body: JSON.stringify({ name: FOLDER_NAME, mimeType: 'application/vnd.google-apps.folder' }),
     });
