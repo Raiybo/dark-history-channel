@@ -1,23 +1,36 @@
 // Single LLM client with provider switching + automatic fallback.
 //
 // Default provider is Gemini 2.5 Flash. It historically produced fresher, more
-// surprising facts and punchier hooks than Groq/Llama — which is what drives
+// surprising facts and punchier hooks than Groq — which is what drives
 // retention and, in turn, organic growth. If a Gemini call fails for ANY reason
 // (including the billing-dunning block that took the channel down on 2026-06-01),
-// we AUTOMATICALLY fall back to Groq (Llama 3.3 70B) so the pipeline never hard-
-// fails the way it did before.
+// we AUTOMATICALLY fall back to Groq so the pipeline never hard-fails the way it
+// did before.
 //
 //   LLM_PROVIDER=gemini  (default) — prefer Gemini, fall back to Groq
 //   LLM_PROVIDER=groq             — prefer Groq, fall back to Gemini
 //
 // Set both GEMINI_API_KEY and GROQ_API_KEY so the fallback always has a path.
+//
+// 2026-09-16: `llama-3.3-70b-versatile` was decommissioned and every Groq call
+// started returning 404 model_not_found, while the Gemini key had gone 401 — so
+// BOTH providers were down and the pipeline could not have posted at all. The
+// default is now qwen3.8-27b, which is the only model on the free tier that
+// covers all three things this repo needs: text, strict JSON mode, and vision.
+// Override with GROQ_MODEL if it is retired in turn; check the live list with
+// `curl -H "Authorization: Bearer $GROQ_API_KEY" https://api.groq.com/openai/v1/models`.
 
 // Both providers are called via their plain REST endpoints with the built-in
 // fetch. We deliberately do NOT use the @google/generative-ai SDK: its fetch
 // flaked intermittently ("Error fetching") in CI and locally, while direct REST
 // calls were 100% reliable on the very same network and key.
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
-const GROQ_MODEL = 'llama-3.3-70b-versatile';
+const GROQ_MODEL = process.env.GROQ_MODEL || 'qwen/qwen3.8-27b';
+const GROQ_VISION_MODEL = process.env.GROQ_VISION_MODEL || GROQ_MODEL;
+// Images are far more token-hungry than text and the free tier allows only
+// 7,000 input tokens/minute, so the Groq vision path sends fewer frames than
+// Gemini's. Three spread across a clip is still enough to place the payoff.
+const GROQ_VISION_FRAMES = Number(process.env.GROQ_VISION_FRAMES || 3);
 const GEMINI_MODEL = 'gemini-2.5-flash';
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
@@ -116,13 +129,71 @@ export async function chat(prompt, opts = {}) {
 // the old chatWithRetry name is just an alias kept for existing call sites.
 export const chatWithRetry = chat;
 
+// Vision over one or more frames on Groq. This exists because vision used to be
+// Gemini-only, which made it a single point of failure: when that key died the
+// clip commentary silently degraded to reading filenames aloud. Both vision
+// entry points below now fall through to here.
+async function callGroqVision(base64Array, mimeType, prompt, maxTokens) {
+  const key = process.env.GROQ_API_KEY;
+  if (!key || !base64Array?.length) return null;
+
+  // Keep the newest/most spread-out frames but stay under the per-minute input
+  // token cap; evenly sample rather than just truncating so we still see the
+  // whole clip's arc.
+  let frames = base64Array;
+  if (frames.length > GROQ_VISION_FRAMES) {
+    const step = (frames.length - 1) / (GROQ_VISION_FRAMES - 1);
+    frames = Array.from({ length: GROQ_VISION_FRAMES }, (_, i) => base64Array[Math.round(i * step)]);
+  }
+
+  const body = {
+    model: GROQ_VISION_MODEL,
+    messages: [{ role: 'user', content: [
+      { type: 'text', text: prompt },
+      ...frames.map(b => ({ type: 'image_url', image_url: { url: `data:${mimeType || 'image/jpeg'};base64,${b}` } })),
+    ] }],
+    temperature: 0.4,
+    max_tokens: maxTokens,
+  };
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const res = await fetch(GROQ_URL, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json().catch(() => ({}));
+      if ((res.status === 429 || res.status >= 500) && attempt < 2) {
+        // Groq says exactly how long the token bucket needs; guessing shorter
+        // just burns the next attempt against an empty bucket.
+        const hinted = (data.error?.message || '').match(/try again in\s*([\d.]+)\s*s/i);
+        const wait = hinted ? Math.ceil(parseFloat(hinted[1]) * 1000) + 500 : 5000 * (attempt + 1);
+        console.log(`  Groq vision rate-limited; waiting ${(wait / 1000).toFixed(1)}s and retrying...`);
+        await new Promise(r => setTimeout(r, wait));
+        continue;
+      }
+      if (!res.ok) {
+        console.log(`  Groq vision unavailable (${res.status}: ${(data.error?.message || '').slice(0, 90)}).`);
+        return null;
+      }
+      return (data.choices?.[0]?.message?.content || '').trim() || null;
+    } catch (err) {
+      if (attempt < 2) { await new Promise(r => setTimeout(r, 3000)); continue; }
+      console.log(`  Groq vision call failed (${(err.message || '').slice(0, 80)}).`);
+      return null;
+    }
+  }
+  return null;
+}
+
 // Vision: describe what's happening in a single still frame. Used to write clip
-// commentary from the actual footage instead of an opaque filename. Gemini 2.5
-// Flash is multimodal; Groq has no vision, so this is Gemini-only and returns
-// null on any failure (the caller falls back to a generic line).
+// commentary from the actual footage instead of an opaque filename. Tries Gemini
+// (2.5 Flash), then Groq, and returns null only if both are unavailable — the
+// caller falls back to a generic line.
 export async function describeImage(base64, mimeType, prompt, { maxTokens = 200 } = {}) {
   const key = process.env.GEMINI_API_KEY;
-  if (!key) return null;
+  if (!key) return callGroqVision([base64], mimeType, prompt, maxTokens);
   const body = {
     contents: [{ parts: [
       { text: prompt },
@@ -150,15 +221,19 @@ export async function describeImage(base64, mimeType, prompt, { maxTokens = 200 
         await new Promise(r => setTimeout(r, wait));
         continue;
       }
-      if (!res.ok) { console.log(`  Vision unavailable (${res.status}); using generic commentary.`); return null; }
-      return (data.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join('').trim() || null;
+      if (!res.ok) {
+        console.log(`  Gemini vision unavailable (${res.status}); trying Groq...`);
+        return callGroqVision([base64], mimeType, prompt, maxTokens);
+      }
+      const text = (data.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join('').trim();
+      return text || await callGroqVision([base64], mimeType, prompt, maxTokens);
     } catch (err) {
       if (attempt < 2) { await new Promise(r => setTimeout(r, 3000)); continue; }
-      console.log(`  Vision call failed (${(err.message || '').slice(0, 80)}); using generic commentary.`);
-      return null;
+      console.log(`  Gemini vision failed (${(err.message || '').slice(0, 80)}); trying Groq...`);
+      return callGroqVision([base64], mimeType, prompt, maxTokens);
     }
   }
-  return null;
+  return callGroqVision([base64], mimeType, prompt, maxTokens);
 }
 
 // Vision over MULTIPLE frames of one clip at once — lets the model both describe
@@ -167,7 +242,8 @@ export async function describeImage(base64, mimeType, prompt, { maxTokens = 200 
 // Same retry/fallback behavior as describeImage; returns raw text (JSON) or null.
 export async function describeImages(base64Array, mimeType, prompt, { maxTokens = 320 } = {}) {
   const key = process.env.GEMINI_API_KEY;
-  if (!key || !base64Array?.length) return null;
+  if (!base64Array?.length) return null;
+  if (!key) return callGroqVision(base64Array, mimeType, prompt, maxTokens);
   const body = {
     contents: [{ parts: [
       { text: prompt },
@@ -187,13 +263,17 @@ export async function describeImages(base64Array, mimeType, prompt, { maxTokens 
         await new Promise(r => setTimeout(r, wait));
         continue;
       }
-      if (!res.ok) { console.log(`  Vision unavailable (${res.status}); using filename fallback.`); return null; }
-      return (data.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join('').trim() || null;
+      if (!res.ok) {
+        console.log(`  Gemini vision unavailable (${res.status}); trying Groq...`);
+        return callGroqVision(base64Array, mimeType, prompt, maxTokens);
+      }
+      const text = (data.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join('').trim();
+      return text || await callGroqVision(base64Array, mimeType, prompt, maxTokens);
     } catch (err) {
       if (attempt < 2) { await new Promise(r => setTimeout(r, 3000)); continue; }
-      console.log(`  Vision call failed (${(err.message || '').slice(0, 80)}); using filename fallback.`);
-      return null;
+      console.log(`  Gemini vision failed (${(err.message || '').slice(0, 80)}); trying Groq...`);
+      return callGroqVision(base64Array, mimeType, prompt, maxTokens);
     }
   }
-  return null;
+  return callGroqVision(base64Array, mimeType, prompt, maxTokens);
 }

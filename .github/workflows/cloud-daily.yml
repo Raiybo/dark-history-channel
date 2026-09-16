@@ -96,6 +96,10 @@ jobs:
           YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
           CHANNEL_NAME: ${{ secrets.CHANNEL_NAME }}
+          # The Gemini key currently 401s, so try Groq first and save a failed
+          # round-trip on every call. Gemini stays wired as the fallback — drop
+          # this line the moment a working AIza... key is in the secrets.
+          LLM_PROVIDER: groq
           YT_STUDIO_COOKIES: ${{ secrets.YT_STUDIO_COOKIES }}
           CI: 'true'
         run: node scripts/cloud-daily.mjs
