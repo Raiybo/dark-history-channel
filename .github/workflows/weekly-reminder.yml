@@ -14,7 +14,7 @@ name: Weekly clip reminder
 
 on:
   schedule:
-    - cron: '0 7 * * 0'      # Sundays 07:00 UTC — 10:00 in Beirut
+    - cron: '0 18 * * 0'     # Sundays 18:00 UTC — 21:00 in Beirut (night)
   workflow_dispatch:
 
 jobs:
